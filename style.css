@@ -289,3 +289,12 @@ body.kb .inputbar{margin-bottom:8px}
 .mm-pick:first-child{border-top:0}
 .mm-pick input{accent-color:var(--accent);width:20px;height:20px;flex:none;margin-top:1px}
 .mm-pick small{display:block;font-size:12px;color:var(--sys-sub);margin-top:2px}
+/* 朋友圈用宋体 */
+.ptext,.pc,#momText{font-family:var(--ti)}
+/* 「我的」折叠 */
+#page-me .sec h3{display:flex;align-items:center;cursor:pointer;margin-bottom:0}
+#page-me .sec:not(.fold) h3{margin-bottom:8px}
+#page-me .sec h3::after{content:"";margin-left:auto;width:8px;height:8px;border-right:1.5px solid var(--sub);border-bottom:1.5px solid var(--sub);transform:rotate(45deg);transition:transform .2s}
+#page-me .sec.fold h3::after{transform:rotate(-45deg)}
+#page-me .sec.fold>:not(h3){display:none}
+
