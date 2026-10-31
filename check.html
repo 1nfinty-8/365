@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>365 检查</title>
+<style>
+body{font:15px/1.6 -apple-system,'PingFang SC',sans-serif;padding:24px 16px 60px;background:#F2F2F7;color:#000;margin:0}
+h1{font-size:20px;margin:0 0 10px}
+.r{background:#fff;border-radius:12px;padding:12px 14px;margin:10px 0}
+.ok{color:#34C759}.bad{color:#FF3B30}
+small{color:#6e6e73;word-break:break-all;display:block;margin-top:2px}
+button{font:inherit;padding:13px;border:0;border-radius:12px;background:#000;color:#fff;margin-top:14px;width:100%}
+</style>
+</head>
+<body>
+<h1>365 文件检查</h1>
+<div id="out">检查中…</div>
+<button id="clr">清除缓存（不会删数据）</button>
+<script>
+const FILES=['index.html','style.css','app.js','chat.js','moments.js','anniv.js','diary.js','capsule.js','memory.js','sw.js','manifest.json'];
+const IDS=['anAdd','anModal','anSave','anList','postBtn','momText','feed','dyAdd','dyModal','tcAdd','mmAdd','mmModal','tabbar','replyBar','picker'];
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function row(f,ok,msg){return `<div class="r"><b class="${ok?'ok':'bad'}">${ok?'✓':'✗'} ${f}</b>${msg.map(m=>`<small>${esc(m)}</small>`).join('')}</div>`}
+(async()=>{
+  let h='';
+  for(const f of FILES){
+    let ok=true;const msg=[];
+    try{
+      const r=await fetch(f+'?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok){h+=row(f,false,['⚠️ 找不到这个文件（'+r.status+'），检查文件名']);continue}
+      const s=await r.text();
+      msg.push(s.length+' 字 · 最后一行：'+s.trim().split('\n').pop().trim().slice(-40));
+      if(f.endsWith('.js')){
+        if(!s.slice(0,150).includes(f)){ok=false;msg.push('⚠️ 开头不是 '+f+' 的代码，可能粘错文件了')}
+        try{new Function(s)}catch(e){ok=false;msg.push('⚠️ 代码不完整或有错：'+e.message)}
+      }
+      if(f==='app.js'){
+        const n=(s.match(/function chatSystem/g)||[]).length;
+        if(n!==1){ok=false;msg.push('⚠️ chatSystem 出现了 '+n+' 次（应该是 1 次）')}
+        if(!s.includes('personaText')){ok=false;msg.push('⚠️ 记忆那一步没改')}
+      }
+      if(f==='index.html'){
+        if(!s.trim().endsWith('</html>')){ok=false;msg.push('⚠️ 结尾不是 </html>，被截断了')}
+        const miss=IDS.filter(id=>!s.includes('id="'+id+'"'));
+        if(miss.length){ok=false;msg.push('⚠️ 缺少：'+miss.join('、'))}
+        const sc=['app','chat','moments','anniv','diary','capsule','memory'].filter(n=>!s.includes('src="'+n+'.js"'));
+        if(sc.length){ok=false;msg.push('⚠️ 没有加载：'+sc.map(n=>n+'.js').join('、'))}
+      }
+      if(f==='style.css'){
+        const a=(s.match(/{/g)||[]).length,b=(s.match(/}/g)||[]).length;
+        if(a!==b){ok=false;msg.push(`⚠️ 括号对不上（{ ${a} 个，} ${b} 个），中间可能被截断了`)}
+        for(const k of ['.modal{','.mbox{','#sheet{','.an-card{','.post{','.composer{'])if(!s.includes(k)){ok=false;msg.push('⚠️ 缺少样式 '+k)}
+      }
+      if(f==='manifest.json'){try{JSON.parse(s)}catch(e){ok=false;msg.push('⚠️ 格式不对')}}
+    }catch(e){ok=false;msg.push('读取失败：'+e.message)}
+    h+=row(f,ok,msg);
+  }
+  out.innerHTML=h;
+})();
+document.getElementById('clr').onclick=async()=>{
+  try{
+    const regs=navigator.serviceWorker?await navigator.serviceWorker.getRegistrations():[];
+    for(const r of regs)await r.unregister();
+    if(window.caches)for(const k of await caches.keys())await caches.delete(k);
+    alert('缓存清好了，数据没有动');
+  }catch(e){alert('清除失败：'+e.message)}
+};
+</script>
+</body>
+</html>
