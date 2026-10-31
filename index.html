@@ -20,7 +20,6 @@
 <div id="bg"></div><div id="mask"></div>
 
 <div id="app">
-  <!-- 365 首页 -->
   <section class="page active" id="page-home"><div class="wrap">
     <div class="top">
       <span class="tsp"></span>
@@ -43,7 +42,6 @@
     </div>
   </div></section>
 
-  <!-- 聊天 -->
   <section class="page" id="page-chat">
     <div class="chat-top glass">
       <div id="chatAv"></div>
@@ -60,7 +58,6 @@
     </div>
   </section>
 
-  <!-- 朋友圈 -->
   <section class="page" id="page-moments"><div class="wrap">
     <div class="head">
       <h2>朋友圈</h2><em>moments</em><span class="sp"></span>
@@ -74,7 +71,6 @@
     <div id="feed"></div>
   </div></section>
 
-  <!-- 图书馆 -->
   <section class="page" id="page-library"><div class="wrap">
     <div class="head">
       <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -86,7 +82,6 @@
     </div>
   </div></section>
 
-  <!-- 纪念日 -->
   <section class="page" id="page-anniv"><div class="wrap">
     <div class="head">
       <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -97,7 +92,6 @@
     <div id="anList"></div>
   </div></section>
 
-  <!-- 小狗日记 -->
   <section class="page" id="page-diary"><div class="wrap">
     <div class="head">
       <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -108,7 +102,6 @@
     <div id="dyList"></div>
   </div></section>
 
-  <!-- 时间胶囊 -->
   <section class="page" id="page-capsule"><div class="wrap">
     <div class="head">
       <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -119,7 +112,6 @@
     <div id="tcList"></div>
   </div></section>
 
-  <!-- 记忆 -->
   <section class="page" id="page-memory"><div class="wrap">
     <div class="head">
       <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -132,10 +124,8 @@
     <div id="mmList"></div>
   </div></section>
 
-  <!-- 我的 -->
   <section class="page" id="page-me"><div class="wrap">
     <div class="head"><h2>我的</h2><em>settings</em></div>
-
     <div class="sec glass">
       <h3>我们<em>us</em></h3>
       <div class="avs">
@@ -147,7 +137,6 @@
       <label class="f"><span>在一起的日子</span><input type="date" data-k="startDate"></label>
       <label class="f"><span>首页的那句话</span><textarea class="short" data-k="quote"></textarea></label>
     </div>
-
     <div class="sec glass">
       <h3>外观<em>look</em></h3>
       <div class="pv">
@@ -163,20 +152,17 @@
       <div class="btns"><button class="pill ghost" id="lookReset">恢复默认外观</button></div>
       <p class="hint">每排最后的彩色圆圈可以自己选颜色。</p>
     </div>
-
     <div class="sec glass">
       <h3>背景<em>wallpaper</em></h3>
       <div class="btns"><button class="pill" id="bgPick">换一张照片</button><button class="pill ghost" id="bgReset">恢复默认粉色</button></div>
       <label class="f"><span>照片模糊度</span><input type="range" min="0" max="20" step="1" data-k="blur"></label>
       <label class="f"><span>粉色遮罩浓度（照片太花时调高，字会更清楚）</span><input type="range" min="0" max="0.85" step="0.05" data-k="dim"></label>
     </div>
-
     <div class="sec glass">
       <h3><span class="hisName">陆择</span>的人设<em>who he is</em></h3>
       <label class="f"><textarea id="personaBox" data-k="persona"></textarea></label>
       <p class="hint">这是他「是谁」的全部。写得越具体，他越像他。</p>
     </div>
-
     <div class="sec glass">
       <h3>连接<em>api</em></h3>
       <label class="f"><span>用哪家</span><select data-k="provider"><option value="gemini">Gemini</option><option value="openai">OpenAI 兼容（DeepSeek 等）</option></select></label>
@@ -188,7 +174,6 @@
       <div class="btns"><button class="pill" id="testBtn">测试连接</button></div>
       <p class="hint">推荐 gemini-2.5-flash（快、便宜）。Key 只存在这台手机里，不会写进代码。</p>
     </div>
-
     <div class="sec glass">
       <h3>数据<em>backup</em></h3>
       <div class="btns">
@@ -203,4 +188,73 @@
 
   <nav id="tabbar" class="glass">
     <button data-go="home" class="on"><span class="t365">365</span>365</button>
-    <button data-go="chat"><svg class="i" viewBox="0 0 24 24"><path d="M4 5.5h16v10.5H10l-5 4v-4H4z"
+    <button data-go="chat"><svg class="i" viewBox="0 0 24 24"><path d="M4 5.5h16v10.5H10l-5 4v-4H4z"/></svg>聊天</button>
+    <button data-go="moments"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.1 4.1 0 0 1 12 7.3a4.1 4.1 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/></svg>朋友圈</button>
+    <button data-go="me"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/></svg>我的</button>
+  </nav>
+
+  <div id="replyBar" class="glass"><input id="replyInput" placeholder="回复…" enterkeyhint="send"><button class="pill" id="replySend">发送</button></div>
+
+  <div class="modal" id="anModal"><div class="mbox">
+    <h3 id="anTitle">新的纪念日</h3>
+    <label class="f"><span>名字</span><input class="ti" id="anName" placeholder="比如：陆择的生日"></label>
+    <label class="f"><span>日期</span><input type="date" id="anDate"></label>
+    <div class="f"><span>怎么算</span><div class="seg" id="anType"><button data-t="count">数天数 · 第 N 天</button><button data-t="yearly">每年 · 还有 N 天</button></div></div>
+    <label class="f"><span>备注（可以不写）</span><textarea class="short" id="anNote"></textarea></label>
+    <label class="chk"><input type="checkbox" id="anPin"><span>置顶</span></label>
+    <div class="mbtns"><button class="pill ghost" data-close="anModal">取消</button><button class="pill" id="anSave">保存</button></div>
+  </div></div>
+
+  <div class="modal" id="dyModal"><div class="mbox">
+    <h3 id="dyTitle">今天的日记</h3>
+    <label class="f"><span>日期</span><input type="date" id="dyDate"></label>
+    <div class="f"><span>心情</span><div class="dy-moods" id="dyMoods"></div></div>
+    <label class="f"><span>写点什么</span><textarea class="tall" id="dyText" placeholder="今天……"></textarea></label>
+    <button class="pill ghost" id="dyPhoto">＋ 照片</button>
+    <div class="pend" id="dyPend"></div>
+    <label class="chk" id="dyAskRow"><input type="checkbox" id="dyAsk" checked><span>写完让<span class="hisName">陆择</span>来看</span></label>
+    <div class="mbtns"><button class="pill ghost" data-close="dyModal">取消</button><button class="pill" id="dySave">保存</button></div>
+  </div></div>
+
+  <div class="modal" id="tcModal"><div class="mbox">
+    <h3>把这一刻藏起来</h3>
+    <label class="f"><span>名字</span><input class="ti" id="tcTitle" placeholder="比如：给一年后的我们"></label>
+    <label class="f"><span>哪天才能打开</span><input type="date" id="tcDate"></label>
+    <label class="f"><span>写给以后</span><textarea class="tall" id="tcText" placeholder="等你打开的时候……"></textarea></label>
+    <button class="pill ghost" id="tcPhoto">＋ 照片</button>
+    <div class="pend" id="tcPend"></div>
+    <label class="chk"><input type="checkbox" id="tcHis" checked><span>让<span class="hisName">陆择</span>也写一封，到时候一起拆</span></label>
+    <div class="mbtns"><button class="pill ghost" data-close="tcModal">取消</button><button class="pill" id="tcSave">封存</button></div>
+  </div></div>
+
+  <div class="modal" id="mmModal"><div class="mbox">
+    <h3 id="mmTitle">记一条</h3>
+    <label class="f"><span>要记住的事</span><textarea class="short" id="mmText" placeholder="比如：小狗不吃香菜"></textarea></label>
+    <div class="f"><span>分类</span><div class="seg" id="mmCat"></div></div>
+    <div class="mbtns"><button class="pill ghost" data-close="mmModal">取消</button><button class="pill" id="mmSave">保存</button></div>
+  </div></div>
+
+  <div class="modal" id="mmPick"><div class="mbox">
+    <h3><span class="hisName">陆择</span>想记住这些</h3>
+    <p class="hint" style="text-align:center;color:var(--sys-sub)">勾选想保存的，没勾的不会存</p>
+    <div id="mmPickList"></div>
+    <div class="mbtns"><button class="pill ghost" data-close="mmPick">取消</button><button class="pill" id="mmPickSave">保存选中的</button></div>
+  </div></div>
+</div>
+
+<div id="toast"></div>
+<div id="sheet"></div>
+<div id="viewer"><img alt=""></div>
+<input type="file" id="picker" accept="image/*" hidden>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script src="app.js"></script>
+<script src="chat.js"></script>
+<script src="moments.js"></script>
+<script src="anniv.js"></script>
+<script src="diary.js"></script>
+<script src="capsule.js"></script>
+<script src="memory.js"></script>
+</body>
+</html>
+
