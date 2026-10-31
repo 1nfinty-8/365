@@ -353,5 +353,34 @@ window.chatSystem=function(){
 
 READY.then(async()=>{const saved=await DB.get('diary');if(Array.isArray(saved))DIARY=saved;render()});
 })();
+/* ===== 全局主题色 + 勾选文字修正 ===== */
+document.head.insertAdjacentHTML('beforeend',`<style>
+.pill:not(.ghost){background:var(--accent);color:var(--acct,#fff)}
+#tabbar button.on,.pname,.pc b,.plike,.an-pin,.an-ms,.an-card.today .an-num{color:var(--accent-t,var(--accent))}
+</style>`);
+LOOK.theme='#B4848D';
+const darkenHex=(h,k)=>'#'+rgb(h).map(v=>Math.round(v*k).toString(16).padStart(2,'0')).join('');
+const baseLook=window.applyLook;
+window.applyLook=function(){
+  baseLook.apply(this,arguments);
+  const t=S.theme||LOOK.theme,r=document.documentElement.style,[a,b,c]=rgb(t);
+  const light=.299*a+.587*b+.114*c>160;
+  r.setProperty('--accent',t);r.setProperty('--acct',onText(t));r.setProperty('--accent-t',light?darkenHex(t,.62):t);
+  document.querySelectorAll('.sw[data-sw="theme"] button').forEach(x=>x.classList.toggle('on',x.dataset.c===String(t).toUpperCase()));
+};
+READY.then(()=>{
+  if(!S.theme)S.theme=LOOK.theme;
+  const cols=['#B4848D','#D4B5BA','#E8CDD2','#8C7A80','#9AA8B8','#2E1A1F'];
+  $('#lookReset').closest('.btns').insertAdjacentHTML('beforebegin',
+    `<div class="f"><span>主题色（按钮、勾选框、导航高亮都会跟着变）</span><div class="sw" data-sw="theme">${cols.map(c=>`<button data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}<input type="color" data-k="theme"></div></div>`);
+  const w=$('.sw[data-sw="theme"]'),inp=w.querySelector('input');
+  inp.value=S.theme.toLowerCase();
+  const set=v=>{S.theme=v.toUpperCase();inp.value=v.toLowerCase();applyLook();saveSettings()};
+  w.addEventListener('click',e=>{const b=e.target.closest('button[data-c]');if(b)set(b.dataset.c)});
+  inp.addEventListener('input',()=>set(inp.value));
+  applyLook();
+  const row=$('#dyAskRow');
+  if(row)row.innerHTML=`<input type="checkbox" id="dyAsk" checked><span>写完让<span class="hisName">${esc(S.hisName)}</span>来看</span>`;
+});
 
 
