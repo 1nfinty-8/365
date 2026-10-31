@@ -118,13 +118,16 @@ async function callAI(system,msgs){
     }
   }catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}
 }
+HOOKS.persona=HOOKS.persona||[];
+function personaText(){let s=S.persona;
+  for(const f of HOOKS.persona){try{const x=f();if(x)s+='\n\n'+x}catch(e){}}
+  return s}
 function chatSystem(){
-  let s=S.persona+'\n\n'+nowLine();
+  let s=personaText()+'\n\n'+nowLine();
   if(S.split)s+='\n【格式】像用手机发消息一样，一次可以发几条，每条单独一行。';
   for(const f of HOOKS.context){try{const x=f();if(x)s+='\n'+x}catch(e){}}
   return s}
-function sceneSystem(scene){return S.persona+'\n\n'+nowLine()+'\n【场景】'+scene}
-
+function sceneSystem(scene){return personaText()+'\n\n'+nowLine()+'\n【场景】'+scene}
 /* ---------- 导航 ---------- */
 const TABS=['home','chat','moments','me'];
 function go(name){
