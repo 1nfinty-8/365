@@ -160,3 +160,17 @@ READY.then(async()=>{
   render();
 });
 })();
+/* ===== 中文字体：苹方细体 · 宽字距 ===== */
+document.head.insertAdjacentHTML('beforeend',`<style>
+body{font-weight:300;letter-spacing:.5px}
+b,strong{font-weight:500}
+.head h2{font-weight:300;letter-spacing:5px}
+.card .cn{font-weight:300;letter-spacing:4px}
+.dayl{font-weight:300;letter-spacing:4px}
+.quote{letter-spacing:2px}
+.sec h3,.an-name,.an-box h3{font-weight:400;letter-spacing:3px}
+.chat-top .nm{font-weight:400;letter-spacing:2px}
+.pname,.pc b{font-weight:500}
+#tabbar button{letter-spacing:1px}
+.pill{letter-spacing:1px}
+</style>`);
