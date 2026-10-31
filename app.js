@@ -286,3 +286,13 @@ async function boot(){
 }
 document.addEventListener('DOMContentLoaded',boot);
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+/* ---------- 「我的」折叠 ---------- */
+HOOKS.ready.push(()=>{
+  const key=h=>h.querySelector('em')?.textContent||h.textContent;
+  let open=[];try{open=JSON.parse(localStorage.getItem('365-open')||'[]')}catch(e){}
+  $$('#page-me .sec').forEach(sec=>{
+    const h=sec.querySelector('h3');if(!h)return;
+    sec.classList.toggle('fold',!open.includes(key(h)));
+    h.onclick=()=>{sec.classList.toggle('fold');
+      open=[...$$('#page-me .sec:not(.fold) h3')].map(key);
+      localStorage.setItem('365-open',JSON.stringify(open))}})});
