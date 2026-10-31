@@ -160,17 +160,20 @@ READY.then(async()=>{
   render();
 });
 })();
-/* ===== 中文字体：苹方细体 · 宽字距 ===== */
+/* ===== 首页卡片字体 + 透明玻璃 ===== */
 document.head.insertAdjacentHTML('beforeend',`<style>
-body{font-weight:300;letter-spacing:.5px}
-b,strong{font-weight:500}
-.head h2{font-weight:300;letter-spacing:5px}
-.card .cn{font-weight:300;letter-spacing:4px}
-.dayl{font-weight:300;letter-spacing:4px}
-.quote{letter-spacing:2px}
-.sec h3,.an-name,.an-box h3{font-weight:400;letter-spacing:3px}
-.chat-top .nm{font-weight:400;letter-spacing:2px}
-.pname,.pc b{font-weight:500}
-#tabbar button{letter-spacing:1px}
-.pill{letter-spacing:1px}
+#page-home .card .cn{font-weight:300;letter-spacing:4px}
+.glass:not(.sheet-box):not(.an-box){
+  background:linear-gradient(135deg,rgba(255,255,255,.38) 0%,rgba(255,255,255,.08) 45%,rgba(255,255,255,0) 60%,rgba(255,255,255,.12) 100%),var(--glass);
+  -webkit-backdrop-filter:blur(var(--gblur)) saturate(1.5);
+  backdrop-filter:blur(var(--gblur)) saturate(1.5);
+  border:1px solid rgba(255,255,255,.55);
+  box-shadow:inset 1.5px 1.5px 0 rgba(255,255,255,.85),inset -1px -1px 0 rgba(255,255,255,.25),0 6px 20px rgba(60,30,40,.06);
+}
 </style>`);
+LOOK.glassA=0.12;LOOK.glassB=0;LOOK.glassTint='#FFFFFF';
+READY.then(()=>{
+  const a=$('[data-k="glassA"]');if(a)a.min='0';
+  if(!S.clearGlass){S.clearGlass=true;S.glassA=LOOK.glassA;S.glassB=LOOK.glassB;S.glassTint=LOOK.glassTint;
+    syncInputs();applyLook();saveSettings()}
+});
