@@ -1,0 +1,12 @@
+{
+  "name": "365 infinity",
+  "short_name": "365",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3E9EA",
+  "theme_color": "#F3E9EA",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
