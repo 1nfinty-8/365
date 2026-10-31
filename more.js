@@ -177,3 +177,10 @@ READY.then(()=>{
   if(!S.clearGlass){S.clearGlass=true;S.glassA=LOOK.glassA;S.glassB=LOOK.glassB;S.glassTint=LOOK.glassTint;
     syncInputs();applyLook();saveSettings()}
 });
+/* ===== 原生风格提示 + 发送按钮跟随气泡颜色 ===== */
+document.head.insertAdjacentHTML('beforeend',`<style>
+#toast{background:rgba(255,255,255,.75);color:#000;-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);border:.5px solid rgba(0,0,0,.06);box-shadow:0 8px 30px rgba(0,0,0,.12);font:500 14px/1.4 -apple-system,'PingFang SC',sans-serif;letter-spacing:0;padding:11px 18px;border-radius:22px}
+@media (prefers-color-scheme:dark){#toast{background:rgba(44,44,46,.75);color:#fff;border-color:rgba(255,255,255,.08);box-shadow:0 8px 30px rgba(0,0,0,.35)}}
+.send{background:var(--mb);color:var(--mbt);box-shadow:0 0 0 .5px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.08)}
+</style>`);
+
