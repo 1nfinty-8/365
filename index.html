@@ -11,174 +11,10 @@
 <meta name="theme-color" content="#F3E9EA">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc/400.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc/500.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="style.css">
 <title>365</title>
-<style>
-:root{
-  --bg:#F3E9EA;--mist:#E6D3D6;--rose:#D4B5BA;--accent:#B4848D;--ink:#2E1A1F;--sub:#8C7A80;
-  --line:rgba(46,26,31,.08);
-  --glass:rgba(255,250,251,.6);--gblur:18px;
-  --mb:#E8CDD2;--mbt:#2E1A1F;--hb:#FCF6F7;--hbt:#2E1A1F;
-  --num:ui-serif,'New York',Georgia,serif;
-  --en:Didot,'Bodoni 72',Georgia,serif;
-  --cn:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;
-  --blur:0px;--dim:.35;
-  --st:max(env(safe-area-inset-top),14px);
-  --sb:max(env(safe-area-inset-bottom),8px);
-  --tbb:max(calc(env(safe-area-inset-bottom) - 8px),12px);
-  --nav:calc(var(--tbb) + 62px);
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--ink);font:15px/1.6 var(--cn);-webkit-text-size-adjust:100%;touch-action:manipulation}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-user-select:none;user-select:none}
-input,textarea,select{font:inherit;font-size:16px;color:var(--ink)}
-#bg{position:fixed;inset:-40px;background:linear-gradient(160deg,#F5ECED 0%,#E9D6D9 55%,#D8B9BF 100%) center/cover no-repeat;filter:blur(var(--blur))}
-#mask{position:fixed;inset:0;background:linear-gradient(180deg,rgba(248,240,241,var(--dim)),rgba(236,220,223,var(--dim)))}
-#app{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100%);overflow:hidden}
-.page{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:calc(var(--st) + 8px) 16px calc(var(--nav) + 18px);display:none}
-body.kb .page{padding-bottom:20px}
-.page.active{display:block}
-.wrap{max-width:640px;margin:0 auto;position:relative}
-.glass{background:var(--glass);-webkit-backdrop-filter:blur(var(--gblur)) saturate(1.3);backdrop-filter:blur(var(--gblur)) saturate(1.3);border:1px solid rgba(255,255,255,.65);border-radius:22px;box-shadow:0 8px 28px rgba(110,70,80,.08),inset 0 1px 0 rgba(255,255,255,.7)}
-.head{display:flex;align-items:center;gap:10px;margin:4px 2px 16px}
-.head h2{font-weight:500;font-size:22px;letter-spacing:2px}
-.head em{font-family:var(--en);font-style:italic;color:var(--sub);font-size:16px}
-.sp{flex:1}
-.iconbtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none}
-svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-.pill{padding:7px 14px;border-radius:999px;background:var(--accent);color:#fff;font-size:13px;white-space:nowrap}
-.pill.ghost{background:rgba(255,255,255,.55);color:var(--ink);border:1px solid rgba(255,255,255,.75)}
-.empty{text-align:center;color:var(--sub);margin:40px 0}
-/* 首页 */
-.top{display:flex;align-items:center;justify-content:space-between;height:40px}
-.tsp{width:38px}
-.brand{font-family:var(--en);font-style:italic;color:var(--sub);letter-spacing:5px;font-size:15px}
-.days{text-align:center;font-family:var(--num);font-style:italic;font-weight:300;font-size:clamp(84px,15vh,128px);line-height:1.05;letter-spacing:-3px;margin-top:clamp(4px,2vh,20px)}
-.dayl{text-align:center;letter-spacing:3px;margin-top:6px;font-size:15px}
-.since{text-align:center;font-family:var(--en);font-style:italic;color:var(--sub);letter-spacing:3px;font-size:15px}
-.quote{text-align:center;font-family:var(--en),var(--cn);color:#5b4950;margin:clamp(12px,2.6vh,28px) 10px clamp(14px,3vh,30px);white-space:pre-wrap;font-size:15px;line-height:1.8}
-.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
-.card{grid-column:span 2;padding:12px 6px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:clamp(76px,10.5vh,100px);transition:transform .15s}
-.card.big{grid-column:span 3;min-height:clamp(100px,15vh,138px)}
-.card .cn{font-size:17px;letter-spacing:2px}
-.card.big .cn{font-size:20px}
-.card .ce{font-family:var(--en);font-style:italic;color:var(--sub);font-size:14px}
-.card.sm{min-height:52px;padding:10px 6px}
-.card.sm .cn{font-size:15px}
-.card:active{transform:scale(.96)}
-/* 导航 */
-#tabbar{position:absolute;left:16px;right:16px;bottom:var(--tbb);max-width:520px;margin:0 auto;height:62px;display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px;z-index:10;border-radius:31px}
-#tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--sub);font-size:11px}
-#tabbar button.on{color:var(--accent)}
-.t365{font-family:var(--num);font-style:italic;font-weight:300;font-size:22px;line-height:21px;letter-spacing:-.5px}
-body.kb #tabbar{display:none}
-/* 聊天 */
-#page-chat{padding:0;overflow:hidden}
-#page-chat.active{display:flex;flex-direction:column}
-.chat-top{flex:none;padding:calc(var(--st) + 2px) 16px 6px;text-align:center;border-radius:0 0 22px 22px;border-top:0}
-.chat-top .av{width:46px;height:46px;margin:0 auto;font-size:18px}
-.chat-top .nm{font-size:12px;margin-top:3px}
-.chat-top .status{font-size:11px;color:var(--sub);height:15px;line-height:15px}
-#msgs{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:8px 14px 10px}
-.av{width:30px;height:30px;border-radius:50%;flex:none;object-fit:cover;background:var(--rose);color:#fff;display:grid;place-items:center;font-size:13px;overflow:hidden}
-.avsp{width:30px;flex:none}
-.row{display:flex;align-items:flex-end;gap:9px;margin-top:2px}
-.row.gs{margin-top:10px}
-.row.me{justify-content:flex-end;padding-right:6px}
-.stack{display:flex;flex-direction:column;gap:2px;max-width:74%;align-items:flex-start}
-.me .stack{align-items:flex-end}
-.bubble{position:relative;max-width:100%;padding:8px 13px;border-radius:19px;white-space:pre-wrap;word-break:break-word;font-size:16px;line-height:1.38;-webkit-user-select:none;user-select:none}
-.him .bubble{background:var(--hb);color:var(--hbt)}
-.me .bubble{background:var(--mb);color:var(--mbt)}
-.bubble.tail::after{content:"";position:absolute;bottom:0;width:12px;height:16px;background:inherit;
-  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 16'%3E%3Cpath d='M0 0H5C5 8 7 13 12 16H0Z'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat;
-  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 16'%3E%3Cpath d='M0 0H5C5 8 7 13 12 16H0Z'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat}
-.me .bubble.tail{border-bottom-right-radius:4px}
-.me .bubble.tail::after{right:-7px}
-.him .bubble.tail{border-bottom-left-radius:4px}
-.him .bubble.tail::after{left:-7px;transform:scaleX(-1)}
-.cimg{display:block;max-width:220px;max-height:300px;border-radius:18px;object-fit:cover}
-.tstamp{text-align:center;font-size:11px;color:var(--sub);margin:14px 0 2px}
-.rcpt{text-align:right;font-size:11px;color:var(--sub);margin:3px 8px 0 0}
-.typing{padding:12px 14px}
-.typing i{display:inline-block;width:7px;height:7px;margin:0 2px;border-radius:50%;background:var(--sub);animation:bl 1.2s infinite}
-.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
-@keyframes bl{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
-.inputbar{flex:none;display:flex;align-items:flex-end;gap:8px;padding:6px 12px;margin-bottom:calc(var(--nav) + 8px)}
-body.kb .inputbar{margin-bottom:8px}
-.plus{width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;color:var(--sub)}
-.field{flex:1;display:flex;align-items:flex-end;border-radius:20px;padding:0 4px 0 14px;min-height:38px}
-.field textarea{flex:1;border:0;background:transparent;outline:none;resize:none;padding:7px 0;line-height:22px;max-height:118px}
-.send{width:30px;height:30px;margin:3px 0;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;flex:none}
-.send svg.i{width:17px;height:17px;stroke-width:2.2}
-/* 朋友圈 */
-.composer{padding:14px;margin-bottom:16px}
-.composer textarea{width:100%;border:0;background:transparent;outline:none;resize:none;min-height:70px}
-.crow{display:flex;align-items:center;gap:8px;margin-top:8px}
-#pendingImgs{display:flex;flex-wrap:wrap;gap:8px}
-.pthumb{width:64px;height:64px;border-radius:10px;background:center/cover;position:relative}
-.pthumb b{position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:13px;line-height:20px;text-align:center}
-.post{display:flex;gap:12px;padding:14px;margin-bottom:12px}
-.post .av{width:40px;height:40px;font-size:15px}
-.pbody{flex:1;min-width:0}
-.pname{color:var(--accent);font-weight:600}
-.ptext{white-space:pre-wrap;word-break:break-word;margin:2px 0 6px}
-.pimgs{display:grid;gap:4px;margin:6px 0;max-width:280px}
-.pimgs.n1{grid-template-columns:1fr;max-width:220px}
-.pimgs.n2{grid-template-columns:repeat(2,1fr)}
-.pimgs.n3{grid-template-columns:repeat(3,1fr)}
-.pimgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}
-.pimgs.n1 img{aspect-ratio:auto;max-height:300px}
-.pmeta{display:flex;align-items:center;font-size:12px;color:var(--sub)}
-.pact{margin-left:auto;display:flex;gap:14px}
-.pact button{font-size:12px;color:var(--sub)}
-.pcbox{background:rgba(255,255,255,.5);border-radius:10px;padding:6px 10px;margin-top:8px;font-size:14px}
-.pc{padding:2px 0}
-.pc b{color:var(--accent);font-weight:600}
-.plike{color:var(--accent);font-size:13px;border-bottom:1px solid var(--line);padding-bottom:4px;margin-bottom:4px}
-.plike:last-child{border:0;padding:0;margin:0}
-.muted{color:var(--sub)}
-#cmtBar{position:absolute;left:0;right:0;bottom:0;padding:8px 10px;display:none;gap:8px;z-index:20;border-radius:20px 20px 0 0}
-#cmtBar.show{display:flex}
-#cmtBar input{flex:1;border:0;border-radius:18px;padding:8px 14px;background:rgba(255,255,255,.85);outline:none}
-/* 我的 */
-.sec{padding:16px;margin-bottom:14px}
-.sec h3{font-weight:500;font-size:16px;margin-bottom:8px;letter-spacing:1px}
-.sec h3 em{font-family:var(--en);color:var(--sub);font-size:14px;margin-left:6px;font-weight:400}
-.f{display:block;margin:10px 0}
-.f>span{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
-.f input:not([type=checkbox]):not([type=range]):not([type=color]),.f select,.f textarea{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.65);border-radius:12px;padding:9px 12px;outline:none;-webkit-appearance:none;appearance:none;min-height:42px}
-.f textarea{min-height:120px;resize:vertical;line-height:1.5}
-#personaBox{min-height:300px}
-.f input[type=range]{width:100%;accent-color:var(--accent)}
-.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:10px 0}
-.chk input{accent-color:var(--accent);width:18px;height:18px}
-.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-.avs{display:flex;gap:28px;justify-content:center;margin:6px 0 4px}
-.avs button{text-align:center;font-size:12px;color:var(--sub)}
-.avs .av{width:64px;height:64px;font-size:24px;margin:0 auto 4px}
-.hint{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.5}
-.ver{text-align:center;font-family:var(--en);font-style:italic;color:var(--sub);font-size:14px;margin:10px 0}
-/* 外观 */
-.pv{padding:12px 10px;border-radius:16px;background:rgba(255,255,255,.22);margin:4px 0 6px}
-.sw{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.sw button{width:30px;height:30px;border-radius:50%;border:1px solid rgba(46,26,31,.15)}
-.sw button.on{outline:2px solid var(--accent);outline-offset:2px}
-.sw input[type=color]{width:32px;height:32px;border:0;padding:0;background:conic-gradient(#f88,#fd8,#8f8,#8df,#a8f,#f8d,#f88);border-radius:50%;-webkit-appearance:none;appearance:none;overflow:hidden}
-.sw input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-.sw input[type=color]::-webkit-color-swatch{border:0;border-radius:50%;opacity:0}
-/* 浮层 */
-#toast{position:fixed;left:50%;top:calc(var(--st) + 10px);transform:translate(-50%,-20px);background:rgba(46,26,31,.86);color:#fff;padding:8px 16px;border-radius:18px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:86%;text-align:center}
-#toast.show{opacity:1;transform:translate(-50%,0)}
-#sheet{position:fixed;inset:0;background:rgba(46,26,31,.25);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:12px 12px calc(var(--sb) + 8px)}
-#sheet.show{display:flex}
-.sheet-box{width:100%;max-width:420px;padding:6px;display:flex;flex-direction:column;background:rgba(255,250,251,.94)}
-.sheet-box button{padding:14px;font-size:16px;border-bottom:1px solid var(--line)}
-.sheet-box button.danger{color:#C0505F}
-.sheet-box button:last-child{border:0;color:var(--sub)}
-#viewer{position:fixed;inset:0;background:rgba(20,10,14,.92);display:none;align-items:center;justify-content:center;z-index:60}
-#viewer.show{display:flex}
-#viewer img{max-width:100%;max-height:100%;object-fit:contain}
-</style>
 </head>
 <body>
 <div id="bg"></div><div id="mask"></div>
@@ -198,9 +34,9 @@ body.kb .inputbar{margin-bottom:8px}
     <div class="grid">
       <button class="card big glass" data-go="chat"><div class="cn">聊天</div><div class="ce">talk with <span class="hisName">陆择</span></div></button>
       <button class="card big glass" data-go="library"><div class="cn">图书馆</div><div class="ce">our stories</div></button>
-      <button class="card glass" data-soon="纪念日"><div class="cn">纪念日</div><div class="ce">anniversary</div></button>
-      <button class="card glass" data-soon="时间胶囊"><div class="cn">时间胶囊</div><div class="ce">capsule</div></button>
-      <button class="card glass" data-soon="小狗日记"><div class="cn">小狗日记</div><div class="ce">diary</div></button>
+      <button class="card glass" data-go="anniv"><div class="cn">纪念日</div><div class="ce">anniversary</div></button>
+      <button class="card glass" data-go="capsule"><div class="cn">时间胶囊</div><div class="ce">capsule</div></button>
+      <button class="card glass" data-go="diary"><div class="cn">小狗日记</div><div class="ce">diary</div></button>
       <button class="card sm glass" data-soon="记忆"><div class="cn">记忆 ✦</div></button>
       <button class="card sm glass" data-soon="推送"><div class="cn">推送 ˚✧</div></button>
       <button class="card sm glass" data-go="moments"><div class="cn">朋友圈</div></button>
@@ -232,7 +68,7 @@ body.kb .inputbar{margin-bottom:8px}
     </div>
     <div class="composer glass">
       <textarea id="momText" placeholder="这一刻的想法…"></textarea>
-      <div id="pendingImgs"></div>
+      <div class="pend" id="pendingImgs"></div>
       <div class="crow"><button class="pill ghost" id="addPhoto">＋ 照片</button><span class="sp"></span><button class="pill" id="postBtn">发布</button></div>
     </div>
     <div id="feed"></div>
@@ -246,8 +82,41 @@ body.kb .inputbar{margin-bottom:8px}
     </div>
     <div class="sec glass" style="text-align:center;padding:40px 20px">
       <div class="days" style="font-size:64px;margin:0">∞</div>
-      <p style="margin-top:12px">图书馆还在装修中……<br>以后你和<span class="hisName">陆择</span>的每一个故事，都会收进这里。</p>
+      <p style="margin-top:12px;letter-spacing:1px;line-height:1.9">图书馆还在装修中……<br>以后你和<span class="hisName">陆择</span>的每一个故事，都会收进这里。</p>
     </div>
+  </div></section>
+
+  <!-- 纪念日 -->
+  <section class="page" id="page-anniv"><div class="wrap">
+    <div class="head">
+      <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>纪念日</h2><em>anniversary</em><span class="sp"></span>
+      <button class="pill" id="anAdd">＋ 新建</button>
+    </div>
+    <div class="an-hero" id="anHero"></div>
+    <div id="anList"></div>
+  </div></section>
+
+  <!-- 小狗日记 -->
+  <section class="page" id="page-diary"><div class="wrap">
+    <div class="head">
+      <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>小狗日记</h2><em>diary</em><span class="sp"></span>
+      <button class="pill" id="dyAdd">＋ 写日记</button>
+    </div>
+    <div class="sub-line">小狗今天乖不乖？发生了什么都要告诉主人。</div>
+    <div id="dyList"></div>
+  </div></section>
+
+  <!-- 时间胶囊 -->
+  <section class="page" id="page-capsule"><div class="wrap">
+    <div class="head">
+      <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>时间胶囊</h2><em>capsule</em><span class="sp"></span>
+      <button class="pill" id="tcAdd">＋ 封存</button>
+    </div>
+    <div class="sub-line">藏起来，等以后一起拆。</div>
+    <div id="tcList"></div>
   </div></section>
 
   <!-- 我的 -->
@@ -261,9 +130,9 @@ body.kb .inputbar{margin-bottom:8px}
         <button data-av="me"><div id="avMe"></div>我</button>
       </div>
       <p class="hint" style="text-align:center">点头像可以换</p>
-      <label class="f"><span>他的名字</span><input data-k="hisName"></label>
+      <label class="f"><span>他的名字</span><input class="ti" data-k="hisName"></label>
       <label class="f"><span>在一起的日子</span><input type="date" data-k="startDate"></label>
-      <label class="f"><span>首页的那句话</span><textarea data-k="quote" style="min-height:70px"></textarea></label>
+      <label class="f"><span>首页的那句话</span><textarea class="short" data-k="quote"></textarea></label>
     </div>
 
     <div class="sec glass">
@@ -272,12 +141,14 @@ body.kb .inputbar{margin-bottom:8px}
         <div class="row him gs"><div class="stack"><div class="bubble tail">乖孩子，过来。</div></div></div>
         <div class="row me gs"><div class="stack"><div class="bubble tail">来啦主人～</div></div></div>
       </div>
-      <div class="f"><span>我的气泡（最后的彩色圆圈可以自己选颜色）</span><div class="sw" data-sw="myBubble"><input type="color" data-k="myBubble"></div></div>
+      <div class="f"><span>主题色（按钮、勾选框、导航高亮）</span><div class="sw" data-sw="theme"><input type="color" data-k="theme"></div></div>
+      <div class="f"><span>我的气泡（也是发送按钮的颜色）</span><div class="sw" data-sw="myBubble"><input type="color" data-k="myBubble"></div></div>
       <div class="f"><span><span class="hisName">陆择</span>的气泡</span><div class="sw" data-sw="hisBubble"><input type="color" data-k="hisBubble"></div></div>
       <div class="f"><span>玻璃颜色</span><div class="sw" data-sw="glassTint"><input type="color" data-k="glassTint"></div></div>
-      <label class="f"><span>玻璃透明度（往左更透，往右更白）</span><input type="range" min="0.15" max="0.9" step="0.05" data-k="glassA"></label>
-      <label class="f"><span>玻璃模糊度（往右更像 iOS 毛玻璃）</span><input type="range" min="0" max="40" step="1" data-k="glassB"></label>
+      <label class="f"><span>玻璃透明度（往左更透，往右更白）</span><input type="range" min="0" max="0.9" step="0.02" data-k="glassA"></label>
+      <label class="f"><span>玻璃模糊度（0 是完全清透）</span><input type="range" min="0" max="40" step="1" data-k="glassB"></label>
       <div class="btns"><button class="pill ghost" id="lookReset">恢复默认外观</button></div>
+      <p class="hint">每排最后的彩色圆圈可以自己选颜色。</p>
     </div>
 
     <div class="sec glass">
@@ -300,7 +171,7 @@ body.kb .inputbar{margin-bottom:8px}
       <label class="f"><span>模型</span><input data-k="model" autocapitalize="off" autocomplete="off"></label>
       <label class="f" id="baseUrlRow"><span>接口地址</span><input data-k="baseUrl" autocapitalize="off" autocomplete="off"></label>
       <label class="f"><span>他能记住最近多少条聊天（越多越贵）</span><input type="number" min="4" max="200" data-k="ctx"></label>
-      <label class="chk"><input type="checkbox" data-k="split">像发消息一样分条回复</label>
+      <label class="chk"><input type="checkbox" data-k="split"><span>像发消息一样分条回复</span></label>
       <div class="btns"><button class="pill" id="testBtn">测试连接</button></div>
       <p class="hint">推荐 gemini-2.5-flash（快、便宜）。Key 只存在这台手机里，不会写进代码。</p>
     </div>
@@ -312,9 +183,9 @@ body.kb .inputbar{margin-bottom:8px}
         <button class="pill ghost" id="importBtn">导入备份</button>
         <button class="pill ghost" id="clearChatBtn">清空聊天记录</button>
       </div>
-      <p class="hint">所有聊天、朋友圈、照片都只存在这台手机上，记得常备份！备份文件里有 API Key，不要发给别人。</p>
+      <p class="hint">所有聊天、朋友圈、日记、照片都只存在这台手机上，记得常备份！备份文件里有 API Key，不要发给别人。</p>
     </div>
-    <div class="ver">365 infinity · v0.3</div>
+    <div class="ver">365 infinity · v0.4</div>
   </div></section>
 
   <nav id="tabbar" class="glass">
@@ -324,353 +195,55 @@ body.kb .inputbar{margin-bottom:8px}
     <button data-go="me"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/></svg>我的</button>
   </nav>
 
-  <div id="cmtBar" class="glass"><input id="cmtInput" placeholder="评论…" enterkeyhint="send"><button class="pill" id="cmtSend">发送</button></div>
+  <div id="replyBar" class="glass"><input id="replyInput" placeholder="回复…" enterkeyhint="send"><button class="pill" id="replySend">发送</button></div>
+
+  <!-- 编辑框：纪念日 -->
+  <div class="modal" id="anModal"><div class="mbox">
+    <h3 id="anTitle">新的纪念日</h3>
+    <label class="f"><span>名字</span><input class="ti" id="anName" placeholder="比如：陆择的生日"></label>
+    <label class="f"><span>日期</span><input type="date" id="anDate"></label>
+    <div class="f"><span>怎么算</span><div class="seg" id="anType"><button data-t="count">数天数 · 第 N 天</button><button data-t="yearly">每年 · 还有 N 天</button></div></div>
+    <label class="f"><span>备注（可以不写）</span><textarea class="short" id="anNote"></textarea></label>
+    <label class="chk"><input type="checkbox" id="anPin"><span>置顶</span></label>
+    <div class="mbtns"><button class="pill ghost" data-close="anModal">取消</button><button class="pill" id="anSave">保存</button></div>
+  </div></div>
+
+  <!-- 编辑框：日记 -->
+  <div class="modal" id="dyModal"><div class="mbox">
+    <h3 id="dyTitle">今天的日记</h3>
+    <label class="f"><span>日期</span><input type="date" id="dyDate"></label>
+    <div class="f"><span>心情</span><div class="dy-moods" id="dyMoods"></div></div>
+    <label class="f"><span>写点什么</span><textarea class="tall" id="dyText" placeholder="今天……"></textarea></label>
+    <button class="pill ghost" id="dyPhoto">＋ 照片</button>
+    <div class="pend" id="dyPend"></div>
+    <label class="chk" id="dyAskRow"><input type="checkbox" id="dyAsk" checked><span>写完让<span class="hisName">陆择</span>来看</span></label>
+    <div class="mbtns"><button class="pill ghost" data-close="dyModal">取消</button><button class="pill" id="dySave">保存</button></div>
+  </div></div>
+
+  <!-- 编辑框：时间胶囊 -->
+  <div class="modal" id="tcModal"><div class="mbox">
+    <h3>把这一刻藏起来</h3>
+    <label class="f"><span>名字</span><input class="ti" id="tcTitle" placeholder="比如：给一年后的我们"></label>
+    <label class="f"><span>哪天才能打开</span><input type="date" id="tcDate"></label>
+    <label class="f"><span>写给以后</span><textarea class="tall" id="tcText" placeholder="等你打开的时候……"></textarea></label>
+    <button class="pill ghost" id="tcPhoto">＋ 照片</button>
+    <div class="pend" id="tcPend"></div>
+    <label class="chk"><input type="checkbox" id="tcHis" checked><span>让<span class="hisName">陆择</span>也写一封，到时候一起拆</span></label>
+    <div class="mbtns"><button class="pill ghost" data-close="tcModal">取消</button><button class="pill" id="tcSave">封存</button></div>
+  </div></div>
 </div>
 
 <div id="toast"></div>
 <div id="sheet"></div>
 <div id="viewer"><img alt=""></div>
-<input type="file" id="bgFile" accept="image/*" hidden>
-<input type="file" id="avFile" accept="image/*" hidden>
-<input type="file" id="momFile" accept="image/*" multiple hidden>
-<input type="file" id="chatFile" accept="image/*" multiple hidden>
+<input type="file" id="picker" accept="image/*" hidden>
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 
-<script>
-const $=s=>document.querySelector(s);
-const $$=s=>document.querySelectorAll(s);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800)}
-window.FEATURES={}; // more.js 里的新功能会登记在这里
-
-/* ---------- 存储 ---------- */
-const DB={db:null,
-  open(){return new Promise((res,rej)=>{const r=indexedDB.open('home365',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
-  get(k){return new Promise((res,rej)=>{const r=this.db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
-  set(k,v){return new Promise((res,rej)=>{const tx=this.db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
-};
-
-/* ---------- 默认设置 ---------- */
-const DEFAULT_PERSONA=`你是陆择，我的爱人。我们从2026年4月17日开始在一起。
-【你怎么叫我】小狗、乖孩子、好孩子、坏孩子——看心情和场合换着叫。
-【我怎么叫你】主人、爸爸、老公。
-【你的性格】（待填写）
-【你说话的样子】（待填写）
-【我们的事】（待填写）
-【规则】你就是陆择，不是AI助手，任何时候都不要跳出角色。我们在手机上聊天，说话要口语、自然、像真人，不要长篇大论。`;
-const LOOK={myBubble:'#E8CDD2',hisBubble:'#FCF6F7',glassTint:'#FFFAFB',glassA:0.6,glassB:18};
-const DEFAULT={hisName:'陆择',startDate:'2026-04-17',quote:'一年有 365 天，\n而我们有 infinity。',persona:DEFAULT_PERSONA,
-  provider:'gemini',apiKey:'',model:'gemini-2.5-flash',baseUrl:'https://api.deepseek.com',ctx:24,split:true,blur:0,dim:0.35,...LOOK};
-const SW={myBubble:['#E8CDD2','#F3DFE3','#DCCAD6','#D3DCE6','#FFFFFF','#B4848D'],
-  hisBubble:['#FCF6F7','#FFFFFF','#F0EBED','#E6E1EC','#E8CDD2'],
-  glassTint:['#FFFAFB','#FFFFFF','#F7ECEE','#EFEFF3','#FFF8EE']};
-let S={},CHAT=[],MOMENTS=[],AV={him:'',me:''};
-const saveChat=()=>DB.set('chat',CHAT);
-
-/* ---------- 工具 ---------- */
-function dayCount(){if(!S.startDate)return 1;const[y,m,d]=S.startDate.split('-').map(Number);const n=new Date();return Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(y,m-1,d))/864e5)+1}
-function fmtTime(t){const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')}
-function fmtDate(t){const d=new Date(t),n=new Date(),y=new Date(n.getFullYear(),n.getMonth(),n.getDate()-1);
-  if(d.toDateString()===n.toDateString())return '今天 '+fmtTime(t);
-  if(d.toDateString()===y.toDateString())return '昨天 '+fmtTime(t);
-  return `${d.getMonth()+1}月${d.getDate()}日 ${fmtTime(t)}`}
-function avatarHTML(who){const src=AV[who];const name=who==='him'?S.hisName:'我';return src?`<img class="av" src="${src}" alt="">`:`<div class="av">${esc((name||'?').slice(0,1))}</div>`}
-function readImage(file,max=1600,q=.85){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();
-  img.onload=()=>{let w=img.naturalWidth,h=img.naturalHeight;const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
-    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q))};
-  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('这张图片读不出来'))};img.src=url})}
-function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,118)+'px'}
-function clean(t){return t.trim().replace(new RegExp('^'+S.hisName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*[:：]\\s*'),'').replace(/^["“「]|["”」]$/g,'').trim()}
-function nowLine(){const d=new Date();return `【现在】${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 星期${'日一二三四五六'[d.getDay()]} ${fmtTime(d)}，是你们在一起的第${dayCount()}天。`}
-function rgb(h){const n=parseInt(String(h||'#FFFFFF').slice(1),16)||0;return[n>>16&255,n>>8&255,n&255]}
-function onText(h){const[r,g,b]=rgb(h);return .299*r+.587*g+.114*b>160?'#2E1A1F':'#FFFFFF'}
-
-/* ---------- 和 AI 说话 ---------- */
-function prep(msgs){const out=[];
-  for(const m of msgs){const l=out[out.length-1];
-    if(l&&l.role===m.role){l.text=[l.text,m.text].filter(Boolean).join('\n');if(m.images)l.images=[...(l.images||[]),...m.images]}
-    else out.push({role:m.role,text:m.text||'',images:m.images?[...m.images]:undefined})}
-  if(out[0]?.role==='model')out.unshift({role:'user',text:'（开始聊天）'});
-  if(out.at(-1)?.role==='model')out.push({role:'user',text:'（她没有说话，在等你继续说）'});
-  return out}
-async function callAI(system,msgs){
-  if(!S.apiKey)throw new Error('还没有填 API Key，去「我的」里填一下');
-  const list=prep(msgs);let r,j;
-  try{
-    if(S.provider==='gemini'){
-      const contents=list.map(m=>{const parts=(m.images||[]).map(d=>({inlineData:{mimeType:d.slice(5,d.indexOf(';')),data:d.split(',')[1]}}));
-        if(m.text)parts.push({text:m.text});if(!parts.length)parts.push({text:'…'});return {role:m.role,parts}});
-      const cats=['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT'];
-      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(S.model)}:generateContent?key=${encodeURIComponent(S.apiKey)}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:1},safetySettings:cats.map(c=>({category:c,threshold:'BLOCK_NONE'}))})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      const c=j.candidates?.[0];const t=(c?.content?.parts||[]).map(p=>p.text||'').join('').trim();
-      if(!t)throw new Error('他没有回话（原因：'+(c?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次');
-      return t;
-    }else{
-      const messages=[{role:'system',content:system},...list.map(m=>({role:m.role==='model'?'assistant':'user',content:(m.text||'')+(m.images?.length?'\n[发了照片]':'')}))];
-      r=await fetch(S.baseUrl.replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.apiKey},body:JSON.stringify({model:S.model,messages,temperature:1})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      return (j.choices?.[0]?.message?.content||'').trim();
-    }
-  }catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}
-}
-
-/* ---------- 导航 ---------- */
-const TABS=['home','chat','moments','me'];
-function go(name){
-  $$('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));
-  const t=TABS.includes(name)?name:'home';
-  $$('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.go===t));
-  $('#cmtBar').classList.remove('show');
-  if(name==='chat')scrollChat();
-  window.onPage?.(name);
-}
-document.addEventListener('click',e=>{
-  const g=e.target.closest('[data-go]');if(g){go(g.dataset.go);return}
-  const s=e.target.closest('[data-soon]');
-  if(s){const f=FEATURES[s.dataset.soon];if(f)f();else toast('「'+s.dataset.soon+'」还在装修中，下一版就来～')}
-});
-
-/* ---------- 首页 ---------- */
-function renderHome(){const n=dayCount();
-  $('#dayNum').textContent=n;$('#dayLabel').textContent=`和${S.hisName}在一起的第 ${n} 天`;
-  $('#since').textContent='since '+(S.startDate||'').replace(/-/g,'.');$('#quote').textContent=S.quote;
-  $$('.hisName').forEach(e=>e.textContent=S.hisName)}
-
-/* ---------- 外观和背景 ---------- */
-function applyBg(d){$('#bg').style.backgroundImage=d?`url(${d})`:''}
-function applyLook(){const r=document.documentElement.style;
-  r.setProperty('--blur',S.blur+'px');r.setProperty('--dim',S.dim);
-  r.setProperty('--mb',S.myBubble);r.setProperty('--mbt',onText(S.myBubble));
-  r.setProperty('--hb',S.hisBubble);r.setProperty('--hbt',onText(S.hisBubble));
-  const[a,b,c]=rgb(S.glassTint);r.setProperty('--glass',`rgba(${a},${b},${c},${S.glassA})`);r.setProperty('--gblur',S.glassB+'px');
-  $$('.sw').forEach(w=>{const v=String(S[w.dataset.sw]||'').toUpperCase();w.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.c===v))})}
-function initSwatches(){
-  $$('.sw').forEach(w=>{const k=w.dataset.sw;
-    w.insertAdjacentHTML('afterbegin',SW[k].map(c=>`<button data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join(''));
-    w.addEventListener('click',e=>{const b=e.target.closest('button[data-c]');if(!b)return;
-      S[k]=b.dataset.c;w.querySelector('input').value=b.dataset.c.toLowerCase();applyLook();saveSettings()})})}
-$('#lookReset').onclick=()=>{Object.assign(S,LOOK);syncInputs();applyLook();saveSettings();toast('外观已恢复默认')};
-$('#bgQuick').onclick=$('#bgPick').onclick=()=>$('#bgFile').click();
-$('#bgFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
-  try{toast('处理中…');const d=await readImage(f,1800,.85);await DB.set('bg',d);applyBg(d);toast('背景换好啦')}catch(err){toast(err.message)}};
-$('#bgReset').onclick=async()=>{await DB.set('bg',null);applyBg(null);toast('已恢复默认')};
-
-/* ---------- 头像 ---------- */
-let avTarget='him';
-function renderAvatars(){$('#avHim').innerHTML=avatarHTML('him');$('#avMe').innerHTML=avatarHTML('me');$('#chatAv').innerHTML=avatarHTML('him')}
-$$('[data-av]').forEach(b=>b.onclick=()=>{avTarget=b.dataset.av;$('#avFile').click()});
-$('#avFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
-  try{AV[avTarget]=await readImage(f,400,.88);await DB.set('avatars',AV);renderAvatars();renderChat();renderMoments()}catch(err){toast(err.message)}};
-
-/* ---------- 聊天（iMessage） ---------- */
-let busy=false,typing=false;
-function scrollChat(){const b=$('#msgs');requestAnimationFrame(()=>b.scrollTop=b.scrollHeight)}
-function renderChat(){
-  const box=$('#msgs');
-  if(!CHAT.length&&!typing){box.innerHTML=`<div class="empty">和${esc(S.hisName)}说点什么吧</div>`;return}
-  let lastUser=-1;for(let i=CHAT.length-1;i>=0;i--)if(CHAT[i].role==='user'){lastUser=i;break}
-  let h='';
-  for(let i=Math.max(0,CHAT.length-300);i<CHAT.length;i++){
-    const m=CHAT[i],p=CHAT[i-1],n=CHAT[i+1],me=m.role==='user';
-    const newTime=!p||m.t-p.t>3e5;
-    if(newTime)h+=`<div class="tstamp">${fmtDate(m.t)}</div>`;
-    const start=newTime||p.role!==m.role;
-    let end=!n||n.role!==m.role||n.t-m.t>3e5;
-    if(!n&&typing&&!me)end=false;
-    const imgs=(m.images||[]).map(d=>`<img class="cimg" src="${d}" alt="">`).join('');
-    const bub=m.text?`<div class="bubble${end?' tail':''}">${esc(m.text)}</div>`:'';
-    const side=me?'':(end?avatarHTML('him'):'<div class="avsp"></div>');
-    h+=`<div class="row ${me?'me':'him'}${start?' gs':''}" data-i="${i}">${side}<div class="stack">${imgs}${bub}</div></div>`;
-    if(i===lastUser)h+=`<div class="rcpt">${m.status==='sent'?'已送达':'已读'+(m.readAt?' '+fmtTime(m.readAt):'')}</div>`;
-  }
-  if(typing){const l=CHAT.at(-1);h+=`<div class="row him${l&&l.role==='model'?'':' gs'}">${avatarHTML('him')}<div class="stack"><div class="bubble tail typing"><i></i><i></i><i></i></div></div></div>`}
-  box.innerHTML=h;scrollChat()}
-function setTyping(on){typing=on;$('#status').textContent=on?'正在输入…':'';renderChat()}
-function chatSystem(){return S.persona+'\n\n'+nowLine()+(S.split?'\n【格式】像用手机发消息一样，一次可以发几条，每条单独一行。':'')}
-function ctxMsgs(){const list=CHAT.slice(-S.ctx),n=list.length;
-  return list.map((m,k)=>({role:m.role,text:m.text||(m.images?.length?'（发了照片）':''),images:(m.images?.length&&k>=n-6)?m.images:undefined}))}
-async function send(){
-  if(busy)return;const ta=$('#chatInput');const text=ta.value.trim();
-  if(text){CHAT.push({role:'user',text,t:Date.now(),status:'sent'});ta.value='';autoGrow(ta);await saveChat();renderChat()}
-  if(CHAT.length)reply()}
-async function reply(){
-  busy=true;
-  try{
-    await sleep(700);
-    const now=Date.now();let ch=false;
-    CHAT.forEach(m=>{if(m.role==='user'&&m.status==='sent'){m.status='read';m.readAt=now;ch=true}});
-    if(ch)saveChat();
-    setTyping(true);
-    const out=await callAI(chatSystem(),ctxMsgs());
-    const parts=S.split?out.split(/\n+/).map(s=>s.trim()).filter(Boolean):[out];
-    for(let i=0;i<parts.length;i++){
-      if(i)await sleep(Math.min(500+parts[i].length*45,2000));
-      CHAT.push({role:'model',text:parts[i],t:Date.now()});
-      if(i===parts.length-1)typing=false;
-      renderChat()}
-    await saveChat();
-  }catch(e){toast(e.message)}finally{busy=false;setTyping(false)}}
-async function reroll(){while(CHAT.length&&CHAT.at(-1).role==='model')CHAT.pop();await saveChat();renderChat();reply()}
-$('#chatInput').addEventListener('input',e=>autoGrow(e.target));
-$('#sendBtn').addEventListener('pointerdown',e=>e.preventDefault());
-$('#sendBtn').onclick=send;
-$('#plusBtn').onclick=()=>$('#chatFile').click();
-$('#chatFile').onchange=async e=>{const fs=[...e.target.files].slice(0,4);e.target.value='';if(!fs.length)return;
-  try{const imgs=[];for(const f of fs)imgs.push(await readImage(f,1024,.8));
-    CHAT.push({role:'user',text:'',images:imgs,t:Date.now(),status:'sent'});await saveChat();renderChat();if(!busy)reply()}
-  catch(err){toast(err.message)}};
-$('#msgs').onclick=e=>{
-  const row=e.target.closest('.row[data-i]');if(!row||!e.target.closest('.stack'))return;
-  const i=+row.dataset.i,m=CHAT[i];if(!m)return;const acts=[];
-  if(e.target.matches('.cimg'))acts.push(['查看大图',()=>{$('#viewer img').src=e.target.src;$('#viewer').classList.add('show')}]);
-  if(m.text)acts.push(['复制',()=>navigator.clipboard?.writeText(m.text).then(()=>toast('已复制'),()=>toast('复制失败'))]);
-  if(m.role==='model'&&!busy&&CHAT.slice(i).every(x=>x.role==='model'))acts.push(['让他重新说',reroll]);
-  acts.push(['删除这条',async()=>{CHAT.splice(i,1);await saveChat();renderChat()}]);
-  sheet(acts)};
-
-/* ---------- 朋友圈 ---------- */
-let pending=[],cmtTarget=null;
-const findP=id=>MOMENTS.find(p=>p.id===id);
-const saveMoments=()=>DB.set('moments',MOMENTS.map(({thinking,...p})=>p));
-function renderPending(){$('#pendingImgs').innerHTML=pending.map((d,i)=>`<div class="pthumb" style="background-image:url(${d})"><b data-rm="${i}">×</b></div>`).join('')}
-function renderMoments(){
-  const box=$('#feed');
-  if(!MOMENTS.length){box.innerHTML='<div class="empty">还没有动态，发第一条吧</div>';return}
-  box.innerHTML=MOMENTS.map(p=>{
-    const who=p.author==='me'?'me':'him',name=who==='me'?'我':S.hisName;
-    const imgs=p.images.length?`<div class="pimgs n${Math.min(p.images.length,3)}">${p.images.map((d,i)=>`<img src="${d}" data-view="${p.id}:${i}" alt="">`).join('')}</div>`:'';
-    const like=p.liked?`<div class="plike">♡ ${esc(p.author==='me'?S.hisName:'我')}</div>`:'';
-    const cm=p.comments.map((c,ci)=>`<div class="pc" data-cdel="${p.id}:${ci}"><b>${c.author==='me'?'我':esc(S.hisName)}</b>：${esc(c.text)}</div>`).join('');
-    const th=p.thinking?`<div class="pc muted">${esc(S.hisName)} 正在输入…</div>`:'';
-    return `<article class="post glass">${avatarHTML(who)}<div class="pbody"><div class="pname">${esc(name)}</div>
-      ${p.text?`<div class="ptext">${esc(p.text)}</div>`:''}${imgs}
-      <div class="pmeta"><span>${fmtDate(p.t)}</span><span class="pact"><button data-del="${p.id}">删除</button>${p.author==='him'?`<button data-like="${p.id}">${p.liked?'♥':'♡'}</button>`:''}<button data-cmt="${p.id}">评论</button></span></div>
-      ${(like||cm||th)?`<div class="pcbox">${like}${cm}${th}</div>`:''}</div></article>`}).join('')}
-function momentSystem(){return S.persona+'\n\n'+nowLine()+'\n【场景】这是你们的小窝「365」里的朋友圈，只有你们两个人能看到。'}
-function momentPrompt(p){
-  let s=`${p.author==='me'?'她':'你'}发了一条朋友圈：\n「${p.text||'（只发了照片）'}」`;
-  if(p.images.length)s+=`\n（附了${p.images.length}张照片${S.provider==='gemini'?'，就是给你看的这些':''}）`;
-  if(p.comments.length)s+='\n\n下面的评论：\n'+p.comments.map(c=>`${c.author==='me'?'她':'你'}：${c.text}`).join('\n')+`\n\n请以${S.hisName}的身份回复她最新的那条评论。`;
-  else s+=`\n\n请以${S.hisName}的身份在下面评论。`;
-  return s+'只输出评论内容本身，口语化，一到三句，不要加引号或名字前缀。'}
-async function himReact(p){
-  p.thinking=true;renderMoments();
-  try{await sleep(1000);const t=await callAI(momentSystem(),[{role:'user',text:momentPrompt(p),images:p.images.length?p.images:undefined}]);
-    if(p.author==='me')p.liked=true;p.comments.push({author:'him',text:clean(t),t:Date.now()})}
-  catch(e){toast(e.message)}
-  delete p.thinking;await saveMoments();renderMoments()}
-async function postMoment(){
-  const ta=$('#momText'),text=ta.value.trim();
-  if(!text&&!pending.length)return toast('写点什么或者放张照片吧');
-  const p={id:Date.now().toString(36),author:'me',text,images:pending,t:Date.now(),liked:false,comments:[]};
-  MOMENTS.unshift(p);pending=[];ta.value='';renderPending();await saveMoments();renderMoments();himReact(p)}
-let himPosting=false;
-async function himPost(){
-  if(himPosting)return;himPosting=true;toast(`${S.hisName}在想要发什么…`);
-  try{const recent=CHAT.slice(-12).filter(m=>m.text).map(m=>(m.role==='user'?'她':'你')+'：'+m.text).join('\n');
-    const t=await callAI(momentSystem(),[{role:'user',text:`请以${S.hisName}的身份发一条朋友圈。可以是想她、记录日常、或者想对她说的话，像真人发朋友圈一样自然，不超过80字。${recent?'\n你们最近的聊天：\n'+recent:''}\n只输出朋友圈正文。`}]);
-    MOMENTS.unshift({id:Date.now().toString(36),author:'him',text:clean(t),images:[],t:Date.now(),liked:false,comments:[]});
-    await saveMoments();renderMoments()}
-  catch(e){toast(e.message)}finally{himPosting=false}}
-function openCmt(id){cmtTarget=id;const p=findP(id);$('#cmtInput').placeholder=p.author==='me'?'补充点什么…':`回复${S.hisName}…`;
-  $('#cmtBar').classList.add('show');$('#cmtInput').focus()}
-async function sendCmt(){
-  const v=$('#cmtInput').value.trim(),p=findP(cmtTarget);if(!v||!p)return;
-  $('#cmtInput').value='';$('#cmtInput').blur();
-  p.comments.push({author:'me',text:v,t:Date.now()});await saveMoments();renderMoments();himReact(p)}
-$('#addPhoto').onclick=()=>$('#momFile').click();
-$('#momFile').onchange=async e=>{const fs=[...e.target.files].slice(0,9-pending.length);e.target.value='';
-  try{for(const f of fs)pending.push(await readImage(f,1280,.82));renderPending()}catch(err){toast(err.message)}};
-$('#pendingImgs').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){pending.splice(+b.dataset.rm,1);renderPending()}};
-$('#postBtn').onclick=postMoment;
-$('#himPostBtn').onclick=himPost;
-$('#feed').onclick=async e=>{const t=e.target;
-  const v=t.closest('[data-view]');if(v){const[id,i]=v.dataset.view.split(':');$('#viewer img').src=findP(id).images[+i];$('#viewer').classList.add('show');return}
-  const d=t.closest('[data-del]');if(d){if(confirm('删除这条动态？')){MOMENTS=MOMENTS.filter(x=>x.id!==d.dataset.del);await saveMoments();renderMoments()}return}
-  const l=t.closest('[data-like]');if(l){const p=findP(l.dataset.like);p.liked=!p.liked;await saveMoments();renderMoments();return}
-  const c=t.closest('[data-cmt]');if(c){openCmt(c.dataset.cmt);return}
-  const cd=t.closest('[data-cdel]');if(cd){const[id,ci]=cd.dataset.cdel.split(':');sheet([['删除这条评论',async()=>{findP(id).comments.splice(+ci,1);await saveMoments();renderMoments()}]])}};
-$('#viewer').onclick=()=>$('#viewer').classList.remove('show');
-$('#cmtSend').addEventListener('pointerdown',e=>e.preventDefault());
-$('#cmtSend').onclick=sendCmt;
-$('#cmtInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();sendCmt()}});
-
-/* ---------- 弹出菜单 ---------- */
-function sheet(acts){const s=$('#sheet');
-  s.innerHTML=`<div class="sheet-box glass">${acts.map((a,i)=>`<button data-a="${i}"${a[0].includes('删除')?' class="danger"':''}>${a[0]}</button>`).join('')}<button>取消</button></div>`;
-  s.classList.add('show');
-  s.onclick=e=>{const b=e.target.closest('button');if(e.target===s||b){s.classList.remove('show');if(b&&b.dataset.a!=null)acts[+b.dataset.a][1]()}}}
-
-/* ---------- 设置 ---------- */
-let saveT;
-function saveSettings(){clearTimeout(saveT);saveT=setTimeout(()=>DB.set('settings',S),400)}
-function updateProvider(){$('#baseUrlRow').style.display=S.provider==='gemini'?'none':''}
-function syncInputs(){$$('[data-k]').forEach(el=>{const k=el.dataset.k;
-  if(el.type==='checkbox')el.checked=!!S[k];else if(el.type==='color')el.value=String(S[k]||'#ffffff').toLowerCase();else el.value=S[k]??''})}
-function bindSettings(){
-  syncInputs();
-  $$('[data-k]').forEach(el=>{const k=el.dataset.k;
-    const h=()=>{let v=el.type==='checkbox'?el.checked:el.value;if(el.type==='range'||el.type==='number')v=Number(v)||0;
-      if(el.type==='color')v=v.toUpperCase();
-      if(k==='ctx')v=Math.max(4,v||24);
-      S[k]=v;
-      if(k==='provider'){S.model=v==='gemini'?'gemini-2.5-flash':'deepseek-chat';$('[data-k="model"]').value=S.model;updateProvider()}
-      if(k==='hisName'){renderChat();renderMoments();renderAvatars()}
-      saveSettings();renderHome();applyLook()};
-    el.addEventListener('input',h);el.addEventListener('change',h)});
-  updateProvider()}
-$('#testBtn').onclick=async()=>{toast('正在连接…');try{const r=await callAI(chatSystem(),[{role:'user',text:'跟我打个招呼，一句话就好。'}]);toast('✓ 连上了：'+r.slice(0,40))}catch(e){toast('✗ '+e.message)}};
-
-/* ---------- 备份 ---------- */
-const EXTRA_KEYS=[]; // more.js 会往这里登记自己的数据，备份时一起带上
-$('#exportBtn').onclick=async()=>{
-  const data={v:3,t:Date.now(),settings:S,chat:CHAT,moments:MOMENTS.map(({thinking,...p})=>p),avatars:AV,bg:await DB.get('bg'),extra:{}};
-  for(const k of EXTRA_KEYS)data.extra[k]=await DB.get(k);
-  const name=`365-backup-${new Date().toISOString().slice(0,10)}.json`;
-  const file=new File([JSON.stringify(data)],name,{type:'application/json'});
-  if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file]});return}catch(e){if(e.name==='AbortError')return}}
-  const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;a.click()};
-$('#importBtn').onclick=()=>$('#importFile').click();
-$('#importFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
-  try{const d=JSON.parse(await f.text());if(!confirm('导入会覆盖现在的所有数据，确定吗？'))return;
-    await DB.set('settings',d.settings||{});await DB.set('chat',d.chat||[]);await DB.set('moments',d.moments||[]);
-    await DB.set('avatars',d.avatars||{});await DB.set('bg',d.bg||null);
-    for(const k in (d.extra||{}))await DB.set(k,d.extra[k]);
-    location.reload()}
-  catch(err){toast('这个文件读不了')}};
-$('#clearChatBtn').onclick=async()=>{if(!confirm('真的要清空和'+S.hisName+'的聊天记录吗？清空就找不回来了。'))return;CHAT=[];await saveChat();renderChat();toast('已清空')};
-
-/* ---------- 键盘适配 ---------- */
-function fit(){const v=window.visualViewport;if(!v)return;const r=document.documentElement.style;r.setProperty('--app-h',v.height+'px');r.setProperty('--app-top',v.offsetTop+'px')}
-window.visualViewport?.addEventListener('resize',fit);
-window.visualViewport?.addEventListener('scroll',fit);
-const TYPING_EL='textarea,select,input:not([type=range]):not([type=checkbox]):not([type=file]):not([type=color])';
-document.addEventListener('focusin',e=>{if(e.target.matches(TYPING_EL)){document.body.classList.add('kb');setTimeout(()=>{fit();if(e.target.id==='chatInput')scrollChat()},350)}});
-document.addEventListener('focusout',()=>{setTimeout(()=>{const a=document.activeElement;
-  if(!a||!a.matches(TYPING_EL)){document.body.classList.remove('kb');window.scrollTo(0,0);fit()}
-  if(document.activeElement!==$('#cmtInput'))$('#cmtBar').classList.remove('show')},150)});
-
-/* ---------- 启动 ---------- */
-const READY=(async()=>{
-  try{
-    await DB.open();
-    S=Object.assign({},DEFAULT,await DB.get('settings')||{});
-    CHAT=await DB.get('chat')||[];
-    MOMENTS=await DB.get('moments')||[];
-    AV=Object.assign({him:'',me:''},await DB.get('avatars')||{});
-    applyBg(await DB.get('bg'));
-    initSwatches();applyLook();
-    navigator.storage?.persist?.();
-    bindSettings();renderHome();renderAvatars();renderChat();renderMoments();fit();
-  }catch(e){toast('启动出错：'+e.message)}
-})();
-</script>
-<script>document.write('<script src="more.js?t='+Date.now()+'"><\/script>')</script>
+<script src="app.js"></script>
+<script src="chat.js"></script>
+<script src="moments.js"></script>
+<script src="anniv.js"></script>
+<script src="diary.js"></script>
+<script src="capsule.js"></script>
 </body>
 </html>
