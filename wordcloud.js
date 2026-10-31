@@ -28,7 +28,7 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
 </div></section>`);
 
 const card=$('[data-soon="推送"]');
-if(card){card.removeAttribute('data-soon');card.dataset.go='cloud';card.innerHTML='<div class="cn">词云 ☁︎</div>'}
+if(card){card.removeAttribute('data-soon');card.dataset.go='cloud';card.innerHTML='<div class="cn">词云</div>'}
 
 const STOP=new Set('我们 你们 他们 她们 什么 怎么 这个 那个 这些 那些 就是 还是 可以 没有 不是 一个 一下 然后 因为 所以 但是 而且 已经 现在 知道 觉得 真的 这样 那样 这么 那么 自己 时候 的话 还有 怎么样 为什么 是不是 有点 一点 一些 不要 不会 不能 应该 可能 如果 或者 还要 只是 只有 这里 那里 哪里 东西 起来 出来 过来 下来 一样 这种 那种 其实 而已 the and you'.split(' '));
 const ok=w=>!STOP.has(w)&&(/[\u4e00-\u9fff]/.test(w)?w.length>=2:/^[a-z]{2,}$/.test(w));
