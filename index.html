@@ -5,17 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="365">
 <meta name="format-detection" content="telephone=no">
-<meta name="theme-color" content="#FFFFFF">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc/400.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc/500.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="style.css">
 <title>365</title>
-  <script>window.addEventListener('error',e=>alert('出错了：'+e.message+'\n'+(e.filename||'').split('/').pop()+' 第 '+e.lineno+' 行'));window.addEventListener('unhandledrejection',e=>alert('出错了：'+(e.reason&&e.reason.message||e.reason)))</script>
+<script>window.addEventListener('error',e=>alert('出错了：'+e.message+'\n'+(e.filename||'').split('/').pop()+' 第 '+e.lineno+' 行'));window.addEventListener('unhandledrejection',e=>alert('出错了：'+(e.reason&&e.reason.message||e.reason)))</script>
 </head>
 <body>
 <div id="bg"></div><div id="mask"></div>
@@ -38,8 +37,8 @@
       <button class="card glass" data-go="capsule"><div class="cn">时间胶囊</div><div class="ce">capsule</div></button>
       <button class="card glass" data-go="diary"><div class="cn">小狗日记</div><div class="ce">diary</div></button>
       <button class="card sm glass" data-go="memory"><div class="cn">记忆 ✦</div></button>
-      <button class="card sm glass" data-soon="推送"><div class="cn">推送 ˚✧</div></button>
-      <button class="card sm glass" data-go="moments"><div class="cn">朋友圈</div></button>
+      <button class="card sm glass" data-go="cloud"><div class="cn">词云</div></button>
+      <button class="card sm glass" data-go="more"><div class="cn">More</div><i class="ndot"></i></button>
     </div>
   </div></section>
 
@@ -72,16 +71,7 @@
     <div id="feed"></div>
   </div></section>
 
-  <section class="page" id="page-library"><div class="wrap">
-    <div class="head">
-      <button class="iconbtn glass" data-go="home" aria-label="返回"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <h2>图书馆</h2><em>library</em>
-    </div>
-    <div class="sec glass" style="text-align:center;padding:40px 20px">
-      <div class="days" style="font-size:64px;margin:0">∞</div>
-      <p style="margin-top:12px;letter-spacing:1px;line-height:1.9">图书馆还在装修中……<br>以后你和<span class="hisName">陆择</span>的每一个故事，都会收进这里。</p>
-    </div>
-  </div></section>
+  <section class="page" id="page-library"><div class="wrap"></div></section>
 
   <section class="page" id="page-anniv"><div class="wrap">
     <div class="head">
@@ -124,7 +114,6 @@
     <div class="mm-tabs" id="mmTabs"></div>
     <div id="mmList"></div>
   </div></section>
-
   <section class="page" id="page-me"><div class="wrap">
     <div class="head"><h2>我的</h2><em>settings</em></div>
     <div class="sec glass">
@@ -182,9 +171,9 @@
         <button class="pill ghost" id="importBtn">导入备份</button>
         <button class="pill ghost" id="clearChatBtn">清空聊天记录</button>
       </div>
-      <p class="hint">所有聊天、朋友圈、日记、记忆、照片都只存在这台手机上，记得常备份！备份文件里有 API Key，不要发给别人。</p>
+      <p class="hint">所有内容和照片都只存在这台手机上，记得常备份！备份文件里有 API Key 和秘密，不要发给别人。</p>
     </div>
-    <div class="ver">365 infinity · v0.5</div>
+    <div class="ver">365 infinity · v0.7</div>
   </div></section>
 
   <nav id="tabbar" class="glass">
@@ -268,4 +257,3 @@
 <script src="secret.js"></script>
 </body>
 </html>
-
