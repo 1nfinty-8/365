@@ -75,3 +75,36 @@ setInterval(()=>{if(!document.hidden)dots()},1500);
 HOOKS.ready.push(()=>{ok=true;dots()});
 HOOKS.page.push(n=>{page=n;dots()});
 })();
+/* Safari 顶部那条：自动取壁纸顶部的颜色 */
+(()=>{
+if(navigator.standalone)return;
+const bg=$('#bg'),mask=$('#mask');if(!bg)return;
+const bar=document.createElement('div');
+bar.style.cssText='position:fixed;top:0;left:0;right:0;height:max(env(safe-area-inset-top),3px);z-index:150;pointer-events:none';
+document.body.appendChild(bar);
+let last='';
+const rgbOf=s=>(s.match(/[\d.]+/g)||[]).map(Number);
+function tint(){
+  const m=getComputedStyle(bg).backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+  const src=m?m[1]:'',key=src+getComputedStyle(mask||bg).backgroundColor+(mask?getComputedStyle(mask).opacity:'');
+  if(key===last)return;last=key;
+  const done=c=>{const[mr,mg,mb,ma=1]=rgbOf(mask?getComputedStyle(mask).backgroundColor:'rgba(0,0,0,0)');
+    const a=(mask?+getComputedStyle(mask).opacity:0)*ma;
+    const f=c.map((v,i)=>Math.round(v*(1-a)+[mr,mg,mb][i]*a));
+    const hex='#'+f.map(v=>(v||0).toString(16).padStart(2,'0')).join('');
+    bar.style.background=hex;document.documentElement.style.setProperty('background-color',hex,'important')};
+  if(!src)return done(rgbOf(getComputedStyle(bg).backgroundColor).slice(0,3));
+  const img=new Image();
+  img.onload=()=>{try{
+    const c=document.createElement('canvas');c.width=40;c.height=6;
+    const g=c.getContext('2d');
+    g.drawImage(img,0,0,img.naturalWidth,Math.max(1,img.naturalHeight*.06),0,0,40,6);
+    const d=g.getImageData(0,0,40,6).data;let r=0,gg=0,b=0,n=0;
+    for(let i=0;i<d.length;i+=4){r+=d[i];gg+=d[i+1];b+=d[i+2];n++}
+    done([r/n,gg/n,b/n].map(Math.round))}catch(e){}};
+  img.src=src}
+tint();
+new MutationObserver(()=>{last='';tint()}).observe(bg,{attributes:true});
+setInterval(tint,3000);
+})();
+
