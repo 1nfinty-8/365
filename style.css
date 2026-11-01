@@ -27,7 +27,7 @@ input,textarea,select{font:16px/1.5 var(--cn);color:var(--ink)}
 input.ti{font-family:var(--ti)}
 .bubble,.dy-text,.dy-note,.tc-letter,.tc-his,.an-note{font-family:var(--cn)}
 
-#bg{position:fixed;top:-40px;left:-40px;right:-40px;height:calc(var(--full-h,100vh) + 80px);background:linear-gradient(160deg,#F5ECED 0%,#E9D6D9 55%,#D8B9BF 100%) center/cover no-repeat;filter:blur(var(--blur))}
+#bg{position:fixed;inset:-40px;background:linear-gradient(160deg,#F5ECED 0%,#E9D6D9 55%,#D8B9BF 100%) center/cover no-repeat;filter:blur(var(--blur))}
 #mask{position:fixed;top:0;left:0;right:0;height:var(--full-h,100vh);background:linear-gradient(180deg,rgba(248,240,241,var(--dim)),rgba(236,220,223,var(--dim)))}
 #app{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100%);overflow:hidden}
 .page{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:calc(var(--st) + 8px) 16px calc(var(--nav) + 18px);display:none}
