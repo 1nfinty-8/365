@@ -312,3 +312,10 @@ body #nb.show{transform:none;opacity:1;visibility:visible;transition:transform .
 #viewer.show{display:flex}
 #viewer img{max-width:100%;max-height:100%;object-fit:contain}
 .has-dot>.ndot{display:block}
+/* 除了聊天，正文都用高级字体 */
+body .dy-text,body .dy-note,body .tc-letter,body .tc-his,body .an-note,body .mm-text,
+body .td-x,body .nt-p,body .ws-note,body .ws-his,body .cd-say,body .rc-l,body .rc-p,body .dl-prev,
+body textarea,body input:not([type=checkbox]):not([type=range]):not([type=color]):not([type=date]):not([type=time]):not([type=number]){font-family:var(--ti)}
+body .dy-text{font-size:16px;line-height:1.9;letter-spacing:.5px}
+body .dy-note,body .mm-text,body .td-x{line-height:1.75}
+body #chatInput,body #sxInput{font-family:var(--cn)}
