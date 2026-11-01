@@ -47,10 +47,11 @@ HOOKS.ready.push(()=>{ok=true;dots()});
 HOOKS.page.push(n=>{page=n;dots()});
 })();
 
-/* ---------- Safari 顶部那条：自动取壁纸顶部的颜色 ---------- */
+/* ---------- 顶部状态栏：自动取壁纸顶部的颜色 ---------- */
 (()=>{
-if(navigator.standalone)return;
 const bg=$('#bg'),mask=$('#mask');if(!bg)return;
+let meta=document.querySelector('meta[name="theme-color"]');
+if(!meta){meta=document.createElement('meta');meta.name='theme-color';document.head.appendChild(meta)}
 const bar=document.createElement('div');
 bar.style.cssText='position:fixed;top:0;left:0;right:0;height:max(env(safe-area-inset-top),3px);z-index:150;pointer-events:none';
 document.body.appendChild(bar);
@@ -64,7 +65,8 @@ function tint(){
     const a=(mask?+getComputedStyle(mask).opacity:0)*ma;
     const f=c.map((v,i)=>Math.round(v*(1-a)+[mr,mg,mb][i]*a));
     const hex='#'+f.map(v=>(v||0).toString(16).padStart(2,'0')).join('');
-    bar.style.background=hex;document.documentElement.style.setProperty('background-color',hex,'important')};
+    bar.style.background=hex;meta.setAttribute('content',hex);
+    document.documentElement.style.setProperty('background-color',hex,'important')};
   if(!src)return done(rgbOf(getComputedStyle(bg).backgroundColor).slice(0,3));
   const img=new Image();
   img.onload=()=>{try{
