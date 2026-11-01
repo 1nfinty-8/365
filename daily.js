@@ -81,7 +81,7 @@ $('#nb').addEventListener('touchmove',e=>{if(e.touches[0].clientY-sy<-15)hide()}
 const markSeen=()=>LS.set('seen',Date.now());
 function unread(){const s=LS.get('seen',0);
   for(let i=DATA.chat.length-1;i>=0;i--){const m=DATA.chat[i];if(m.t<=s)return false;if(m.role==='model')return true}return false}
-function dots(){const on=page!=='chat'&&unread();$$('.ndot').forEach(d=>d.parentElement.classList.toggle('has-dot',on))}
+function dots(){const on=page!=='chat'&&unread();$$('.card[data-go="chat"]>.ndot,#tabbar [data-go="chat"]>.ndot').forEach(d=>d.parentElement.classList.toggle('has-dot',on))}
 
 /* ---------- 新动静 → 横幅 ---------- */
 function counts(){let dy=0,mo=0,tc=0,dyL=null,moL=null;
