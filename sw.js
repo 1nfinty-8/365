@@ -1,8 +1,8 @@
-/* ===== 365 · sw.js · 离线缓存 ===== */
+/* ===== 365 · sw.js · 离线缓存（自动缓存所有文件） ===== */
 const CACHE='365-app';
 const FONTS='365-fonts';
-const CORE=['./','index.html','style.css','app.js','chat.js','moments.js','anniv.js','diary.js','capsule.js','memory.js','wordcloud.js','library.js','daily.js','hub.js','deeptalk.js','manifest.json','apple-touch-icon.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).catch(()=>{}));self.skipWaiting()});
+const CORE=['./','index.html','style.css','app.js'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(CORE.map(u=>c.add(u).catch(()=>{})))));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{
   const r=e.request;if(r.method!=='GET')return;
