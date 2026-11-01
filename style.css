@@ -297,4 +297,7 @@ body.kb .inputbar{margin-bottom:8px}
 #page-me .sec h3::after{content:"";margin-left:auto;width:8px;height:8px;border-right:1.5px solid var(--sub);border-bottom:1.5px solid var(--sub);transform:rotate(45deg);transition:transform .2s}
 #page-me .sec.fold h3::after{transform:rotate(-45deg)}
 #page-me .sec.fold>:not(h3){display:none}
+/* 通知横幅：收起时完全藏好 */
+body #nb{transform:translateY(calc(-100% - var(--st) - 40px));opacity:0;visibility:hidden;transition:transform .4s cubic-bezier(.2,.9,.3,1.15),opacity .3s,visibility 0s .4s}
+body #nb.show{transform:none;opacity:1;visibility:visible;transition:transform .4s cubic-bezier(.2,.9,.3,1.15),opacity .2s}
 
