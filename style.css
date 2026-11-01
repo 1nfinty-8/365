@@ -308,8 +308,6 @@ body #page-home .grid{margin-top:0;gap:clamp(10px,1.5vh,14px)}
 body #page-home .card{min-height:clamp(70px,11vh,112px)}
 body #page-home .card.big{min-height:clamp(92px,15.5vh,160px)}
 body #page-home .card.sm{min-height:clamp(48px,6.8vh,64px)}
-/* 顶部白色 */
-body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:#FFFFFF;z-index:200;pointer-events:none}
 /* 首页卡片再大一些 */
 body #app #page-home .card{min-height:clamp(78px,12.5vh,128px)}
 body #app #page-home .card.big{min-height:clamp(104px,18vh,186px)}
