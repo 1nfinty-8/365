@@ -6,7 +6,7 @@ const save=()=>saveData('phone');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 const PIC='<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>';
 const LOCK='<svg class="i" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
-const APPS=[['search','搜索','#8E8E93','?'],['memo','备忘录','#F5C842','≡'],['music','音乐','#FA3C5A','♪'],['shop','购物','#FF8A00','¥'],['tw','X','#000000','X']];
+const APPS=[['search','搜索','linear-gradient(180deg,#9A9AA0,#636366)','<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>'],['memo','备忘录','linear-gradient(180deg,#FFD54A 0,#FFC93C 30%,#FFFFFF 30%)','<svg viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" stroke-width="1.6" stroke-linecap="round"><path d="M4 13h16M4 17h16M4 21h10"/></svg>'],['music','音乐','linear-gradient(180deg,#FB5C74,#FA233B)','<svg viewBox="0 0 24 24" fill="#fff"><path d="M9 17.5V6l10-2v11.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="6.5" cy="17.5" r="2.8"/><circle cx="16.5" cy="15.5" r="2.8"/></svg>'],['shop','购物','linear-gradient(180deg,#FFA53D,#FF7A00)','<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>'],['tw','X','#000000','<svg viewBox="0 0 24 24" fill="#fff" style="width:28px;height:28px"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>']];
 const T=()=>isoDate(today());
 const arr=v=>Array.isArray(v)?v:[];
 const rec=id=>{let r=DATA.phone.find(x=>x.id===id);if(!r){r={id};DATA.phone.push(r)}return r};
@@ -37,6 +37,10 @@ body.ph #tabbar{display:none}
 .ph-app{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-family:var(--cn);font-size:12px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
 .ph-ic{width:60px;height:60px;border-radius:15px;display:grid;place-items:center;font-size:27px;font-weight:600;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.2);font-family:var(--cn)}
 .ph-app:active .ph-ic{transform:scale(.92)}
+.ph-ic svg{width:34px;height:34px}
+.ph-ic{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 12px rgba(0,0,0,.25);border:.5px solid rgba(255,255,255,.15)}
+.tw-hl{color:#1D9BF0}
+.tw-more{display:block;width:100%;padding:18px 0;color:#1D9BF0;font-size:15px}
 #phApp{background:#F2F2F7;color:#000;font-family:var(--cn)}
 .pa-top{flex:none;display:flex;align-items:center;gap:6px;padding:calc(var(--st) + 4px) 8px 8px}
 .pa-top button{color:#007AFF;font-size:16px;padding:6px;min-width:76px;text-align:left}
@@ -180,18 +184,23 @@ async function sxAI(system,text){
     }
     return t}
   catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}}
-async function genTw(){
+async function genTw(more){
   if(twBusy)return;twBusy=true;if(app==='tw')renderApp();
   try{
-    let sys=personaText()+'\n\n'+nowLine()+'\n【场景】她在偷偷翻你的手机，打开了你的推特（X）小号。这里只属于你们两个人，没有别人能看到。';
+    const R=rec('tw'),old=more?arr(R.posts):[];
+    let sys=personaText()+'\n\n'+nowLine()+'\n【场景】她在偷偷翻你的手机，打开了你的推特（X）小号 Lu（@isnotluz）。这里只属于你们两个人，没有别人能看到。';
     if((S.sxExtra||'').trim())sys+='\n\n'+S.sxExtra.trim();
-    const t=await sxAI(sys,`请写出你推特小号今天的样子：你点赞、收藏、转发的内容，还有你自己发的。按你的人设和你们之间的玩法来，是你在上面“学习”、想以后对她做的事。不要用 emoji，只输出 JSON，不要其他文字：
-{"name":"小号昵称","handle":"@开头的用户名","bio":"简介","posts":[{"type":"赞过 / 收藏 / 转发 / 我发的","author":"作者昵称","handle":"@用户名","text":"内容","time":"比如 2小时"}]}
-posts 写 8 条。`);
+    const had=old.slice(-15).map(p=>'- '+String(p.text||'').slice(0,40)).join('\n');
+    const t=await sxAI(sys,`请写出你推特小号${more?'继续往下刷、时间线上更早的内容':'今天的时间线'}：你点赞、收藏、转发的帖子，还有你自己发的。按你的人设和你们之间的玩法来，是你在上面“学习”、想以后对她做的事。
+每条正文末尾都要带 2 到 4 个 # 话题标签，用这类帖子真的会用的标签。别人的帖子可以 @ 别人；你自己发的可以暗暗提到她，但不要写她的名字。
+${had?'这些已经出现过，不要重复：\n'+had+'\n':''}不要用 emoji，只输出 JSON，不要其他文字：
+{"bio":"简介","posts":[{"type":"赞过 / 收藏 / 转发 / 我发的","author":"作者昵称","handle":"@用户名","text":"内容","time":"${more?'比如 1天、3天':'比如 2小时'}"}]}
+posts 写 15 条，类型混着来，其中至少 4 条是我发的。`);
     const j=JSON.parse((t.match(/\{[\s\S]*\}/)||['{}'])[0]);
-    Object.assign(rec('tw'),{date:T(),name:j.name||'',handle:j.handle||'',bio:j.bio||'',posts:arr(j.posts)});
+    if(more)R.posts=[...old,...arr(j.posts)];
+    else Object.assign(R,{date:T(),bio:j.bio||R.bio||'',posts:arr(j.posts)});
     await save()}
-  catch(e){toast(e instanceof SyntaxError?'没读出来，点右上角刷新再试一次':e.message)}
+  catch(e){toast(e instanceof SyntaxError?'没读出来，再试一次':e.message)}
   finally{twBusy=false;if(app==='tw')renderApp()}}
 
 /* ---------- 打开 App ---------- */
@@ -215,19 +224,21 @@ function renderApp(){
   $('#paT').textContent=APPS.find(a=>a[0]===k)[1];
   const D=tw?rec('tw'):rec('day'),b=$('#paBody'),loading=tw?twBusy:busy;
   if(!D.date){b.innerHTML=`<div class="pa-empty">${loading?'正在加载…':'还没有内容，点右上角刷新'}</div>`;return}
-  const tip=loading?'<div class="pa-h" style="text-align:center">正在更新…</div>':'';
+  const tip=loading&&!tw?'<div class="pa-h" style="text-align:center">正在更新…</div>':'';
   let h='';
   if(k==='search')h=`<div class="pa-h">最近搜索</div><div class="pa-g">${arr(D.search).map(s=>`<div class="pa-r">${esc(s)}</div>`).join('')}</div>`;
-  if(k==='memo')h=arr(D.memo).map(n=>`<div class="pa-note"><b>${esc(n.title)}</b><p>${esc(n.text)}</p></div>`).join('');
+  if(k==='memo')h=arr(D.memo).map(n=>`<div class="pa-note"><b>${esc(n.title)}</b><p>${esc(n.text)}</p ></div>`).join('');
   if(k==='music')h=`<div class="pa-h">最近播放</div><div class="pa-g">${arr(D.music).map(m=>`<div class="pa-r">${esc(m.song)}<small>${esc(m.artist)}${m.note?' · '+esc(m.note):''}</small></div>`).join('')}</div>`;
   if(k==='shop')h=`<div class="pa-h">购物车和订单</div><div class="pa-g">${arr(D.shop).map(s=>`<div class="pa-r"><span class="pr">${esc(s.price)}</span>${esc(s.item)}<small>${esc(s.status)}${s.note?' · '+esc(s.note):''}</small></div>`).join('')}</div>`;
-  if(tw){const mine=p=>/我发/.test(p.type||''),num=(s,k)=>{let x=k;for(const c of String(s))x=(x*31+c.charCodeAt(0))%997;return x%60};
-    h=`<div class="tw-ban"></div><div class="tw-pf"><div class="tw-big">${avatarHTML('him')}</div><b>Lu</b><small>@isnotluz</small>${D.bio?`<p>${esc(D.bio)}</p >`:''}<div class="tw-fl"><span><b>23</b> 正在关注</span><span><b>1</b> 关注者</span></div></div>
+  if(tw){const mine=p=>/我发/.test(p.type||''),num=(s,n)=>{let x=n;for(const c of String(s))x=(x*31+c.charCodeAt(0))%997;return x%60};
+    const hl=s=>String(s||'').split(/([#＃][^\s#＃@]+|@[A-Za-z0-9_]+)/).map((x,i)=>i%2?`<span class="tw-hl">${esc(x)}</span>`:esc(x)).join('');
+    h=`<div class="tw-ban"></div><div class="tw-pf"><div class="tw-big">${avatarHTML('him')}</div><b>Lu</b><small>@isnotluz</small>${D.bio?`<p>${hl(D.bio)}</p >`:''}<div class="tw-fl"><span><b>23</b> 正在关注</span><span><b>1</b> 关注者</span></div></div>
     <div class="tw-tabs"><span class="on">帖子</span><span>回复</span><span>喜欢</span></div>`
     +arr(D.posts).map(p=>{const m=mine(p);
-      return `<div class="tw-p">${m?avatarHTML('him').replace('class="av"','class="av tw-av"'):`<div class="tw-av">${esc(String(p.author||'?').slice(0,1))}</div>`}<div style="flex:1;min-width:0">${m?'':`<div class="tw-tag">Lu ${esc(p.type)}</div>`}<div class="tw-n"><b>${m?'Lu':esc(p.author)}</b> <span>${m?'@isnotluz':esc(p.handle)} · ${esc(p.time)}</span></div><div class="tw-x">${esc(p.text)}</div><div class="tw-act"><span>○ ${num(p.text,3)}</span><span>⇄ ${num(p.text,7)}</span><span>♡ ${num(p.text,11)*3}</span></div></div></div>`}).join('')}
+      return `<div class="tw-p">${m?avatarHTML('him').replace('class="av"','class="av tw-av"'):`<div class="tw-av">${esc(String(p.author||'?').slice(0,1))}</div>`}<div style="flex:1;min-width:0">${m?'':`<div class="tw-tag">Lu ${esc(p.type)}</div>`}<div class="tw-n"><b>${m?'Lu':esc(p.author)}</b> <span>${m?'@isnotluz':esc(p.handle)} · ${esc(p.time)}</span></div><div class="tw-x">${hl(p.text)}</div><div class="tw-act"><span>○ ${num(p.text,3)}</span><span>⇄ ${num(p.text,7)}</span><span>♡ ${num(p.text,11)*3}</span></div></div></div>`}).join('')
+    +`<button class="tw-more" id="twMore">${twBusy?'正在加载…':'继续往下刷'}</button>`}
   b.innerHTML=tip+(h||'<div class="pa-empty">空空的</div>')}
-
+$('#paBody').addEventListener('click',e=>{if(e.target.closest('#twMore'))genTw(true)});
 /* ---------- 被他发现 ---------- */
 function caught(){
   if(!seen.size||!S.apiKey){seen.clear();return}
