@@ -1,7 +1,29 @@
-/* ===== 365 · hub.js · More ===== */
+/* ===== 365 · hub.js · More、小圆点、首页固定 ===== */
 (()=>{
+document.querySelector('meta[name="theme-color"]')?.setAttribute('content','#FFFFFF');
 document.head.insertAdjacentHTML('beforeend',`<style>
+html{background:#FFFFFF}
+#page-home{overflow:hidden;padding-top:max(calc(var(--st) - 6px),6px);padding-bottom:calc(var(--nav) + 12px)}
+#page-home.active{display:flex;flex-direction:column}
+#page-home>.wrap{flex:1;min-height:0;width:100%;display:flex;flex-direction:column}
+#page-home .top{height:34px;flex:none}
+#page-home .days{font-size:clamp(60px,11.5vh,118px);margin-top:0}
+#page-home .dayl{margin-top:2px;font-size:14px}
+#page-home .since{font-size:14px}
+#page-home .quote{margin:clamp(6px,1.6vh,20px) 10px;font-size:14.5px;line-height:1.7}
+#page-home .grid{margin-top:auto;gap:clamp(8px,1.2vh,12px)}
+#page-home .card{min-height:clamp(60px,8.8vh,96px);padding:8px 6px}
+#page-home .card.big{min-height:clamp(76px,12vh,130px)}
+#page-home .card.sm{min-height:clamp(42px,5.6vh,54px)}
+#page-home .card .cn{font-size:clamp(15px,2vh,17px)}
+#page-home .card.big .cn{font-size:clamp(17px,2.4vh,20px)}
+#page-home .card.sm .cn{font-size:15px}
+#hmTips button:nth-child(n+3),#calTips button:nth-child(n+2){display:none}
 .more-grid .card{grid-column:span 3;min-height:clamp(96px,13vh,124px)}
+.card{position:relative}
+.ndot{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--dot,#7E5A61);box-shadow:0 0 0 2px rgba(255,255,255,.85);display:none}
+.card .ndot{top:12px;right:14px}
+.has-dot>.ndot{display:block}
 </style>`);
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -15,13 +37,41 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
 </div></section>`);
 
 const home=$('#page-home .card[data-go="moments"]');
-if(home){home.dataset.go='more';home.innerHTML='<div class="cn">More</div>'}
+if(home){home.dataset.go='more';home.innerHTML='<div class="cn">More</div><i class="ndot"></i>'}
+const homeMore=$('#page-home .card[data-go="more"]');
 
+/* ---------- More ---------- */
 const LIST=[];
 function render(){
   $('#moreGrid').innerHTML=LIST.length
-    ?LIST.map(o=>`<button class="card glass" data-go="${o.go}"><div class="cn">${esc(o.cn)}</div>${o.ce?`<div class="ce">${esc(o.ce)}</div>`:''}</button>`).join('')
-    :'<div class="empty" style="grid-column:1/-1">这里会放更多的功能</div>'}
+    ?LIST.map(o=>`<button class="card glass" data-go="${o.go}"><div class="cn">${esc(o.cn)}</div>${o.ce?`<div class="ce">${esc(o.ce)}</div>`:''}<i class="ndot"></i></button>`).join('')
+    :'<div class="empty" style="grid-column:1/-1">这里会放更多的功能</div>';
+  dots()}
 window.addMore=o=>{LIST.push(o);render()};
+
+/* ---------- 小圆点 ---------- */
+const LSG=k=>{try{return JSON.parse(localStorage.getItem('365-'+k))}catch(e){return null}};
+const LSS=(k,v)=>localStorage.setItem('365-'+k,JSON.stringify(v));
+const CHECK={},SEEN={},ALIAS={dtalk:'deep'};
+let page='home',ok=false;
+window.addDot=(go,fn,onSeen)=>{CHECK[go]=fn;if(onSeen)SEEN[go]=onSeen};
+function seen(go){let s=LSG('seen-'+go);if(s==null){s=Date.now();LSS('seen-'+go,s)}return s}
+function dots(){if(!ok)return;
+  const cur=ALIAS[page]||page;let any=false;
+  for(const go in CHECK){
+    if(go===cur){LSS('seen-'+go,Date.now());try{SEEN[go]?.()}catch(e){}}
+    let on=false;try{on=go!==cur&&!!CHECK[go](seen(go))}catch(e){}
+    if(on)any=true;
+    $$(`.card[data-go="${go}"]`).forEach(c=>c.classList.toggle('has-dot',on))}
+  homeMore?.classList.toggle('has-dot',any)}
+
+const wishKeys=()=>(DATA.wish||[]).flatMap(w=>[...(w.who==='him'?[w.id]:[]),...(w.his?[w.id+':'+w.his.length]:[])]);
+addDot('wish',()=>{const k=wishKeys(),s=LSG('wish-keys');if(!s){LSS('wish-keys',k);return false}return k.some(x=>!s.includes(x))},()=>LSS('wish-keys',wishKeys()));
+addDot('deep',s=>(DATA.deep||[]).some(d=>{const c=d.cards?.at(-1);return c&&c.role==='model'&&c.t>s}));
+addDot('cal',s=>s<today().getTime()&&(DATA.marks||[]).some(m=>m.date===isoDate(today())));
+
 render();
+setInterval(()=>{if(!document.hidden)dots()},1500);
+HOOKS.ready.push(()=>{ok=true;dots()});
+HOOKS.page.push(n=>{page=n;dots()});
 })();
