@@ -65,6 +65,17 @@ body.ph #tabbar{display:none}
 .tw-n{font-size:15px}
 .tw-n span{color:#71767B}
 .tw-x{font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin-top:2px}
+.tw-ban{height:110px;margin:0 -16px;background:linear-gradient(135deg,#1d1f2b,#3a3f55)}
+.tw-pf{position:relative;padding:44px 2px 12px}
+.tw-big{position:absolute;top:-36px;left:0}
+.tw-big .av{width:72px;height:72px;font-size:28px;border:3px solid #000}
+.tw-fl{display:flex;gap:16px;font-size:14px;color:#71767B;margin-top:10px}
+.tw-fl b{color:#E7E9EA}
+.tw-tabs{display:flex;border-bottom:1px solid #2F3336;margin:0 -16px}
+.tw-tabs span{flex:1;text-align:center;padding:12px 0;font-size:15px;color:#71767B}
+.tw-tabs .on{color:#E7E9EA;font-weight:700;box-shadow:inset 0 -4px 0 #1D9BF0}
+.tw-act{display:flex;justify-content:space-between;max-width:260px;color:#71767B;font-size:13px;margin-top:8px}
+img.tw-av{object-fit:cover}
 </style>`);
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -210,8 +221,11 @@ function renderApp(){
   if(k==='memo')h=arr(D.memo).map(n=>`<div class="pa-note"><b>${esc(n.title)}</b><p>${esc(n.text)}</p></div>`).join('');
   if(k==='music')h=`<div class="pa-h">最近播放</div><div class="pa-g">${arr(D.music).map(m=>`<div class="pa-r">${esc(m.song)}<small>${esc(m.artist)}${m.note?' · '+esc(m.note):''}</small></div>`).join('')}</div>`;
   if(k==='shop')h=`<div class="pa-h">购物车和订单</div><div class="pa-g">${arr(D.shop).map(s=>`<div class="pa-r"><span class="pr">${esc(s.price)}</span>${esc(s.item)}<small>${esc(s.status)}${s.note?' · '+esc(s.note):''}</small></div>`).join('')}</div>`;
-  if(tw)h=`<div class="tw-pf"><b>${esc(D.name)}</b><small>${esc(D.handle)}</small>${D.bio?`<p>${esc(D.bio)}</p>`:''}</div>`
-    +arr(D.posts).map(p=>`<div class="tw-p"><div class="tw-av">${esc(String(p.author||'?').slice(0,1))}</div><div style="flex:1;min-width:0"><div class="tw-tag">${esc(p.type)}</div><div class="tw-n"><b>${esc(p.author)}</b> <span>${esc(p.handle)} · ${esc(p.time)}</span></div><div class="tw-x">${esc(p.text)}</div></div></div>`).join('');
+  if(tw){const mine=p=>/我发/.test(p.type||''),num=(s,k)=>{let x=k;for(const c of String(s))x=(x*31+c.charCodeAt(0))%997;return x%60};
+    h=`<div class="tw-ban"></div><div class="tw-pf"><div class="tw-big">${avatarHTML('him')}</div><b>Lu</b><small>@isnotluz</small>${D.bio?`<p>${esc(D.bio)}</p >`:''}<div class="tw-fl"><span><b>23</b> 正在关注</span><span><b>1</b> 关注者</span></div></div>
+    <div class="tw-tabs"><span class="on">帖子</span><span>回复</span><span>喜欢</span></div>`
+    +arr(D.posts).map(p=>{const m=mine(p);
+      return `<div class="tw-p">${m?avatarHTML('him').replace('class="av"','class="av tw-av"'):`<div class="tw-av">${esc(String(p.author||'?').slice(0,1))}</div>`}<div style="flex:1;min-width:0">${m?'':`<div class="tw-tag">Lu ${esc(p.type)}</div>`}<div class="tw-n"><b>${m?'Lu':esc(p.author)}</b> <span>${m?'@isnotluz':esc(p.handle)} · ${esc(p.time)}</span></div><div class="tw-x">${esc(p.text)}</div><div class="tw-act"><span>○ ${num(p.text,3)}</span><span>⇄ ${num(p.text,7)}</span><span>♡ ${num(p.text,11)*3}</span></div></div></div>`}).join('')}
   b.innerHTML=tip+(h||'<div class="pa-empty">空空的</div>')}
 
 /* ---------- 被他发现 ---------- */
