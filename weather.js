@@ -63,16 +63,20 @@ function getPos(){return new Promise((res,rej)=>{
     e=>rej(new Error(e.code===1?'没有定位权限，可以手动选城市':'定位失败，等会儿再试')),
     {enableHighAccuracy:false,timeout:12000,maximumAge:30*6e4})})}
 async function cityName(lat,lon){
+  const tidy=s=>String(s||'').replace(/(市|地区|自治州|盟)$/,'').trim();
   try{const r=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`);const j=await r.json();
-    return (j.city||j.locality||j.principalSubdivision||'').replace(/市$/,'')||'这里'}catch(e){return '这里'}}
+    const n=tidy(j.city||j.locality||j.principalSubdivision);if(n)return n}catch(e){}
+  try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=zh-CN`);const j=await r.json(),a=j.address||{};
+    const n=tidy(a.city||a.town||a.county||a.state_district||a.state);if(n)return n}catch(e){}
+  return '这里'}
 function setLoc(l){
-  if(LOC&&LOC.name&&l.name&&LOC.name!==l.name)LS.set('move',{from:LOC.name,to:l.name,t:Date.now()});
+  if(LOC&&LOC.name&&LOC.name!=='这里'&&l.name&&l.name!=='这里'&&LOC.name!==l.name)LS.set('move',{from:LOC.name,to:l.name,t:Date.now()});
   LOC={...l,t:Date.now()};LS.set('loc',LOC);return LOC}
 async function locate(force){
   if(S.wxMode==='manual')return S.wxCity?setLoc(S.wxCity):null;
-  if(!force&&LOC&&Date.now()-LOC.t<36e5)return LOC;
+  if(!force&&LOC&&LOC.name!=='这里'&&Date.now()-LOC.t<36e5)return LOC;
   const p=await getPos();
-  const same=LOC&&Math.abs(LOC.lat-p.lat)<.05&&Math.abs(LOC.lon-p.lon)<.05;
+  const same=LOC&&LOC.name&&LOC.name!=='这里'&&Math.abs(LOC.lat-p.lat)<.05&&Math.abs(LOC.lon-p.lon)<.05;
   return setLoc({name:same?LOC.name:await cityName(p.lat,p.lon),...p})}
 
 /* ---------- 天气 ---------- */
