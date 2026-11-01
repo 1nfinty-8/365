@@ -300,4 +300,13 @@ body.kb .inputbar{margin-bottom:8px}
 /* 通知横幅：收起时完全藏好 */
 body #nb{transform:translateY(calc(-100% - var(--st) - 40px));opacity:0;visibility:hidden;transition:transform .4s cubic-bezier(.2,.9,.3,1.15),opacity .3s,visibility 0s .4s}
 body #nb.show{transform:none;opacity:1;visibility:visible;transition:transform .4s cubic-bezier(.2,.9,.3,1.15),opacity .2s}
+/* 首页：放大，填满中间的空 */
+html,body{background:#FFFFFF!important}
+body #page-home .days{font-size:clamp(70px,13.5vh,140px)}
+body #page-home .quote{margin:auto 10px;padding:clamp(6px,1.4vh,16px) 0}
+body #page-home .grid{margin-top:0;gap:clamp(10px,1.5vh,14px)}
+body #page-home .card{min-height:clamp(70px,11vh,112px)}
+body #page-home .card.big{min-height:clamp(92px,15.5vh,160px)}
+body #page-home .card.sm{min-height:clamp(48px,6.8vh,64px)}
+
 
