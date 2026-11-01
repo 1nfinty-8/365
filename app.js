@@ -14,7 +14,7 @@ const daysBetween=(a,b)=>Math.round((b-a)/864e5);
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800)}
 
 /* 各功能文件往这里登记自己 */
-const HOOKS={ready:[],page:[],refresh:[],context:[]};
+const HOOKS={ready:[],page:[],refresh:[],context:[],persona:[]};
 
 /* ---------- 存储 ---------- */
 const DB={db:null,
@@ -55,8 +55,10 @@ const SW={theme:['#B4848D','#D4B5BA','#E8CDD2','#8C7A80','#9AA8B8','#2E1A1F'],
   hisBubble:['#FCF6F7','#FFFFFF','#F0EBED','#E6E1EC','#E8CDD2'],
   glassTint:['#FFFFFF','#FFFAFB','#F7ECEE','#EFEFF3','#FFF8EE']};
 let S={},AV={him:'',me:''};
-const DATA={chat:[],moments:[],anniv:null,diary:[],capsule:[]};
-const LISTS=['chat','moments','diary','capsule'];
+/* 所有数据：聊天、朋友圈、纪念日、日记、胶囊、记忆、图书馆、deeptalk、生理期、特殊日子、心愿、屏幕时间、秘密 */
+const DATA={chat:[],moments:[],anniv:null,diary:[],capsule:[],memory:[],library:[],deep:[],period:[],marks:[],wish:[],screen:[],secret:[]};
+/* 里面会放照片的数据（清理照片时要看这些） */
+const LISTS=['chat','moments','diary','capsule','wish','screen'];
 const strip=v=>Array.isArray(v)?v.map(o=>{if(!o||typeof o!=='object')return o;const c={};for(const k in o)if(k[0]!=='_')c[k]=o[k];return c}):v;
 const saveData=k=>DB.set(k,strip(DATA[k]));
 let saveT;
@@ -106,7 +108,7 @@ async function callAI(system,msgs){
         body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:1},safetySettings:cats.map(c=>({category:c,threshold:'BLOCK_NONE'}))})});
       j=await r.json();
       if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      const c=j.candidates?.[0];const t=(c?.content?.parts||[]).map(p=>p.text||'').join('').trim();
+      const c=j.candidates?.[0];const t=(c?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
       if(!t)throw new Error('他没有回话（原因：'+(c?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次');
       return t;
     }else{
@@ -114,11 +116,12 @@ async function callAI(system,msgs){
       r=await fetch(S.baseUrl.replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.apiKey},body:JSON.stringify({model:S.model,messages,temperature:1})});
       j=await r.json();
       if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      return (j.choices?.[0]?.message?.content||'').trim();
+      const t=(j.choices?.[0]?.message?.content||'').trim();
+      if(!t)throw new Error('他没有回话，再试一次');
+      return t;
     }
   }catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}
 }
-HOOKS.persona=HOOKS.persona||[];
 function personaText(){let s=S.persona;
   for(const f of HOOKS.persona){try{const x=f();if(x)s+='\n\n'+x}catch(e){}}
   return s}
@@ -128,6 +131,7 @@ function chatSystem(){
   for(const f of HOOKS.context){try{const x=f();if(x)s+='\n'+x}catch(e){}}
   return s}
 function sceneSystem(scene){return personaText()+'\n\n'+nowLine()+'\n【场景】'+scene}
+
 /* ---------- 导航 ---------- */
 const TABS=['home','chat','moments','me'];
 function go(name){
@@ -139,7 +143,6 @@ function go(name){
 }
 document.addEventListener('click',e=>{const t=e.target;
   const g=t.closest('[data-go]');if(g){go(g.dataset.go);return}
-  const s=t.closest('[data-soon]');if(s){toast('「'+s.dataset.soon+'」还在装修中，下一版就来～');return}
   const c=t.closest('[data-close]');if(c){closeModal(c.dataset.close);return}
   if(t.classList.contains('modal')){closeModal(t.id);return}
   if(t.matches('img.zoom')&&t.src)viewImage(t.src);
@@ -219,6 +222,17 @@ function bindSettings(){
   updateProvider()}
 $('#testBtn').onclick=async()=>{toast('正在连接…');try{const r=await callAI(chatSystem(),[{role:'user',text:'跟我打个招呼，一句话就好。'}]);toast('✓ 连上了：'+r.slice(0,40))}catch(e){toast('✗ '+e.message)}};
 
+/* ---------- 「我的」折叠 ---------- */
+function initFold(){
+  const key=h=>h.querySelector('em')?.textContent||h.textContent;
+  let open=[];try{open=JSON.parse(localStorage.getItem('365-open')||'[]')}catch(e){}
+  $$('#page-me .sec').forEach(sec=>{
+    const h=sec.querySelector('h3');if(!h)return;
+    sec.classList.toggle('fold',!open.includes(key(h)));
+    h.onclick=()=>{sec.classList.toggle('fold');
+      open=[...$$('#page-me .sec:not(.fold) h3')].map(key);
+      localStorage.setItem('365-open',JSON.stringify(open))}})}
+
 /* ---------- 备份 ---------- */
 async function shareFile(file){
   if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file]});return}catch(e){if(e.name==='AbortError')return}}
@@ -226,7 +240,7 @@ async function shareFile(file){
 $('#exportBtn').onclick=async()=>{
   toast('正在打包…');
   try{
-    const data={v:4,t:Date.now(),settings:S,avatars:AV,bg:await DB.get('bg'),images:{}};
+    const data={v:5,t:Date.now(),settings:S,avatars:AV,bg:await DB.get('bg'),images:{}};
     for(const k of Object.keys(DATA))data[k]=strip(DATA[k]);
     for(const k of await DB.keys())if(String(k).startsWith('img:'))data.images[k]=await DB.get(k);
     const file=new File([JSON.stringify(data)],`365-backup-${isoDate(new Date())}.json`,{type:'application/json'});
@@ -260,12 +274,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderHome
 /* ---------- 旧照片搬家 + 清理没用的照片 ---------- */
 async function migrateImages(){
   for(const k of LISTS){let ch=false;
-    for(const o of DATA[k])if(Array.isArray(o.images))for(let i=0;i<o.images.length;i++){
+    for(const o of DATA[k]||[])if(Array.isArray(o.images))for(let i=0;i<o.images.length;i++){
       const v=o.images[i];if(typeof v==='string'&&v.startsWith('data:')){o.images[i]=await IMG.put(v);ch=true}}
     if(ch)await saveData(k)}}
 async function cleanImages(){try{
   const keys=(await DB.keys()).filter(k=>String(k).startsWith('img:'));
-  const used=new Set();for(const k of LISTS)for(const o of DATA[k])for(const id of o.images||[])used.add(id);
+  const used=new Set();for(const k of LISTS)for(const o of DATA[k]||[])for(const id of o.images||[])used.add(id);
   for(const k of keys)if(!used.has(k)&&!IMG.fresh.has(k))await DB.del(k)}catch(e){}}
 
 /* ---------- 启动 ---------- */
@@ -274,10 +288,10 @@ async function boot(){
     await DB.open();
     S=Object.assign({},DEFAULT,await DB.get('settings')||{});
     for(const k of Object.keys(DATA)){const v=await DB.get(k);if(v!=null)DATA[k]=v}
-    for(const k of LISTS)if(!Array.isArray(DATA[k]))DATA[k]=[];
+    for(const k of Object.keys(DATA))if(k!=='anniv'&&!Array.isArray(DATA[k]))DATA[k]=[];
     AV=Object.assign({him:'',me:''},await DB.get('avatars')||{});
     applyBg(await DB.get('bg'));
-    initSwatches();applyLook();bindSettings();renderHome();renderAvatars();
+    initSwatches();applyLook();bindSettings();initFold();renderHome();renderAvatars();
     await migrateImages();
     for(const f of HOOKS.ready){try{await f()}catch(e){console.error(e)}}
     fit();navigator.storage?.persist?.();
@@ -286,13 +300,4 @@ async function boot(){
 }
 document.addEventListener('DOMContentLoaded',boot);
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-/* ---------- 「我的」折叠 ---------- */
-HOOKS.ready.push(()=>{
-  const key=h=>h.querySelector('em')?.textContent||h.textContent;
-  let open=[];try{open=JSON.parse(localStorage.getItem('365-open')||'[]')}catch(e){}
-  $$('#page-me .sec').forEach(sec=>{
-    const h=sec.querySelector('h3');if(!h)return;
-    sec.classList.toggle('fold',!open.includes(key(h)));
-    h.onclick=()=>{sec.classList.toggle('fold');
-      open=[...$$('#page-me .sec:not(.fold) h3')].map(key);
-      localStorage.setItem('365-open',JSON.stringify(open))}})});
+
