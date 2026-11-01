@@ -72,3 +72,32 @@ HOOKS.refresh.push(render);
 HOOKS.page.push(n=>{if(n==='memory')render()});
 setInterval(()=>{if(ready&&!document.hidden)run()},20000);
 })();
+/* ---------- 记忆页：分类折叠 ---------- */
+(()=>{
+document.head.insertAdjacentHTML('beforeend',`<style>
+#mmTabs{display:none}
+#page-memory .mm-h.fh{display:flex;align-items:center;gap:10px;width:100%;padding:13px 20px;margin:0 0 10px;border-radius:99px;font-size:15px;color:var(--ink);letter-spacing:3px;cursor:pointer}
+#page-memory .mm-h.fh em{font-family:var(--num);font-style:italic;color:var(--sub);letter-spacing:0;font-size:15px}
+#page-memory .mm-h.fh i{margin-left:auto;width:8px;height:8px;border-right:1.5px solid var(--sub);border-bottom:1.5px solid var(--sub);transform:rotate(-45deg);transition:transform .2s}
+#page-memory .mm-h.fh.open i{transform:rotate(45deg)}
+.fh-hide{display:none!important}
+</style>`);
+const KEY='365-mmopen';
+let open=[];try{open=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
+function fold(root){
+  root.querySelectorAll('.mm-h').forEach(h=>{
+    if(!h.dataset.lb)h.dataset.lb=h.textContent.replace(/\s*·\s*\d+\s*$/,'').trim();
+    const lb=h.dataset.lb,sib=[];
+    for(let el=h.nextElementSibling;el&&!el.classList.contains('mm-h');el=el.nextElementSibling)sib.push(el);
+    const n=sib.filter(x=>x.classList.contains('mm-item')).length;
+    if(!h.classList.contains('fh')){h.classList.add('fh','glass');h.innerHTML=`<span>${esc(lb)}</span><em>${n}</em><i></i>`}
+    else{const e=h.querySelector('em');if(e&&e.textContent!==String(n))e.textContent=n}
+    const on=open.includes(lb);h.classList.toggle('open',on);
+    sib.forEach(x=>x.classList.toggle('fh-hide',!on))})}
+const roots=['#mmList','#rpSec'].map(s=>$(s)).filter(Boolean);
+roots.forEach(r=>{fold(r);new MutationObserver(()=>fold(r)).observe(r,{childList:true,subtree:true})});
+$('#page-memory').addEventListener('click',e=>{const h=e.target.closest('.mm-h.fh');if(!h)return;
+  const lb=h.dataset.lb;open=open.includes(lb)?open.filter(x=>x!==lb):[...open,lb];
+  localStorage.setItem(KEY,JSON.stringify(open));roots.forEach(fold)});
+HOOKS.ready.push(()=>$('#mmTabs button')?.click());
+})();
