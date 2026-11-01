@@ -261,7 +261,7 @@ $('#clearChatBtn').onclick=async()=>{if(!confirm('真的要清空和'+S.hisName+
   const ids=DATA.chat.flatMap(m=>m.images||[]);DATA.chat=[];await saveData('chat');await IMG.del(ids);refreshAll();toast('已清空')};
 
 /* ---------- 键盘适配 ---------- */
-function fit(){const v=window.visualViewport;if(!v)return;const r=document.documentElement.style;r.setProperty('--app-h',v.height+'px');r.setProperty('--app-top',v.offsetTop+'px')}
+function fit(){const v=window.visualViewport,r=document.documentElement.style;const land=matchMedia('(orientation:landscape)').matches;const sh=land?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);const full=navigator.standalone?Math.max(sh,window.innerHeight):window.innerHeight;r.setProperty('--full-h',full+'px');if(!v)return;const kb=document.body.classList.contains('kb');r.setProperty('--app-h',(kb?v.height:full)+'px');r.setProperty('--app-top',(kb?v.offsetTop:0)+'px')}
 window.visualViewport?.addEventListener('resize',fit);
 window.visualViewport?.addEventListener('scroll',fit);
 const TYPING_EL='textarea,select,input:not([type=range]):not([type=checkbox]):not([type=file]):not([type=color])';
