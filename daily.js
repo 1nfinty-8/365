@@ -1,6 +1,6 @@
 /* ===== 365 · daily.js · 首页提醒、早安晚安、回忆、通知横幅、主动消息 ===== */
 (()=>{
-Object.assign(DEFAULT,{greet:true,proactive:'low',awayHours:3,awayMax:2,quietFrom:'01:00',quietTo:'07:30',recallTalk:true});
+Object.assign(DEFAULT,{greet:true,idleMin:20,chaseMax:4,awayHours:3,awayMax:2,quietFrom:'01:00',quietTo:'07:30',recallTalk:true});
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 .hm-tips{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:8px}
@@ -49,7 +49,8 @@ $('#exportBtn').closest('.sec').insertAdjacentHTML('beforebegin',`
   <h3>他的消息<em>messages</em></h3>
   <label class="chk"><input type="checkbox" data-k="greet"><span>早安 / 晚安</span></label>
   <p class="hint">早上 5～12 点第一次打开时说早安；晚上 11 点到凌晨 4 点打开时催你睡觉。</p>
-  <label class="f"><span>开着 365 不说话时，他会不会主动找你</span><select data-k="proactive"><option value="off">不主动</option><option value="low">偶尔（约 40 分钟）</option><option value="high">经常（约 15 分钟）</option></select></label>
+  <label class="f"><span>开着 365 不说话多久，他会主动找你（分钟，填 0 就不主动）</span><input type="number" min="0" max="240" data-k="idleMin"></label>
+  <label class="f"><span>你一直不回，他最多连着找你几次（1～10，每次间隔会越来越长）</span><input type="number" min="1" max="10" data-k="chaseMax"></label>
   <label class="f"><span>离开多久以后他会留言（小时，填 0 就不留言）</span><input type="number" min="0" max="72" step="0.5" data-k="awayHours"></label>
   <label class="f"><span>每次最多留几条（1～5）</span><input type="number" min="1" max="5" data-k="awayMax"></label>
   <div class="f"><span>安静时段（这段时间他不会主动发）</span><div class="tm"><input type="time" data-k="quietFrom"><span>到</span><input type="time" data-k="quietTo"></div></div>
@@ -198,16 +199,27 @@ async function away(last){
   if(!ts.length)return false;ts.sort((x,y)=>x-y);
   return himSay(`她离开了大约 ${Math.max(1,Math.round(gap/36e5))} 个小时，现在刚回来，还没看到你的消息。请写你在她不在的这段时间里陆续发给她的消息，分别在 ${ts.map(when).join('、')} 发出。内容要符合那个时间点，比如中午提醒她吃饭、下午说说你在干嘛、晚上想她，像真的隔了一段时间发的，后面的可以接着前面的说。`,ts)}
 
-/* 开着不说话时主动找她 */
+/* 开着不说话时主动找她：一阵一阵地追着发 */
 let idleMark=Date.now();
 function idle(now){
-  if(gen||!S.apiKey||!awake||!S.proactive||S.proactive==='off')return;
-  const lm=DATA.chat.at(-1);if(lm&&lm.role==='model'&&lm.pro)return;
+  const M=Number(S.idleMin)||0;
+  if(gen||!S.apiKey||!awake||!M)return;
   if($('#status').textContent||quiet())return;
-  const T=(S.proactive==='high'?15:40)*6e4,base=Math.max(lm?.t||0,openedAt,idleMark);
-  if(now-base<T)return;
+  const C=DATA.chat,after=[];
+  for(let i=C.length-1;i>=0&&C[i].role!=='user';i--)after.unshift(C[i]);
+  let waves=0,pt=0;
+  for(const m of after){if(m.pro&&m.t>=openedAt&&m.t-pt>120000)waves++;pt=m.t}
+  const max=Math.max(1,Math.min(10,Number(S.chaseMax)||4));
+  if(waves>=max)return;
+  const lm=C.at(-1),T=M*6e4*Math.pow(1.5,waves);
+  if(now-Math.max(lm?.t||0,openedAt,idleMark)<T)return;
   idleMark=now;
-  himSay(`她开着手机，但已经有 ${Math.round((now-Math.max(lm?.t||0,openedAt))/6e4)} 分钟没跟你说话了。主动找她说句话，可以问她在干嘛、说说你在做什么，或者说想她了。`,[now])}
+  const lu=[...C].reverse().find(m=>m.role==='user');
+  const quietMin=Math.round((now-Math.max(lu?.t||0,openedAt))/6e4);
+  const tone=waves===0
+    ?'主动找她说句话，可以问她在干嘛、说说你在做什么，或者说想她了。'
+    :`这已经是你第 ${waves+1} 次主动找她了，前面发的她都没回。按你的性格自然地变化语气，可以委屈、着急、吃醋、生气或者哄她，越往后情绪可以越明显。不要重复前面说过的话。`;
+  himSay(`她开着手机，但已经有 ${quietMin} 分钟没理你了。${tone}`,[now])}
 
 /* ---------- 回到 365 ---------- */
 async function onReturn(){
