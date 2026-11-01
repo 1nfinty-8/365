@@ -1,5 +1,9 @@
-/* ===== 365 · hub.js · More、小圆点、Safari 顶部颜色 ===== */
+/* ===== 365 · hub.js · More、小圆点、顶部颜色 ===== */
 (()=>{
+document.head.insertAdjacentHTML('beforeend',`<style>
+.more-grid .card.sm{min-height:clamp(54px,7.8vh,74px)}
+#moreSm{margin-top:clamp(14px,2.4vh,26px)}
+</style>`);
 $('#tabbar').insertAdjacentHTML('beforebegin',`
 <section class="page" id="page-more"><div class="wrap">
   <div class="head">
@@ -8,15 +12,20 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
   </div>
   <div class="sub-line">更多的小房间。</div>
   <div class="grid more-grid" id="moreGrid"></div>
+  <div class="grid more-grid" id="moreSm"></div>
 </div></section>`);
 const homeMore=$('#page-home .card[data-go="more"]');
 
-/* ---------- More ---------- */
+/* ---------- More：按这个顺序排，最后两个是小按钮 ---------- */
+const ORDER=['deep','todo','memo','wish','wx','cal','screen','phone','cards','secret'];
+const SM=['cards','secret'];
 const LIST=[];
 function render(){
-  $('#moreGrid').innerHTML=LIST.length
-    ?LIST.map(o=>`<button class="card glass" data-go="${o.go}"><div class="cn">${esc(o.cn)}</div>${o.ce?`<div class="ce">${esc(o.ce)}</div>`:''}<i class="ndot"></i></button>`).join('')
-    :'<div class="empty" style="grid-column:1/-1">这里会放更多的功能</div>';
+  const rank=o=>{const i=ORDER.indexOf(o.go);return i<0?99:i};
+  const L=[...LIST].sort((a,b)=>rank(a)-rank(b));
+  const card=(o,sm)=>`<button class="card glass${sm?' sm':''}" data-go="${o.go}"><div class="cn">${esc(o.cn)}</div>${o.ce&&!sm?`<div class="ce">${esc(o.ce)}</div>`:''}<i class="ndot"></i></button>`;
+  $('#moreGrid').innerHTML=L.filter(o=>!SM.includes(o.go)).map(o=>card(o,false)).join('');
+  $('#moreSm').innerHTML=L.filter(o=>SM.includes(o.go)).map(o=>card(o,true)).join('');
   dots()}
 window.addMore=o=>{LIST.push(o);render()};
 
