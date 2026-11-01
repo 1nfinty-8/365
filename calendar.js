@@ -9,34 +9,42 @@ const T=()=>isoDate(today());
 const dt=s=>s.slice(5).replace('-','.');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 const NEXT='<svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
-let ym=null,mkDate=null,mkEdit=null;
+let ym=null,mkEdit=null;
 
 document.head.insertAdjacentHTML('beforeend',`<style>
-.cal-sum{display:flex;align-items:center;gap:12px;padding:16px 18px;margin-bottom:12px}
+.cal-sum{padding:16px 18px;margin-bottom:12px}
+.cal-r1{display:flex;align-items:center;gap:12px}
 .cal-sum .l{flex:1;min-width:0}
 .cal-sum .t{font-size:16px;letter-spacing:2px}
 .cal-sum .s{font-size:12px;color:var(--sub);margin-top:3px;letter-spacing:1px}
 .cal-sum .r{text-align:right;flex:none}
 .cal-sum .p{font-size:11px;color:var(--sub)}
-.cal-sum .n{font-family:var(--num);font-style:italic;font-weight:300;font-size:44px;line-height:1.05;letter-spacing:-1px;color:var(--accent-t)}
-.cal-box{padding:14px 12px 12px;margin-bottom:14px}
+.cal-sum .n{font-family:var(--num);font-style:italic;font-weight:300;font-size:44px;line-height:1.05;letter-spacing:-1px;color:var(--pd)}
+.cal-q{display:flex;gap:8px;margin-top:12px}
+.cal-q .pill{flex:1;padding:10px 0;font-size:14px;letter-spacing:2px;background:var(--pd);color:var(--pdt)}
+.cal-box{padding:14px 10px 12px;margin-bottom:14px}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .cal-nav .iconbtn{width:34px;height:34px}
 .cal-ym{font-family:var(--num);font-style:italic;font-weight:300;font-size:26px;letter-spacing:1px}
 .cal-wk{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:var(--sub);margin-bottom:4px;letter-spacing:1px}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.cal-d{position:relative;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-family:var(--num);font-size:16px}
-.cal-d span{position:relative}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.cal-d{position:relative;aspect-ratio:1;display:grid;place-items:center;font-family:var(--num);font-size:16px}
+.cal-d span{position:relative;z-index:1;width:34px;height:34px;display:grid;place-items:center;border-radius:50%}
 .cal-d i{font-style:normal}
-.cal-d.today{box-shadow:inset 0 0 0 1.5px var(--accent-t)}
-.cal-d.pd{background:var(--accent);color:var(--acct)}
-.cal-d.pp::before{content:"";position:absolute;inset:3px;border-radius:50%;border:1.5px dashed var(--accent)}
-.cal-m{position:absolute;bottom:4px;left:50%;margin-left:-2px;width:4px;height:4px;border-radius:50%;background:var(--accent-t)}
-.cal-d.pd .cal-m{background:var(--acct)}
-.cal-a{position:absolute;top:1px;right:3px;font-size:9px;color:var(--accent-t)}
-.cal-d.pd .cal-a{color:var(--acct)}
+.cal-d.today span{box-shadow:inset 0 0 0 1.5px var(--accent-t)}
+.cal-d.pd{color:var(--pdt)}
+.cal-d.pd::before{content:"";position:absolute;top:5px;bottom:5px;left:0;right:0;background:var(--pd)}
+.cal-d.pd.ps::before{left:4px;border-radius:10px 0 0 10px}
+.cal-d.pd.pe::before{right:4px;border-radius:0 10px 10px 0}
+.cal-d.pd.ps.pe::before{border-radius:10px}
+.cal-d.pd.today span{box-shadow:inset 0 0 0 1.5px var(--pdt)}
+.cal-d.pp::before{content:"";position:absolute;top:5px;bottom:5px;left:4px;right:4px;border:1.5px dashed var(--pd);border-radius:10px;opacity:.75}
+.cal-m{position:absolute;z-index:1;bottom:7px;left:50%;margin-left:-2px;width:4px;height:4px;border-radius:50%;background:var(--accent-t)}
+.cal-d.pd .cal-m{background:var(--pdt)}
+.cal-a{position:absolute;z-index:1;top:4px;right:5px;font-size:9px;color:var(--accent-t)}
+.cal-d.pd .cal-a{color:var(--pdt)}
 .cal-lg{display:flex;justify-content:center;gap:14px;margin-top:10px;font-size:11px;color:var(--sub);flex-wrap:wrap;letter-spacing:1px}
-.cal-lg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.cal-lg i{display:inline-block;width:12px;height:9px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .cal-h{font-size:12px;color:var(--sub);letter-spacing:2px;margin:6px 4px 8px}
 .cal-it{display:flex;gap:12px;align-items:baseline;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px}
 .cal-it b{font-family:var(--num);font-style:italic;font-weight:300;font-size:22px;min-width:34px}
@@ -59,7 +67,7 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
     <div class="cal-nav"><button class="iconbtn" id="calPrev">${BACK}</button><button class="cal-ym" id="calYm"></button><button class="iconbtn" id="calNext">${NEXT}</button></div>
     <div class="cal-wk">${[...'日一二三四五六'].map(x=>`<span>${x}</span>`).join('')}</div>
     <div class="cal-grid" id="calGrid"></div>
-    <div class="cal-lg"><span><i style="background:var(--accent)"></i>生理期</span><span><i style="border:1.5px dashed var(--accent)"></i>预计</span><span><i style="background:var(--accent-t);width:5px;height:5px"></i>特殊日子</span><span>♡ 纪念日</span></div>
+    <div class="cal-lg"><span><i style="background:var(--pd)"></i>生理期</span><span><i style="border:1.5px dashed var(--pd)"></i>预计</span><span><i style="background:var(--accent-t);width:5px;height:5px;border-radius:50%"></i>特殊日子</span><span>♡ 纪念日</span></div>
   </div>
   <div id="calMonth"></div>
   <div id="calHist"></div>
@@ -91,12 +99,12 @@ function predicted(iso,I){
   for(let k=0;k<6;k++){const s=add(I.next,k*I.cycle);if(iso<s)return false;if(iso<=add(s,I.plen-1))return true}
   return false}
 function status(I){
-  if(!I.last)return {t:'还没有记录',s:'点日历上的某一天，标记生理期开始'};
-  if(I.cur)return {t:'照顾好自己',s:I.cur.end?`${dt(I.cur.end)} 结束`:'结束那天，点一下日期标记结束',p:'生理期第',n:diff(I.cur.start,I.t)+1,u:'天'};
+  if(!I.last)return {t:'还没有记录',s:'来了就点下面的按钮'};
+  if(I.cur)return {t:'照顾好自己',s:I.cur.end?`${dt(I.cur.end)} 结束`:'结束那天点「今天结束了」',p:'生理期第',n:diff(I.cur.start,I.t)+1,u:'天'};
   const left=diff(I.t,I.next);
   if(left>0)return {t:'下一次生理期',s:`预计 ${dt(I.next)} · 周期约 ${I.cycle} 天`,p:'大约还有',n:left,u:'天',left};
-  if(left===0)return {t:'预计就是今天',s:'来了记得点一下日期标记',n:'♡',left};
-  return {t:'比预计晚了',s:`预计是 ${dt(I.next)}，来了记得标记`,p:'晚了',n:-left,u:'天',left}}
+  if(left===0)return {t:'预计就是今天',s:'来了记得点一下',n:'♡',left};
+  return {t:'比预计晚了',s:`预计是 ${dt(I.next)}`,p:'晚了',n:-left,u:'天',left}}
 
 /* ---------- 画日历 ---------- */
 function annivMap(y,m){const map={},last=new Date(y,m+1,0).getDate();
@@ -106,13 +114,23 @@ function annivMap(y,m){const map={},last=new Date(y,m+1,0).getDate();
   return map}
 function render(){
   if(!ym){const d=today();ym=[d.getFullYear(),d.getMonth()]}
+  const pd=darken(S.theme||'#B4848D',.75),pg=$('#page-cal');
+  pg.style.setProperty('--pd',pd);pg.style.setProperty('--pdt',onText(pd));
   const[y,m]=ym,I=info(),st=status(I);
-  $('#calSum').innerHTML=`<div class="l"><div class="t">${st.t}</div><div class="s">${st.s}</div></div>${st.n!=null?`<div class="r">${st.p?`<div class="p">${st.p}</div>`:''}<div class="n">${st.n}</div>${st.u?`<div class="p">${st.u}</div>`:''}</div>`:''}`;
+  const q=[];
+  if(I.cur){if(I.t>I.cur.start&&I.cur.end!==I.t)q.push(['end','生理期结束了'])}
+  else q.push(['start','生理期开始了']);
+  $('#calSum').innerHTML=`<div class="cal-r1"><div class="l"><div class="t">${st.t}</div><div class="s">${st.s}</div></div>${st.n!=null?`<div class="r">${st.p?`<div class="p">${st.p}</div>`:''}<div class="n">${st.n}</div>${st.u?`<div class="p">${st.u}</div>`:''}</div>`:''}</div>
+    ${q.length?`<div class="cal-q">${q.map(([k,n])=>`<button class="pill" data-q="${k}">${n}</button>`).join('')}</div>`:''}
+    <p class="hint">补记以前的：点日历上那一天</p>`;
   $('#calYm').textContent=`${y}.${pad(m+1)}`;
   const first=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate(),an=annivMap(y,m);
   let h='';for(let i=0;i<first;i++)h+='<div></div>';
-  for(let d=1;d<=n;d++){const iso=`${y}-${pad(m+1)}-${pad(d)}`;
-    const c=[isPeriod(iso,I)?'pd':predicted(iso,I)?'pp':'',iso===I.t?'today':''].join(' ');
+  for(let d=1;d<=n;d++){const iso=`${y}-${pad(m+1)}-${pad(d)}`,col=(first+d-1)%7;
+    let c='';
+    if(isPeriod(iso,I)){const pv=d>1&&col>0&&isPeriod(add(iso,-1),I),nx=d<n&&col<6&&isPeriod(add(iso,1),I);c='pd'+(pv?'':' ps')+(nx?'':' pe')}
+    else if(predicted(iso,I))c='pp';
+    if(iso===I.t)c+=' today';
     const mk=DATA.marks.some(x=>x.date===iso);
     h+=`<button class="cal-d ${c}" data-d="${iso}"><span>${d}</span>${an[d]?'<i class="cal-a">♡</i>':''}${mk?'<i class="cal-m"></i>':''}</button>`}
   $('#calGrid').innerHTML=h;
@@ -127,19 +145,25 @@ function render(){
     return `<button class="cal-it glass" data-pid="${p.id}"><b style="font-size:17px;min-width:auto">${p.start.slice(0,4)}</b><span>${dt(p.start)} – ${e?dt(e):'进行中'}</span><small>${e?diff(p.start,e)+1+' 天':''}</small></button>`}).join(''):'';
 }
 
-/* ---------- 点日期 ---------- */
+/* ---------- 生理期 ---------- */
 const sv=async()=>{await saveData('period');render();renderTips()};
+async function startAt(iso){const I=info();
+  const open=I.P.filter(x=>x.start<iso&&!x.end).at(-1);
+  if(open){const e=I.endOf(open);open.end=e<iso?e:add(iso,-1)}
+  DATA.period.push({id:uid(),start:iso});await sv();toast('记下了，照顾好自己 ♡')}
+$('#calSum').onclick=async e=>{const b=e.target.closest('[data-q]');if(!b)return;const I=info();
+  if(b.dataset.q==='start')await startAt(I.t);
+  else if(I.cur){I.cur.end=I.t;await sv();toast('记下了 ♡')}};
 function dayMenu(iso){
   const I=info(),acts=[];
-  const p=I.P.find(x=>iso>=x.start&&iso<=I.endOf(x)),open=I.P.find(x=>!x.end);
+  const p=I.P.find(x=>iso>=x.start&&iso<=I.endOf(x));
+  const before=I.P.filter(x=>x.start<iso).at(-1);
   if(p){
-    if(iso>p.start)acts.push(['生理期在这天结束',async()=>{p.end=iso;await sv();toast('记下了 ♡')}]);
+    if(iso>p.start)acts.push(['生理期结束了（生理期最后一天）',async()=>{p.end=iso;await sv();toast('记下了 ♡')}]);
     acts.push(['删除这次生理期记录',async()=>{if(!confirm('删除这次生理期记录？'))return;DATA.period=DATA.period.filter(x=>x!==p);await sv()}]);
   }else if(iso<=I.t){
-    if(open&&iso>open.start&&diff(open.start,iso)<=14)acts.push(['生理期在这天结束',async()=>{open.end=iso;await sv();toast('记下了 ♡')}]);
-    acts.push(['生理期在这天开始',async()=>{
-      if(open&&open.start<iso){const e=I.endOf(open);open.end=e<iso?e:add(iso,-1)}
-      DATA.period.push({id:uid(),start:iso});await sv();toast('记下了，照顾好自己 ♡')}]);
+    acts.push(['生理期开始了（生理期开始）',()=>startAt(iso)]);
+    if(before&&diff(before.start,iso)<=14)acts.push(['生理期结束了（生理期最后一天）',async()=>{before.end=iso;await sv();toast('记下了 ♡')}]);
   }
   acts.push(['记一个特殊日子',()=>openMark(iso)]);
   DATA.marks.filter(x=>x.date===iso).forEach(mk=>{
@@ -152,7 +176,7 @@ $('#calNext').onclick=()=>{ym=ym[1]<11?[ym[0],ym[1]+1]:[ym[0]+1,0];render()};
 $('#calYm').onclick=()=>{ym=null;render()};
 
 /* ---------- 特殊日子 ---------- */
-function openMark(iso,mk){mkDate=iso;mkEdit=mk||null;
+function openMark(iso,mk){mkEdit=mk||null;
   $('#calMkT').textContent=mk?'改一改':'特殊日子';
   $('#calMkD').value=mk?.date||iso;$('#calMkX').value=mk?.text||'';openModal('calMk')}
 async function delMark(mk){if(!confirm(`删除「${mk.text}」？`))return;
