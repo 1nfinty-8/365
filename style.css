@@ -27,8 +27,8 @@ input,textarea,select{font:16px/1.5 var(--cn);color:var(--ink)}
 input.ti{font-family:var(--ti)}
 .bubble,.dy-text,.dy-note,.tc-letter,.tc-his,.an-note{font-family:var(--cn)}
 
-#bg{position:fixed;inset:-40px;background:linear-gradient(160deg,#F5ECED 0%,#E9D6D9 55%,#D8B9BF 100%) center/cover no-repeat;filter:blur(var(--blur))}
-#mask{position:fixed;inset:0;background:linear-gradient(180deg,rgba(248,240,241,var(--dim)),rgba(236,220,223,var(--dim)))}
+#bg{position:fixed;top:-40px;left:-40px;right:-40px;height:calc(var(--full-h,100vh) + 80px);background:linear-gradient(160deg,#F5ECED 0%,#E9D6D9 55%,#D8B9BF 100%) center/cover no-repeat;filter:blur(var(--blur))}
+#mask{position:fixed;top:0;left:0;right:0;height:var(--full-h,100vh);background:linear-gradient(180deg,rgba(248,240,241,var(--dim)),rgba(236,220,223,var(--dim)))}
 #app{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100%);overflow:hidden}
 .page{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:calc(var(--st) + 8px) 16px calc(var(--nav) + 18px);display:none}
 body.kb .page{padding-bottom:20px}
@@ -54,7 +54,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stro
 .muted{color:var(--sub)}
 
 /* 首页：固定在一屏里 */
-#page-home{overflow:hidden;padding-top:max(calc(var(--st) - 6px),6px);padding-bottom:calc(var(--nav) + 12px)}
+#page-home{overflow:hidden;padding-top:calc(var(--st) + 10px);padding-bottom:calc(var(--nav) + 12px)}
 #page-home.active{display:flex;flex-direction:column}
 #page-home>.wrap{flex:1;min-height:0;width:100%;display:flex;flex-direction:column}
 .top{display:flex;align-items:center;justify-content:space-between;height:34px;flex:none}
@@ -312,3 +312,4 @@ body #nb.show{transform:none;opacity:1;visibility:visible;transition:transform .
 #viewer.show{display:flex}
 #viewer img{max-width:100%;max-height:100%;object-fit:contain}
 .has-dot>.ndot{display:block}
+#sheet,#viewer{bottom:auto;height:var(--full-h,100%)}
