@@ -79,10 +79,12 @@ async function query(e){
 
 let busy=false,cache=LS(QC,{});
 const money=(v,c)=>v==null?'—':c+(v>=100?v.toFixed(0):v.toFixed(2));
+function leftOf(e,r){if(!r||r.kind==='none'||r.err)return null;if(r.left!=null)return r.left;
+  const tot=(S.quotaTot||{})[e.id];return tot&&r.used!=null?Math.max(0,tot-r.used):null}
 function pctOf(e,r){const tot=(S.quotaTot||{})[e.id];
   if(r?.kind==='none')return tot?Math.max(0,100-todayN(e.id)/tot*100):null;
-  if(!r||r.left==null)return null;
-  const total=r.total||tot;return total?Math.max(0,Math.min(100,r.left/total*100)):null}
+  const left=leftOf(e,r),total=r?.total||tot;
+  if(left==null||!total)return null;return Math.max(0,Math.min(100,left/total*100))}
 function render(){
   const L=entries(),el=$('#qtList');
   if(!L.length){el.innerHTML='<p class="hint">还没有填 API Key</p>';return}
@@ -90,7 +92,7 @@ function render(){
     let s;
     if(r?.kind==='none')s=`Google 官方查不了余额 · 今天用了 ${n} 次${tot?' / 每天 '+tot+' 次':''}`;
     else if(r?.err)s='查不到：'+esc(r.err);
-    else if(r)s=`剩 ${money(r.left,r.cur)}${r.total||tot?' / 共 '+money(r.total||tot,r.cur):''}${r.used!=null?' · 已用 '+money(r.used,r.cur):''} · 今天 ${n} 次`;
+    else if(r)s=`剩 ${money(leftOf(e,r),r.cur)}${r.total||tot?' / 共 '+money(r.total||tot,r.cur):''}${r.used!=null?' · 已用 '+money(r.used,r.cur):''} · 今天 ${n} 次`;
     else s=busy?'正在查…':'还没查';
     const low=p!=null&&p<15?' low':'';
     return `<button class="qt-it" data-q="${esc(e.id)}"><div class="qt-h"><b>${esc(e.name)}</b><small>${esc(host(e.base))}</small><em class="${low}">${p==null?'—':Math.round(p)}<small>%</small></em></div><div class="qt-bar"><i class="${low}" style="width:${p==null?0:p}%"></i></div><div class="qt-s${low}">${s}</div></button>`}).join('');
