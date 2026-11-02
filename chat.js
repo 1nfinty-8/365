@@ -157,11 +157,11 @@ $('#plusBtn').onclick=async()=>{
   const imgs=await pickPhotos(4,1024,.8);if(!imgs.length)return;
   const ids=await IMG.putAll(imgs);
   DATA.chat.push({role:'user',text:'',images:ids,t:Date.now(),status:'sent'});await save();render();if(!busy)reply()};
-$('#msgs').onclick=e=>{
-  const vb=e.target.closest('.vbub');if(vb){playV(vb.dataset.vid);return}
-  const row=e.target.closest('.row[data-i]');if(!row||!e.target.closest('.stack'))return;
-  const i=+row.dataset.i,m=DATA.chat[i];if(!m)return;const acts=[];
-  if(e.target.matches('.cimg')&&e.target.src)acts.push(['查看大图',()=>viewImage(e.target.src)]);
+document.head.insertAdjacentHTML('beforeend','<style>.vbub{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}</style>');
+function menu(i,el){
+  const m=DATA.chat[i];if(!m)return;const acts=[];
+  if(el&&el.matches&&el.matches('.cimg')&&el.src)acts.push(['查看大图',()=>viewImage(el.src)]);
+  if(m.voice)acts.push([playId===m.voice.id?'停止播放':'播放',()=>playV(m.voice.id)]);
   const tx=m.voice?m.voice.tx:m.text;
   if(tx)acts.push(['复制',()=>navigator.clipboard?.writeText(tx).then(()=>toast('已复制'),()=>toast('复制失败'))]);
   if(m.voice){
@@ -169,8 +169,17 @@ $('#msgs').onclick=e=>{
       m.voice.tx=v.trim();m.text=vlabel(m.voice.dur,m.voice.tx);await save();render()}]);
     acts.push([S.voiceAsr===false?'打开自动转文字':'关闭自动转文字',()=>{S.voiceAsr=S.voiceAsr===false;saveSettings();toast(S.voiceAsr?'自动转文字打开了':'自动转文字关掉了')}])}
   if(m.role==='model'&&!busy&&DATA.chat.slice(i).every(x=>x.role==='model'))acts.push(['让他重新说',reroll]);
-  acts.push(['删除这条',async()=>{const x=DATA.chat.splice(i,1)[0];await save();await IMG.del(x?.images);if(x?.voice)await IMG.del([x.voice.id]);render()}]);
-  sheet(acts)};
+  acts.push(['删除这条',async()=>{if(m.voice&&playId===m.voice.id)stopV();const x=DATA.chat.splice(i,1)[0];await save();await IMG.del(x?.images);if(x?.voice)await IMG.del([x.voice.id]);render()}]);
+  sheet(acts)}
+let lpT=null,lpFired=false;
+$('#msgs').addEventListener('touchstart',e=>{const vb=e.target.closest('.vbub');if(!vb)return;lpFired=false;clearTimeout(lpT);
+  lpT=setTimeout(()=>{lpFired=true;const row=vb.closest('.row[data-i]');if(row)menu(+row.dataset.i,vb)},500)},{passive:true});
+['touchend','touchmove','touchcancel'].forEach(ev=>$('#msgs').addEventListener(ev,()=>clearTimeout(lpT),{passive:true}));
+$('#msgs').onclick=e=>{
+  const vb=e.target.closest('.vbub');
+  if(vb){if(lpFired){lpFired=false;return}playV(vb.dataset.vid);return}
+  const row=e.target.closest('.row[data-i]');if(!row||!e.target.closest('.stack'))return;
+  menu(+row.dataset.i,e.target)};
 
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopV();if(rec)stopRec(true)}});
 HOOKS.ready.push(render);
