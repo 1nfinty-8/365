@@ -123,3 +123,9 @@ const stale=m=>!cache._t||Date.now()-cache._t>m*60000;
 HOOKS.ready.push(()=>{render();if(stale(10))refresh()});
 HOOKS.page.push(n=>{if(n==='me'){render();if(stale(5))refresh()}});
 })();
+/* ---------- 「我的」：连接 和 他的消息 换位置 ---------- */
+HOOKS.ready.push(()=>{
+  const f=t=>[...$$('#page-me .sec')].find(s=>(s.querySelector('h3')?.textContent||'').trim().startsWith(t));
+  const a=f('连接'),b=f('他的消息');if(!a||!b)return;
+  const m=document.createComment('');a.replaceWith(m);b.replaceWith(a);m.replaceWith(b)});
+
