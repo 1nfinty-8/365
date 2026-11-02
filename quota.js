@@ -25,21 +25,28 @@ const cntOn=(id,d)=>CNT[d]?.[id]||0;
 const todayN=id=>cntOn(id,D0());
 
 document.head.insertAdjacentHTML('beforeend',`<style>
-.qt-h{display:flex;align-items:baseline;gap:8px}
-.qt-h b{font-weight:500;font-size:16px;letter-spacing:2px;flex:none}
-.qt-h small{flex:1;min-width:0;font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#webQ{display:none!important}
 .qt-bar{height:6px;border-radius:6px;background:rgba(46,26,31,.08);margin-top:8px;overflow:hidden}
 .qt-bar i{display:block;height:100%;border-radius:6px;background:var(--accent);transition:width .6s}
 .qt-bar i.low{background:#C0505F}
 .qt-s{font-size:12px;color:var(--sub);margin-top:8px;letter-spacing:.5px;word-break:break-all}
-.qt-s.low,.qp-big.low{color:#C0505F}
+.qt-s.low{color:#C0505F}
 .qt-mi{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:14px;letter-spacing:1px}
 .qt-mi .qt-bar{flex:1;margin:0}
 .qt-mi em{font-family:var(--num);font-style:italic;min-width:42px;text-align:right;color:var(--accent-t)}
 .qt-mi em.low{color:#C0505F}
-.qp-c{display:block;width:100%;text-align:left;padding:18px 18px 14px;margin-bottom:14px}
-.qp-big{font-family:var(--num);font-style:italic;font-weight:300;font-size:56px;line-height:1.05;margin-top:6px;color:var(--accent-t)}
-.qp-big small{font-size:20px;margin-left:2px}
+#qtMini{cursor:pointer}
+.qp-c{padding:0;margin-bottom:12px;overflow:hidden}
+.qp-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:16px 18px}
+.qp-l{flex:1;min-width:0;display:flex;flex-direction:column}
+.qp-l b{font-weight:500;font-size:16px;letter-spacing:2px}
+.qp-l small{font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.qp-pc{font-family:var(--num);font-style:italic;font-weight:300;font-size:36px;line-height:1;color:var(--accent-t);flex:none}
+.qp-pc small{font-size:14px;margin-left:1px}
+.qp-pc.low{color:#C0505F}
+.qp-ar{flex:none;width:8px;height:8px;border-right:1.5px solid var(--sub);border-bottom:1.5px solid var(--sub);transform:rotate(-45deg);transition:transform .2s;margin-left:2px}
+.qp-c.open .qp-ar{transform:rotate(45deg)}
+.qp-more{padding:0 18px 16px;animation:fd .25s ease}
 .qp-eta{font-size:13px;margin-top:6px;letter-spacing:1px}
 .qp-eta b{font-family:var(--num);font-style:italic;font-weight:400;font-size:18px;color:var(--accent-t)}
 .qp-ct{font-size:11.5px;color:var(--sub);letter-spacing:2px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
@@ -49,6 +56,8 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .qp-ch div.on i{opacity:1}
 .qp-ch b{font-size:9.5px;font-weight:400;color:var(--sub);margin-bottom:3px;font-family:var(--num);white-space:nowrap}
 .qp-ch small{font-size:11px;color:var(--sub);margin-top:5px;font-family:var(--num);font-style:italic}
+.qp-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.qp-acts .pill{padding:7px 14px;font-size:12.5px}
 .qp-foot{display:flex;gap:10px;justify-content:center;margin:6px 0 10px}
 #qtTips{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:1px}
 #qtTips:empty{display:none}
@@ -63,6 +72,7 @@ $('#exportBtn').closest('.sec').insertAdjacentHTML('beforebegin',`
   <div class="btns"><button class="pill" data-go="quota">打开额度页</button></div>
 </div>`);
 $('#qtSec').addEventListener('click',e=>{if(!e.target.closest('h3'))return;e.preventDefault();e.stopPropagation();go('quota')},true);
+$('#qtMini').onclick=()=>go('quota');
 
 /* ---------- 额度页 ---------- */
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -71,7 +81,7 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
   <div class="sub-line" id="qpTime"></div>
   <div id="qpList"></div>
   <div class="qp-foot"><button class="pill" id="qpAdd">＋ 添加一个 API</button><button class="pill ghost" id="qpWarn"></button></div>
-  <p class="hint">点卡片可以设置总额。中转站一般能自动算出百分比；DeepSeek 只能查余额，要自己填总额；Gemini 官方查不了余额，只能记每天用了几次。柱状图和「还能用多久」是从开始记录那天算起的。</p>
+  <p class="hint">点一行展开看详情。中转站一般能自动算出百分比；DeepSeek 只能查余额，要自己填总额；Gemini 官方查不了余额，只能记每天用了几次。柱状图和「还能用多久」是从开始记录那天算起的。</p>
 </div></section>`);
 $('#app').insertAdjacentHTML('beforeend',`
 <div class="modal" id="qtAdd"><div class="mbox">
@@ -95,6 +105,10 @@ function entries(){const L=[];
   if(S.sxProvider)add('秘密',S.sxProvider,S.sxKey||S.apiKey,S.sxBase||S.baseUrl);
   (S.quotaList||[]).forEach(q=>add(q.name||'其他','',q.key,q.base,q.id));
   return L}
+function webInfo(){if(!S.tvKey)return null;
+  const c=LS('365-web',{}),n=c.m===D0().slice(0,7)?(c.n||0):0,lim=S.webLimit||1000;
+  return {id:'web',web:true,name:'联网',base:'https://api.tavily.com',n,lim,p:Math.max(0,100-n/lim*100)}}
+const rows=()=>{const L=entries(),w=webInfo();if(w)L.push(w);return L};
 
 /* ---------- 查额度 ---------- */
 async function query(e){
@@ -112,7 +126,7 @@ async function query(e){
   if(!hard||hard>=1e6)return {left:null,used,cur:'$'};
   return {left:Math.max(0,hard-(used||0)),total:hard,used,cur:'$'}}
 
-/* ---------- 每天记一次，用来画柱状图、算还能用多久 ---------- */
+/* ---------- 每天记一次 ---------- */
 let HIST=LS(QH,{});
 function metric(r){if(!r||r.err||r.kind==='none')return null;if(r.used!=null)return r.used;if(r.left!=null)return -r.left;return null}
 function record(id,r){const v=metric(r);if(v==null)return;(HIST[id]=HIST[id]||{})[D0()]=v;
@@ -125,49 +139,59 @@ function rate(id){const h=HIST[id];if(!h)return null;const lim=lastDays(8)[0];
   return Math.max(0,(h[b]-h[a])/dd)}
 
 let busy=false,cache=LS(QC,{});
+const OPEN=new Set();
 const money=(v,c)=>v==null?'—':c+(v>=100?v.toFixed(0):v.toFixed(2));
 function leftOf(e,r){if(!r||r.kind==='none'||r.err)return null;if(r.left!=null)return r.left;
   const tot=(S.quotaTot||{})[e.id];return tot&&r.used!=null?Math.max(0,tot-r.used):null}
-function pctOf(e,r){const tot=(S.quotaTot||{})[e.id];
+function pctOf(e,r){if(e.web)return e.p;
+  const tot=(S.quotaTot||{})[e.id];
   if(r?.kind==='none')return tot?Math.max(0,100-todayN(e.id)/tot*100):null;
   const left=leftOf(e,r),total=r?.total||tot;
   if(left==null||!total)return null;return Math.max(0,Math.min(100,left/total*100))}
 function daysLeft(e,r){const L=leftOf(e,r),rt=rate(e.id);if(L==null||rt==null)return null;return rt<=0?Infinity:Math.floor(L/rt)}
+const btn=(k,t,id)=>`<button class="pill ghost" data-qa="${k}" data-id="${esc(id)}">${t}</button>`;
 
-/* ---------- 画出来 ---------- */
-function card(e){
-  const r=cache[e.id],p=pctOf(e,r),n=todayN(e.id),tot=(S.quotaTot||{})[e.id],low=p!=null&&p<warn()?' low':'',cur=r?.cur||'$';
+/* ---------- 展开以后的详情 ---------- */
+function detail(e){
+  const p=pctOf(e,cache[e.id]),low=p!=null&&p<warn()?' low':'';
+  const bar=`<div class="qt-bar"><i class="${low}" style="width:${p==null?0:p}%"></i></div>`;
+  if(e.web)return bar+`<div class="qt-s${low}">这个月搜了 ${e.n} 次 / 每月 ${e.lim} 次 · 每月 1 号重置</div><div class="qp-acts">${btn('wlim','设置每月次数','web')}</div>`;
+  const r=cache[e.id],n=todayN(e.id),tot=(S.quotaTot||{})[e.id],cur=r?.cur||'$';
   let s;
   if(r?.kind==='none')s=`Google 官方查不了余额 · 今天用了 ${n} 次${tot?' / 每天 '+tot+' 次':''}`;
   else if(r?.err)s='查不到：'+esc(r.err);
   else if(r){const TT=r.total||tot;s=`剩 ${money(leftOf(e,r),cur)}${TT?' / 共 '+money(TT,cur):''}${r.used!=null?' · 已用 '+money(r.used,cur):''} · 今天 ${n} 次`}
   else s=busy?'正在查…':'还没查';
   let eta='';
-  if(e.g)eta=tot?`每天 0 点重置 · 今天还能用 <b>${Math.max(0,tot-n)}</b> 次`:'点这张卡片，填每天能用几次';
+  if(e.g)eta=tot?`每天 0 点重置 · 今天还能用 <b>${Math.max(0,tot-n)}</b> 次`:'点下面的按钮，填每天能用几次';
   else if(leftOf(e,r)!=null){const d=daysLeft(e,r);
     eta=d==null?'多用两天，就能算出还能用多久':d===Infinity?'最近几天几乎没花钱':`按最近 7 天的速度，大约还能用 <b>${d}</b> 天`}
-  else if(r&&!r.err)eta='点这张卡片设置总额，就能算出百分比';
+  else if(r&&!r.err)eta='设置总额以后，就能算出百分比';
   const DS=lastDays(7),V=DS.map(d=>e.g?cntOn(e.id,d):spend(e.id,d)),mx=Math.max(0,...V.filter(v=>v!=null))||1;
   const fv=v=>v==null?'':e.g?v:(v<10?v.toFixed(2):v.toFixed(1));
-  return `<button class="qp-c glass" data-q="${esc(e.id)}">
-    <div class="qt-h"><b>${esc(e.name)}</b><small>${esc(host(e.base))}</small></div>
-    <div class="qp-big${low}">${p==null?'—':Math.round(p)}<small>%</small></div>
-    <div class="qt-bar"><i class="${low}" style="width:${p==null?0:p}%"></i></div>
-    <div class="qt-s${low}">${s}</div>${eta?`<div class="qp-eta">${eta}</div>`:''}
+  const acts=[];
+  if(e.g||!r?.total)acts.push(btn('tot',e.g?'设置每天能用几次':'设置总额',e.id));
+  if(e.cid)acts.push(btn('name','改名字',e.id),btn('del','删除',e.id));
+  return bar+`<div class="qt-s${low}">${s}</div>${eta?`<div class="qp-eta">${eta}</div>`:''}
     <div class="qp-ct">${e.g?'最近 7 天 · 每天用了几次':'最近 7 天 · 每天花了多少'}</div>
     <div class="qp-ch">${DS.map((d,i)=>`<div class="${d===D0()?'on':''}"><b>${fv(V[i])}</b><i style="height:${V[i]==null?0:Math.max(3,Math.round(V[i]/mx*60))}px"></i><small>${+d.slice(8)}</small></div>`).join('')}</div>
-  </button>`}
-function renderMini(){const el=$('#qtMini');if(!el)return;const L=entries();
+    ${acts.length?`<div class="qp-acts">${acts.join('')}</div>`:''}`}
+function card(e){
+  const p=pctOf(e,cache[e.id]),low=p!=null&&p<warn()?' low':'',op=OPEN.has(e.id);
+  return `<div class="qp-c glass${op?' open':''}"><button class="qp-row" data-q="${esc(e.id)}"><span class="qp-l"><b>${esc(e.name)}</b><small>${esc(host(e.base))}</small></span><em class="qp-pc${low}">${p==null?'—':Math.round(p)}<small>%</small></em><i class="qp-ar"></i></button>${op?`<div class="qp-more">${detail(e)}</div>`:''}</div>`}
+
+/* ---------- 画出来 ---------- */
+function renderMini(){const el=$('#qtMini');if(!el)return;const L=rows();
   el.innerHTML=L.length?L.map(e=>{const p=pctOf(e,cache[e.id]),low=p!=null&&p<warn()?' low':'';
     return `<div class="qt-mi"><span>${esc(e.name)}</span><div class="qt-bar"><i class="${low}" style="width:${p==null?0:p}%"></i></div><em class="${low}">${p==null?'—':Math.round(p)+'%'}</em></div>`}).join('')
     :'<p class="hint">还没有填 API Key</p>'}
-function renderPage(){const L=entries();
+function renderPage(){const L=rows();
   $('#qpList').innerHTML=L.length?L.map(card).join(''):'<div class="empty">还没有填 API Key</div>';
   $('#qpTime').textContent=busy?'正在查…':cache._t?'更新于 '+fmtDate(cache._t):'';
   $('#qpRef').textContent=busy?'查询中…':'刷新';
   $('#qpWarn').textContent=`提醒线 ${warn()}%`}
 function renderTips(){const el=$('#qtTips');if(!el)return;
-  el.innerHTML=entries().map(e=>[e,pctOf(e,cache[e.id])]).filter(([e,p])=>p!=null&&p<warn())
+  el.innerHTML=rows().map(e=>[e,pctOf(e,cache[e.id])]).filter(([e,p])=>p!=null&&p<warn())
     .map(([e,p])=>`<button data-go="quota">${esc(e.name)}的额度只剩 ${Math.round(p)}% 了</button>`).join('')}
 function renderAll(){renderMini();renderPage();renderTips()}
 
@@ -182,17 +206,18 @@ async function refresh(){
 $('#qpRef').onclick=refresh;
 $('#qpWarn').onclick=()=>{const v=prompt('额度低于百分之几时提醒你？',warn());if(v==null)return;
   const n=parseFloat(v);if(n>0&&n<100){S.quotaWarn=n;saveSettings();renderAll()}};
-$('#qpList').onclick=e=>{const b=e.target.closest('[data-q]');if(!b)return;
-  const en=entries().find(x=>x.id===b.dataset.q);if(!en)return;
-  const r=cache[en.id],acts=[];
-  if(en.g||!r?.total)acts.push([en.g?'设置每天能用几次':'设置总额（用来算百分比）',()=>{
-    const v=prompt(en.g?'这个 Key 每天最多能用几次？':'一共充了多少？（只填数字）',(S.quotaTot||{})[en.id]||'');if(v==null)return;
-    S.quotaTot=S.quotaTot||{};const n=parseFloat(v);if(n>0)S.quotaTot[en.id]=n;else delete S.quotaTot[en.id];saveSettings();renderAll()}]);
-  if(en.cid){
-    acts.push(['改名字',()=>{const q=(S.quotaList||[]).find(x=>x.id===en.cid);if(!q)return;const v=prompt('新的名字',q.name);if(!v||!v.trim())return;q.name=v.trim();saveSettings();renderAll()}]);
-    acts.push(['删除这个',()=>{if(!confirm('删除这个 API？'))return;S.quotaList=(S.quotaList||[]).filter(x=>x.id!==en.cid);saveSettings();renderAll()}])}
-  if(!acts.length)return toast('这个的百分比是自动算的');
-  sheet(acts)};
+$('#qpList').onclick=e=>{
+  const a=e.target.closest('[data-qa]');if(a)return act(a.dataset.qa,a.dataset.id);
+  const b=e.target.closest('[data-q]');if(!b)return;
+  const id=b.dataset.q;OPEN.has(id)?OPEN.delete(id):OPEN.add(id);renderPage()};
+function act(k,id){
+  if(k==='wlim'){const v=prompt('联网每个月能搜几次？',S.webLimit||1000);if(v==null)return;
+    const n=parseInt(v);if(n>0){S.webLimit=n;saveSettings();renderAll()}return}
+  const en=entries().find(x=>x.id===id);if(!en)return;
+  if(k==='tot'){const v=prompt(en.g?'这个 Key 每天最多能用几次？':'一共充了多少？（只填数字）',(S.quotaTot||{})[en.id]||'');if(v==null)return;
+    S.quotaTot=S.quotaTot||{};const n=parseFloat(v);if(n>0)S.quotaTot[en.id]=n;else delete S.quotaTot[en.id];saveSettings();renderAll()}
+  if(k==='name'){const q=(S.quotaList||[]).find(x=>x.id===en.cid);if(!q)return;const v=prompt('新的名字',q.name);if(!v||!v.trim())return;q.name=v.trim();saveSettings();renderAll()}
+  if(k==='del'){if(!confirm('删除这个 API？'))return;S.quotaList=(S.quotaList||[]).filter(x=>x.id!==en.cid);OPEN.delete(id);saveSettings();renderAll()}}
 $('#qpAdd').onclick=()=>{$('#qtN').value='';$('#qtU').value='';$('#qtK').value='';openModal('qtAdd')};
 $('#qtSave').onclick=()=>{const name=$('#qtN').value.trim(),base=$('#qtU').value.trim(),key=$('#qtK').value.trim();
   if(!base||!key)return toast('地址和 Key 都要填');
