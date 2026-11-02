@@ -3,7 +3,6 @@
 if(!Array.isArray(DATA.library))DATA.library=[];
 const save=()=>saveData('library');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
-const DOTS='<svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="8" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="6" cy="16" r="2"/><circle cx="12" cy="16" r="2"/></svg>';
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 .lb-item{display:block;width:100%;text-align:left;padding:18px 20px;margin-bottom:12px;transition:transform .15s}
@@ -12,6 +11,22 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .lb-meta{font-size:12px;color:var(--sub);margin-top:4px;letter-spacing:1px}
 .lb-bar{height:2px;background:rgba(46,26,31,.08);border-radius:2px;margin-top:10px;overflow:hidden}
 .lb-bar i{display:block;height:100%;background:var(--accent)}
+.bk-card{padding:22px 20px 18px;margin-bottom:18px;text-align:center}
+.bk-title{font-size:22px;font-weight:500;letter-spacing:4px;line-height:1.5;word-break:break-word}
+.bk-meta{font-size:12px;color:var(--sub);margin-top:4px;letter-spacing:1px}
+.bk-pct{font-family:var(--num);font-style:italic;font-weight:300;font-size:58px;line-height:1.1;margin-top:10px;color:var(--accent-t)}
+.bk-pct small{font-size:20px;margin-left:2px}
+.bk-bar{height:6px;border-radius:6px;background:rgba(46,26,31,.08);margin-top:6px;overflow:hidden}
+.bk-bar i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.bk-at{font-size:12px;color:var(--sub);margin-top:8px;letter-spacing:1px}
+.bk-btns{display:flex;gap:8px;justify-content:center;margin-top:16px}
+.bk-btns .pill{padding:9px 20px;font-size:14px}
+.bk-h{font-size:12px;color:var(--sub);letter-spacing:3px;margin:0 4px 12px}
+.bk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:14px 8px;justify-items:center}
+.bk-c{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--accent);display:grid;place-items:center;font-family:var(--num);font-style:italic;font-size:17px;background:rgba(255,255,255,.35);transition:transform .15s}
+.bk-c:active{transform:scale(.92)}
+.bk-c.read{background:var(--accent);color:var(--acct);opacity:.45}
+.bk-c.on{background:var(--accent);color:var(--acct);border-color:transparent;box-shadow:0 0 0 3px rgba(255,255,255,.75)}
 #reader{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;background:var(--rd-bg);color:var(--rd-tx);-webkit-backdrop-filter:blur(24px) saturate(1.2);backdrop-filter:blur(24px) saturate(1.2)}
 #reader.show{display:flex;animation:fd .25s ease}
 .rd-top{flex:none;display:flex;align-items:center;gap:4px;padding:calc(var(--st) + 4px) 10px 8px}
@@ -29,39 +44,45 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .rd-sw input{width:30px;height:30px;border:0;padding:0;border-radius:50%;background:conic-gradient(#f88,#fd8,#8f8,#8df,#a8f,#f8d,#f88);-webkit-appearance:none;appearance:none;overflow:hidden}
 .rd-sw input::-webkit-color-swatch-wrapper{padding:0}
 .rd-sw input::-webkit-color-swatch{border:0;opacity:0}
-.rd-toc{flex:none;display:none;flex-wrap:wrap;gap:10px;padding:4px 20px 14px;max-height:42vh;overflow-y:auto}
-.rd-toc.show{display:flex}
-.rd-toc button{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--accent);color:inherit;font-family:var(--num);font-style:italic;font-size:16px;display:grid;place-items:center;flex:none}
-.rd-toc button.on{background:var(--accent);color:var(--acct);border-color:transparent}
 .rd-line{flex:none;height:2px;background:rgba(127,127,127,.15)}
 .rd-line i{display:block;height:100%;width:0;background:var(--accent)}
-#rdBody{position:relative;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:12px 26px calc(var(--sb) + 40px)}
+#rdBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:12px 26px calc(var(--sb) + 40px)}
 .rd-text{max-width:620px;margin:0 auto;font-family:var(--ti);font-size:var(--rd-size,17px);line-height:2;letter-spacing:.5px;text-align:justify}
 .rd-text p{margin:0 0 1em;text-indent:2em}
-.rd-div{display:block;width:100%;margin:2em auto 1.4em;font-family:var(--num);font-style:italic;font-size:15px;opacity:.5;letter-spacing:4px;text-align:center;color:inherit}
-.rd-text .rd-div:first-child{margin-top:.6em}
-.rd-end{display:block;margin:30px auto 0;padding:11px 26px}
-.rd-cap{text-align:center;font-size:12px;opacity:.5;letter-spacing:2px;margin-top:30px}
+.rd-div{display:block;width:100%;margin:.6em auto 1.4em;font-family:var(--num);font-style:italic;font-size:15px;opacity:.5;letter-spacing:4px;text-align:center;color:inherit}
+.rd-nav{display:flex;gap:10px;justify-content:center;margin-top:30px}
+.rd-nav .pill{padding:10px 24px;font-size:14px}
+.rd-nav .pill.ghost{background:rgba(127,127,127,.15);color:inherit;border:0}
+.rd-cap{text-align:center;font-size:12px;opacity:.5;letter-spacing:2px;margin-top:24px}
 .mbox .f select{background:var(--sys-card);border:0;color:var(--sys-txt)}
 #lbImpList{max-height:38vh;overflow-y:auto;margin:6px 0}
 #lbImpList .mm-pick span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
 </style>`);
 
 $('#page-library .wrap').innerHTML=`
-  <div class="head">
-    <button class="iconbtn glass" data-go="home" aria-label="返回">${BACK}</button>
-    <h2>图书馆</h2><em>library</em><span class="sp"></span>
-    <button class="pill" id="lbAdd">＋ 新故事</button>
+  <div id="lbShelf">
+    <div class="head">
+      <button class="iconbtn glass" data-go="home" aria-label="返回">${BACK}</button>
+      <h2>图书馆</h2><em>library</em><span class="sp"></span>
+      <button class="pill" id="lbAdd">＋ 新故事</button>
+    </div>
+    <div class="sub-line">我们的故事，一段一段接下去。</div>
+    <div id="lbList"></div>
   </div>
-  <div class="sub-line">我们的故事，一段一段接下去。</div>
-  <div id="lbList"></div>`;
+  <div id="lbBook" style="display:none">
+    <div class="head">
+      <button class="iconbtn glass" id="bkBack" aria-label="返回">${BACK}</button>
+      <h2>图书馆</h2><em>library</em><span class="sp"></span>
+      <button class="iconbtn glass" id="bkMore" style="letter-spacing:1px">···</button>
+    </div>
+    <div id="bkBody"></div>
+  </div>`;
 
 $('#app').insertAdjacentHTML('beforeend',`
 <div id="reader">
   <div class="rd-top">
     <button class="iconbtn" id="rdBack" aria-label="返回">${BACK}</button>
     <div class="rd-title" id="rdTitle"></div>
-    <button class="iconbtn" id="rdTocB" aria-label="目录">${DOTS}</button>
     <button class="iconbtn" id="rdAa" style="font-family:var(--en);font-size:17px">Aa</button>
     <button class="iconbtn" id="rdMore" style="letter-spacing:1px">···</button>
   </div>
@@ -69,7 +90,6 @@ $('#app').insertAdjacentHTML('beforeend',`
     <div class="rd-row"><span>字号</span><button data-fs="-1">A−</button><b id="rdFs">17</b><button data-fs="1">A＋</button></div>
     <div class="rd-row"><span>背景</span><div class="rd-sw" id="rdBg"></div></div>
   </div>
-  <div class="rd-toc" id="rdTocP"></div>
   <div class="rd-line"><i id="rdPg"></i></div>
   <div id="rdBody"></div>
 </div>
@@ -97,20 +117,27 @@ $('#app').insertAdjacentHTML('beforeend',`
 const len=s=>s.parts.reduce((n,p)=>n+p.text.length,0);
 const fmtN=n=>n>=10000?(n/10000).toFixed(1)+' 万':n;
 const pos=()=>{try{return JSON.parse(localStorage.getItem('365-lib')||'{}')}catch(e){return {}}};
-const setPos=(id,r)=>{const P=pos();if(r==null)delete P[id];else P[id]=r;localStorage.setItem('365-lib',JSON.stringify(P))};
+const setPos=(id,v)=>{const P=pos();if(v==null)delete P[id];else P[id]=v;localStorage.setItem('365-lib',JSON.stringify(P))};
+const getPos=id=>{const v=pos()[id];return v&&typeof v==='object'?v:null};
 const paras=t=>t.split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<p>${esc(s)}</p>`).join('');
 function mix(h,w,k){const a=rgb(h),b=rgb(w);return '#'+a.map((v,i)=>Math.round(v*(1-k)+b[i]*k).toString(16).padStart(2,'0')).join('')}
 const themeBg=()=>mix(S.theme||'#B4848D','#FFFFFF',.78);
+function pctOf(s){const n=s.parts.length,p=getPos(s.id);if(!n||!p)return 0;
+  const c=Math.min(p.c,n-1),r=p.r||0;return c===n-1&&r>.95?100:Math.min(100,Math.round((c+r)/n*100))}
 
-/* 书架 */
+let book=null,cur=null,ch=0,editIdx=null,posT;
+
+/* ---------- 第一层：书架 ---------- */
 function render(){
-  const P=pos(),L=[...DATA.library].sort((a,b)=>(b.readAt||b.t)-(a.readAt||a.t));
-  $('#lbList').innerHTML=L.length?L.map(s=>{const p=Math.round((P[s.id]||0)*100);
+  const L=[...DATA.library].sort((a,b)=>(b.readAt||b.t)-(a.readAt||a.t));
+  $('#lbList').innerHTML=L.length?L.map(s=>{const p=pctOf(s);
     return `<button class="lb-item glass" data-lb="${s.id}"><div class="lb-title">${esc(s.title)}</div>
       <div class="lb-meta">${s.parts.length} 段 · 约 ${fmtN(len(s))} 字${p?` · 读到 ${p}%`:''}</div>
       <div class="lb-bar"><i style="width:${p}%"></i></div></button>`}).join('')
     :'<div class="empty">书架还空着<br>点「＋ 新故事」，把你们的剧情放进来</div>'}
-$('#lbList').onclick=e=>{const b=e.target.closest('[data-lb]');if(!b)return;const s=DATA.library.find(x=>x.id===b.dataset.lb);if(s)openBook(s)};
+function showShelf(){book=null;$('#lbShelf').style.display='';$('#lbBook').style.display='none';render()}
+function showBook(s){book=s;$('#lbShelf').style.display='none';$('#lbBook').style.display='';renderDetail();$('#page-library').scrollTop=0}
+$('#lbList').onclick=e=>{const b=e.target.closest('[data-lb]');if(!b)return;const s=DATA.library.find(x=>x.id===b.dataset.lb);if(s)showBook(s)};
 $('#lbAdd').onclick=()=>{$('#lbTitle').value='';$('#lbText').value='';openModal('lbModal')};
 $('#lbSave').onclick=async()=>{
   const title=$('#lbTitle').value.trim(),text=$('#lbText').value.trim();
@@ -118,8 +145,29 @@ $('#lbSave').onclick=async()=>{
   DATA.library.push({id:uid(),title,parts:text?[{id:uid(),text,t:Date.now()}]:[],t:Date.now()});
   await save();closeModal('lbModal');render();toast('放上书架了 ♡')};
 
-/* 阅读 */
-let cur=null,editIdx=null,posT;
+/* ---------- 第二层：这本书的目录 ---------- */
+function renderDetail(){const s=book;if(!s)return;
+  const n=s.parts.length,p=getPos(s.id),c=p?Math.min(p.c,Math.max(0,n-1)):0,pct=pctOf(s);
+  $('#bkBody').innerHTML=`<div class="bk-card glass">
+      <div class="bk-title">${esc(s.title)}</div>
+      <div class="bk-meta">${n} 段 · 约 ${fmtN(len(s))} 字</div>
+      <div class="bk-pct">${pct}<small>%</small></div>
+      <div class="bk-bar"><i style="width:${pct}%"></i></div>
+      <div class="bk-at">${!n?'还没有段落':p?`读到第 ${c+1} 段`:'还没开始读'}</div>
+      <div class="bk-btns">${n?`<button class="pill" id="bkGo">${p?'继续读':'开始读'}</button>`:''}<button class="pill ghost" id="bkAdd">＋ 接着写一段</button></div>
+    </div>
+    ${n?`<div class="bk-h">目录</div><div class="bk-grid">${s.parts.map((_,i)=>`<button class="bk-c${p&&i<c?' read':''}${p&&i===c?' on':''}" data-ci="${i}">${i+1}</button>`).join('')}</div>`:''}`}
+$('#bkBody').onclick=e=>{if(!book)return;
+  if(e.target.closest('#bkGo')){const p=getPos(book.id);openCh(p?Math.min(p.c,book.parts.length-1):0);return}
+  if(e.target.closest('#bkAdd')){openPart(null);return}
+  const c=e.target.closest('[data-ci]');if(c)openCh(+c.dataset.ci)};
+$('#bkBack').onclick=showShelf;
+$('#bkMore').onclick=()=>{const s=book;if(!s)return;
+  sheet([['改名字',async()=>{const v=prompt('新的名字',s.title);if(!v||!v.trim())return;s.title=v.trim();await save();renderDetail()}],
+    ['删除这个故事',async()=>{if(!confirm(`删除「${s.title}」？里面所有的段落都会删掉。`))return;
+      DATA.library=DATA.library.filter(x=>x!==s);setPos(s.id,null);await save();showShelf();toast('删掉了')}]])};
+
+/* ---------- 第三层：读一段 ---------- */
 function applyReader(){
   const base=S.readBg||themeBg(),[r,g,b]=rgb(base),el=$('#reader');
   el.style.setProperty('--rd-bg',`rgba(${r},${g},${b},.86)`);
@@ -130,34 +178,23 @@ function renderSet(){
   $('#rdFs').textContent=S.readSize||17;
   $('#rdBg').innerHTML=BGS.map(([c,n])=>`<button data-bg="${c}" aria-label="${n}" class="${(S.readBg||'')===c?'on':''}" style="background:${c||themeBg()}"></button>`).join('')
     +`<input type="color" id="rdBgC" value="${String(S.readBg||'#f7f3ec').toLowerCase()}">`}
-function renderToc(){
-  $('#rdTocP').innerHTML=cur.parts.length?cur.parts.map((p,i)=>`<button data-ti="${i}">${i+1}</button>`).join('')
-    :'<span style="opacity:.6;font-size:13px">还没有段落</span>';mark()}
-function mark(){const b=$('#rdBody');let c=0;
-  $$('#rdBody [data-pi]').forEach((d,i)=>{if(d.offsetTop<=b.scrollTop+60)c=i});
-  $$('#rdTocP button').forEach((x,i)=>x.classList.toggle('on',i===c))}
-function renderBook(){
-  const s=cur;$('#rdTitle').textContent=s.title;
-  $('#rdBody').innerHTML=`<div class="rd-text">${s.parts.map((p,i)=>`<button class="rd-div" data-pi="${i}">· ${i+1} ·</button>${paras(p.text)}`).join('')}</div>
-    <button class="pill rd-end" id="rdNext">＋ 接着写一段</button>
-    <div class="rd-cap">${s.parts.length} 段 · 约 ${fmtN(len(s))} 字</div>`;
-  renderToc()}
+function renderCh(){const s=cur,n=s.parts.length,p=s.parts[ch];
+  $('#rdTitle').textContent=`${s.title} · ${ch+1}`;
+  $('#rdBody').innerHTML=`<div class="rd-text"><button class="rd-div" id="rdDiv">· ${ch+1} ·</button>${paras(p.text)}</div>
+    <div class="rd-nav">${ch>0?'<button class="pill ghost" id="rdPrev">上一段</button>':''}${ch<n-1?'<button class="pill" id="rdNextCh">下一段</button>':'<button class="pill" id="rdToc">回到目录</button>'}</div>
+    <div class="rd-cap">第 ${ch+1} / ${n} 段 · 约 ${fmtN(p.text.length)} 字</div>`}
 function prog(){const b=$('#rdBody'),m=b.scrollHeight-b.clientHeight,r=m>0?b.scrollTop/m:1;$('#rdPg').style.width=(r*100)+'%';return r}
-async function openBook(s){
-  cur=s;applyReader();renderSet();renderBook();
-  $('#rdSet').classList.remove('show');$('#rdTocP').classList.toggle('show',s.parts.length>1);
-  $('#reader').classList.add('show');
-  const b=$('#rdBody');
-  requestAnimationFrame(()=>{const r=pos()[s.id]||0;b.scrollTop=r*(b.scrollHeight-b.clientHeight);prog();mark()});
-  s.readAt=Date.now();await save()}
-function closeBook(){$('#reader').classList.remove('show');cur=null;render()}
-$('#rdBody').addEventListener('scroll',()=>{if(!cur)return;const id=cur.id,r=prog();mark();clearTimeout(posT);posT=setTimeout(()=>setPos(id,r),300)},{passive:true});
-$('#rdBack').onclick=closeBook;
-$('#rdAa').onclick=()=>{$('#rdTocP').classList.remove('show');$('#rdSet').classList.toggle('show')};
-$('#rdTocB').onclick=()=>{$('#rdSet').classList.remove('show');$('#rdTocP').classList.toggle('show')};
-$('#rdTocP').onclick=e=>{const t=e.target.closest('[data-ti]');if(!t)return;
-  $('#rdTocP').classList.remove('show');
-  requestAnimationFrame(()=>{const el=$(`#rdBody [data-pi="${t.dataset.ti}"]`);if(el)$('#rdBody').scrollTop=el.offsetTop-6;prog();mark()})};
+function openCh(i){
+  if(!book||!book.parts[i])return;
+  cur=book;ch=i;applyReader();renderSet();renderCh();
+  $('#rdSet').classList.remove('show');$('#reader').classList.add('show');
+  const b=$('#rdBody'),p=getPos(cur.id);
+  requestAnimationFrame(()=>{b.scrollTop=p&&p.c===i?(p.r||0)*(b.scrollHeight-b.clientHeight):0;setPos(cur.id,{c:i,r:prog()})});
+  cur.readAt=Date.now();save()}
+function closeReader(){$('#reader').classList.remove('show');cur=null;if(book)renderDetail();render()}
+$('#rdBody').addEventListener('scroll',()=>{if(!cur)return;const id=cur.id,c=ch,r=prog();clearTimeout(posT);posT=setTimeout(()=>setPos(id,{c,r}),300)},{passive:true});
+$('#rdBack').onclick=closeReader;
+$('#rdAa').onclick=()=>$('#rdSet').classList.toggle('show');
 $('#rdSet').addEventListener('click',e=>{
   const f=e.target.closest('[data-fs]');
   if(f){S.readSize=Math.max(14,Math.min(24,(S.readSize||17)+Number(f.dataset.fs)));saveSettings();applyReader();renderSet();return}
@@ -165,27 +202,31 @@ $('#rdSet').addEventListener('click',e=>{
   if(b){S.readBg=b.dataset.bg;saveSettings();applyReader();renderSet()}});
 $('#rdSet').addEventListener('input',e=>{if(e.target.id!=='rdBgC')return;
   S.readBg=e.target.value.toUpperCase();saveSettings();applyReader();$$('#rdBg button').forEach(x=>x.classList.remove('on'))});
-$('#rdMore').onclick=()=>{if(!cur)return;const s=cur;
-  sheet([['改名字',async()=>{const v=prompt('新的名字',s.title);if(!v||!v.trim())return;s.title=v.trim();await save();renderBook()}],
-    ['删除这个故事',async()=>{if(!confirm(`删除「${s.title}」？里面所有的段落都会删掉。`))return;
-      DATA.library=DATA.library.filter(x=>x!==s);setPos(s.id,null);await save();closeBook();toast('删掉了')}]])};
+function partMenu(){
+  sheet([['编辑这一段',()=>openPart(ch)],
+    ['删除这一段',async()=>{if(!confirm(`删除第 ${ch+1} 段？`))return;
+      cur.parts.splice(ch,1);const p=getPos(cur.id);
+      if(p)setPos(cur.id,{c:Math.max(0,Math.min(p.c,cur.parts.length-1)),r:0});
+      await save();closeReader();toast('删掉了')}],
+    ['回到目录',closeReader]])}
+$('#rdMore').onclick=()=>{if(cur)partMenu()};
+$('#rdBody').addEventListener('click',e=>{
+  if(e.target.closest('#rdPrev'))return openCh(ch-1);
+  if(e.target.closest('#rdNextCh'))return openCh(ch+1);
+  if(e.target.closest('#rdToc'))return closeReader();
+  if(e.target.closest('#rdDiv'))partMenu()});
 
-/* 段落：接着写 / 编辑 / 删除 */
+/* ---------- 接着写 / 编辑 ---------- */
 function openPart(i){editIdx=i;
   $('#lbPartT').textContent=i==null?'接着写一段':`编辑第 ${i+1} 段`;
-  $('#lbPartText').value=i==null?'':cur.parts[i].text;openModal('lbPart')}
-$('#rdBody').addEventListener('click',e=>{
-  if(e.target.closest('#rdNext')){openPart(null);return}
-  const d=e.target.closest('[data-pi]');if(!d)return;const i=+d.dataset.pi;
-  sheet([['编辑这一段',()=>openPart(i)],
-    ['删除这一段',async()=>{if(!confirm(`删除第 ${i+1} 段？`))return;cur.parts.splice(i,1);await save();renderBook();prog()}]])});
+  $('#lbPartText').value=i==null?'':book.parts[i].text;openModal('lbPart')}
 $('#lbPartSave').onclick=async()=>{
   const text=$('#lbPartText').value.trim();if(!text)return toast('还没有粘贴内容');
-  let at;
-  if(editIdx==null){cur.parts.push({id:uid(),text,t:Date.now()});at=cur.parts.length-1}
-  else{cur.parts[editIdx].text=text;at=editIdx}
-  await save();closeModal('lbPart');renderBook();
-  requestAnimationFrame(()=>{$(`#rdBody [data-pi="${at}"]`)?.scrollIntoView({block:'start'});prog();mark()});
+  if(!book)return;
+  if(editIdx==null)book.parts.push({id:uid(),text,t:Date.now()});
+  else book.parts[editIdx].text=text;
+  await save();closeModal('lbPart');
+  if(cur&&editIdx!=null)renderCh();else renderDetail();
   toast(editIdx==null?'接上了 ♡':'改好了')};
 
 /* ---------- 从秘密收进图书馆 ---------- */
@@ -224,5 +265,8 @@ $('#lbImpOk').onclick=async()=>{
 document.addEventListener('visibilitychange',()=>{if(document.hidden)$('#lbImp').classList.remove('show')});
 
 HOOKS.ready.push(render);
-HOOKS.page.push(n=>{if(n!=='secret')$('#lbImp').classList.remove('show');if(n==='library')render();else if(cur)closeBook()});
+HOOKS.page.push(n=>{
+  if(n!=='secret')$('#lbImp').classList.remove('show');
+  if(n==='library'){if(book)renderDetail();else render()}
+  else{if(cur){$('#reader').classList.remove('show');cur=null}if(book)showShelf()}});
 })();
