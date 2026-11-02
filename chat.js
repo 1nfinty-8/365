@@ -83,7 +83,7 @@ async function reply(){
     DATA.chat.forEach(m=>{if(m.role==='user'&&m.status==='sent'){m.status='read';m.readAt=now;ch=true}});
     if(ch)save();
     setTyping(true);
-    const out=await callAI(chatSystem(),ctxMsgs());
+    const out=await (window.webReply||callAI)(chatSystem(),ctxMsgs());
     const parts=S.split?out.split(/\n+/).map(s=>s.trim()).filter(Boolean):[out];
     for(let i=0;i<parts.length;i++){
       if(i)await sleep(Math.min(500+parts[i].length*45,2000));
