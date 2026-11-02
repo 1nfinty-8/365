@@ -31,7 +31,6 @@ function prime(){[vo,rg].forEach(el=>{if(el._ok||el._busy)return;el._busy=1;el.s
   let p;try{p=el.play()}catch(e){}
   Promise.resolve(p).then(()=>{if(el.src===SIL)el.pause();el._ok=1}).catch(()=>{}).finally(()=>{el._busy=0})})}
 function unlockTTS(){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
-document.addEventListener('pointerdown',prime,{passive:true});
 const ringSrc=()=>ringData||RIN;
 function ringStart(src){try{rg._ok=1;rg.loop=true;if(rg.src!==src)rg.src=src;rg.currentTime=0;rg.play().catch(()=>{})}catch(e){}}
 function ringStop(){try{rg.pause()}catch(e){}}
