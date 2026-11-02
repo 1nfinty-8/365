@@ -138,7 +138,7 @@ function render(){
   const items=[...DATA.marks.filter(x=>x.date.startsWith(pre)).map(x=>({d:+x.date.slice(8),x:x.text,id:x.id})),
     ...Object.entries(an).flatMap(([d,ns])=>ns.map(nm=>({d:+d,x:nm,a:1})))].sort((a,b)=>a.d-b.d);
   $('#calMonth').innerHTML=items.length?`<div class="cal-h">这个月</div>`+items.map(it=>
-    `<button class="cal-it glass"${it.id?` data-mk="${it.id}"`:''}><b>${it.d}</b><span>${esc(it.x)}</span>${it.a?'<small>纪念日 ♡</small>':''}</button>`).join(''):'';
+  <button class="cal-it glass"${it.id?` data-mk="${it.id}"`:''}${it.a?' data-go="anniv"':''}>
   const H=[...I.P].reverse().slice(0,6);
   $('#calHist').innerHTML=H.length?`<div class="cal-h">最近几次 · 周期约 ${I.cycle} 天 · 每次约 ${I.plen} 天</div>`+H.map(p=>{
     const e=p.end||(p===I.cur?'':I.endOf(p));
@@ -175,7 +175,13 @@ $('#calGrid').onclick=e=>{const b=e.target.closest('[data-d]');if(b)dayMenu(b.da
 $('#calPrev').onclick=()=>{ym=ym[1]?[ym[0],ym[1]-1]:[ym[0]-1,11];render()};
 $('#calNext').onclick=()=>{ym=ym[1]<11?[ym[0],ym[1]+1]:[ym[0]+1,0];render()};
 $('#calYm').onclick=()=>{ym=null;render()};
-
+/* ---------- 纪念日：用纪念日原来的窗口 ---------- */
+function openAnniv(iso){const b=$('#anAdd');if(!b)return toast('没找到纪念日');
+  b.click();
+  setTimeout(()=>{const d=$('#anDate');if(!d)return;d.value=iso;
+    d.dispatchEvent(new Event('input',{bubbles:true}));d.dispatchEvent(new Event('change',{bubbles:true}))},80)}
+new MutationObserver(()=>{if(!$('#anModal').classList.contains('show')&&$('#page-cal').classList.contains('active'))render()})
+  .observe($('#anModal'),{attributes:true,attributeFilter:['class']});
 /* ---------- 特殊日子 ---------- */
 function openMark(iso,mk){mkEdit=mk||null;
   $('#calMkT').textContent=mk?'改一改':'特殊日子';
