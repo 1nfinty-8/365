@@ -1,4 +1,4 @@
-/* ===== 365 · call.js · 打电话 + 他打给你 ===== */
+/* ===== 365 · call.js · 打电话 + 他打给你 + 悬浮窗 + 自定义铃声 ===== */
 (()=>{
 if(!Array.isArray(DATA.calls))DATA.calls=[];
 if(typeof LISTS!=='undefined'&&!LISTS.includes('calls'))LISTS.push('calls');
@@ -6,16 +6,43 @@ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const PHONE='<svg class="i" viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.6 4.2-2 1.3a11.5 11.5 0 0 0 5.8 5.8l1.3-2 4.2 1.6v3a2 2 0 0 1-2.1 2.1A15.5 15.5 0 0 1 4.5 5.6a2 2 0 0 1 2.1-2.1z"/></svg>';
 const PH='<svg viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.6 4.2-2 1.3a11.5 11.5 0 0 0 5.8 5.8l1.3-2 4.2 1.6v3a2 2 0 0 1-2.1 2.1A15.5 15.5 0 0 1 4.5 5.6a2 2 0 0 1 2.1-2.1z"/></svg>';
 const MIC='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>';
+const MINI='<svg viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>';
 const mmss=s=>`${pad(Math.floor(s/60))}:${pad(s%60)}`;
 const IK='365-incall',MK='365-inmiss';
-let st='idle',ctx=null,rec=null,heard='',silT=null,tick=null,t0=0,lines=[],muted=false,stopSpeak=null,tok=0,warned=false,dir='out',inc=null,ringT=null,incT=null,pend=false;
+let st='idle',rec=null,heard='',silT=null,tick=null,t0=0,lines=[],muted=false,stopSpeak=null,tok=0,warned=false,dir='out',inc=null,incT=null,pend=false,mini=false,ringData=null;
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>{}}catch(e){}
+
+/* ---------- 生成声音（铃声、嘟嘟声） ---------- */
+function wav(len,notes){
+  const sr=16000,n=Math.max(1,Math.floor(len*sr)),b=new ArrayBuffer(44+n*2),v=new DataView(b);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const t=i/sr;let s=0;
+    for(const[fs,a,d,vol]of notes)if(t>=a&&t<a+d){const e=Math.min(1,(t-a)/.02,(a+d-t)/.03);for(const f of fs)s+=Math.sin(6.2832*f*t)*vol*e}
+    v.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true)}
+  return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
+const SIL=wav(.15,[]);
+const RB=wav(5,[[[450],0,1,.3]]);
+const RIN=wav(2.6,[0,1.1].flatMap(o=>[659,784,988,784].map((f,i)=>[[f],o+i*.2,.18,.22])));
+const vo=new Audio(),rg=new Audio();
+[vo,rg].forEach(a=>{a.setAttribute('playsinline','');a.preload='auto'});
+function prime(){[vo,rg].forEach(el=>{if(el._ok||el._busy)return;el._busy=1;el.src=SIL;
+  let p;try{p=el.play()}catch(e){}
+  Promise.resolve(p).then(()=>{if(el.src===SIL)el.pause();el._ok=1}).catch(()=>{}).finally(()=>{el._busy=0})})}
+function unlockTTS(){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+document.addEventListener('pointerdown',prime,{passive:true});
+const ringSrc=()=>ringData||RIN;
+function ringStart(src){try{rg._ok=1;rg.loop=true;if(rg.src!==src)rg.src=src;rg.currentTime=0;rg.play().catch(()=>{})}catch(e){}}
+function ringStop(){try{rg.pause()}catch(e){}}
+function loadRing(){ringData=null;if(S.callRing)IMG.get(S.callRing).then(d=>{ringData=d||null}).catch(()=>{})}
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 #callUI{position:absolute;inset:0;z-index:35;display:none;flex-direction:column;align-items:center;color:#fff;background:rgba(18,14,22,.62);-webkit-backdrop-filter:blur(30px) saturate(1.3);backdrop-filter:blur(30px) saturate(1.3);padding:calc(var(--st) + 14px) 28px calc(var(--sb) + 34px)}
 #callUI.show{display:flex;animation:fd .3s ease}
-.cl-top{align-self:stretch;display:flex;justify-content:flex-end;min-height:30px}
-.cl-top button{color:#fff;opacity:.7;font-size:13px;letter-spacing:2px;padding:6px 4px}
+.cl-top{align-self:stretch;display:flex;justify-content:space-between;align-items:center;min-height:34px}
+.cl-top button{color:#fff;opacity:.75;font-size:13px;letter-spacing:2px;padding:6px 4px}
+.cl-top svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
 #callUI.in .cl-top button{visibility:hidden}
 .cl-av{position:relative;margin-top:6vh;border-radius:50%}
 .cl-av .av{width:116px;height:116px;font-size:42px;position:relative;z-index:1}
@@ -43,10 +70,17 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .cl-b svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .cl-b.end svg,.cl-b.ok svg{fill:#fff;stroke:none}
 .cl-b.end svg{transform:rotate(135deg)}
+#callFloat{position:absolute;z-index:34;top:calc(var(--st) + 70px);right:12px;width:74px;height:86px;border-radius:18px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 8px 24px rgba(0,0,0,.18);touch-action:none;transition:left .25s,top .25s}
+#callFloat.show{display:flex;animation:fd .25s ease}
+#callFloat.drag{transition:none}
+#callFloat svg{width:28px;height:28px;fill:#34C759}
+#callFloat span{font-family:var(--num);font-size:13px;color:#34C759;letter-spacing:1px}
+#callFloat.speak svg{animation:cfP 1s ease-in-out infinite}
+@keyframes cfP{50%{transform:scale(1.15)}}
 </style>`);
 
 $('#app').insertAdjacentHTML('beforeend',`<div id="callUI">
-  <div class="cl-top"><button id="clSet">声音</button></div>
+  <div class="cl-top"><button id="clMin" aria-label="缩小">${MINI}</button><button id="clSet">声音</button></div>
   <div class="cl-av" id="clAv"></div>
   <div class="cl-name" id="clName"></div>
   <div class="cl-time" id="clTime"></div>
@@ -61,7 +95,8 @@ $('#app').insertAdjacentHTML('beforeend',`<div id="callUI">
     <button class="cl-b end" id="clNo"><i>${PH}</i>拒绝</button>
     <button class="cl-b ok" id="clYes"><i>${PH}</i>接听</button>
   </div>
-</div>`);
+</div>
+<div id="callFloat">${PH}<span id="cfT">呼叫中</span></div>`);
 
 /* 聊天输入框旁边的电话按钮 */
 const mb=$('#micBtn')||$('#plusBtn');
@@ -69,19 +104,10 @@ mb.insertAdjacentHTML('afterend',`<button id="callBtn" aria-label="打电话">${
 $('#callBtn').className=mb.className;
 $('#callBtn').addEventListener('pointerdown',e=>e.preventDefault());
 $('#callBtn').onclick=()=>start();
+document.addEventListener('click',e=>{if(st!=='idle'&&e.target.closest?.('#micBtn')){e.stopPropagation();e.preventDefault();toast('通话中不能录语音')}},true);
 
-/* ---------- 声音的准备 ---------- */
-function getCtx(){if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){ctx=null}}return ctx}
-document.addEventListener('pointerdown',()=>{try{getCtx()?.resume()}catch(e){}},{passive:true});
-function unlockTTS(){try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}}
-function tone(f,s,d,v){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
-  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(v,s+.03);g.gain.setValueAtTime(v,s+d-.05);g.gain.linearRampToValueAtTime(0,s+d);o.start(s);o.stop(s+d+.02)}
-function ring(){if(!ctx||ctx.state!=='running')return;const t=ctx.currentTime;
-  for(let k=0;k<2;k++)[440,480].forEach(f=>tone(f,t+k*1.4,1,.05))}
-function ringIn(){if(!ctx)return;try{ctx.resume()}catch(e){}if(ctx.state!=='running')return;const t=ctx.currentTime;
-  for(let k=0;k<2;k++)[659,784,988,784].forEach((f,i)=>tone(f,t+k*1.1+i*.2,.18,.07))}
-
-function set(s,t){st=s;const u=$('#callUI');['ring','listen','think','speak','incoming'].forEach(x=>u.classList.toggle(x,x===s));$('#clSt').textContent=t||''}
+function set(s,t){st=s;const u=$('#callUI');['ring','listen','think','speak','incoming'].forEach(x=>u.classList.toggle(x,x===s));$('#clSt').textContent=t||'';upd()}
+function upd(){const f=$('#callFloat');if(!f)return;f.classList.toggle('speak',st==='speak');$('#cfT').textContent=t0?mmss(Math.floor((Date.now()-t0)/1000)):'呼叫中'}
 function sub(live){
   const H=[...lines].reverse().find(x=>x.role==='model');
   const lastMe=lines.at(-1)?.role==='user'?lines.at(-1).text:'';
@@ -89,32 +115,49 @@ function sub(live){
   $('#clSub').innerHTML=(H?`<div class="h">${esc(H.text)}</div>`:'')+(M?`<div class="m">${esc(M)}</div>`:'')}
 function refresh(){HOOKS.refresh.forEach(f=>{try{f()}catch(e){}})}
 function open(s,t,d){
-  tok++;dir=d;lines=[];heard='';t0=0;muted=false;
+  tok++;dir=d;lines=[];heard='';t0=0;muted=false;mini=false;
+  $('#callFloat').classList.remove('show');
   $('#clAv').innerHTML=avatarHTML('him');$('#clName').textContent=S.hisName;$('#clTime').textContent='';
   $('#callUI').classList.toggle('nosub',S.callSub===false);$('#clCap').classList.toggle('on',S.callSub!==false);
   $('#clMute').classList.remove('on');sub();
   $('#callUI').classList.toggle('in',s==='incoming');$('#callUI').classList.add('show');set(s,t)}
 function connected(){t0=Date.now();$('#clTime').textContent='00:00';clearInterval(tick);
-  tick=setInterval(()=>{$('#clTime').textContent=mmss(Math.floor((Date.now()-t0)/1000))},500)}
+  tick=setInterval(()=>{$('#clTime').textContent=mmss(Math.floor((Date.now()-t0)/1000));upd()},500)}
+
+/* ---------- 悬浮窗 ---------- */
+function minimize(){if(st==='idle'||st==='incoming')return;mini=true;$('#callUI').classList.remove('show');$('#callFloat').classList.add('show');upd()}
+function restore(){if(st==='idle')return;mini=false;$('#callFloat').classList.remove('show');$('#callUI').classList.add('show')}
+$('#clMin').onclick=minimize;
+(()=>{const fl=$('#callFloat');let fx=0,fy=0,ox=0,oy=0,moved=false,down=false;
+  fl.addEventListener('pointerdown',e=>{down=true;moved=false;fx=e.clientX;fy=e.clientY;
+    const r=fl.getBoundingClientRect(),a=$('#app').getBoundingClientRect();ox=r.left-a.left;oy=r.top-a.top;
+    fl.classList.add('drag');try{fl.setPointerCapture(e.pointerId)}catch(x){}});
+  fl.addEventListener('pointermove',e=>{if(!down)return;const dx=e.clientX-fx,dy=e.clientY-fy;
+    if(Math.abs(dx)+Math.abs(dy)>6)moved=true;if(!moved)return;
+    fl.style.right='auto';fl.style.left=(ox+dx)+'px';fl.style.top=(oy+dy)+'px'});
+  const up=()=>{if(!down)return;down=false;fl.classList.remove('drag');
+    if(!moved){restore();return}
+    const a=$('#app').getBoundingClientRect(),x=parseFloat(fl.style.left)||0,y=parseFloat(fl.style.top)||0;
+    fl.style.left=(x+37<a.width/2?12:a.width-86)+'px';fl.style.top=Math.max(40,Math.min(a.height-180,y))+'px'};
+  fl.addEventListener('pointerup',up);fl.addEventListener('pointercancel',up)})();
 
 /* ---------- 你打给他 ---------- */
 const H_OUT='（系统提示，不是她说的话：她刚给你打来电话，你接起来了。先开口说第一句。）';
 const H_NIGHT='（系统提示，不是她说的话：快睡觉了，是你主动给她打的电话，她接起来了。先开口，像睡前想听她的声音那样。）';
 const H_MISS='（系统提示，不是她说的话：你们好久没说话了，是你主动给她打的电话，她接起来了。先开口，说说你为什么打给她。）';
 async function start(){
-  if(st!=='idle')return;
+  if(st!=='idle'){if(mini)restore();return}
   if(!SR)return toast('这台手机不支持语音识别，打不了电话');
   if(!S.apiKey)return toast('还没有填 API Key');
+  unlockTTS();prime();
   $('#chatInput')?.blur();
-  getCtx();try{await ctx?.resume()}catch(e){}
-  unlockTTS();
   open('ring','正在呼叫…','out');const my=tok;
-  ring();const rt=setInterval(ring,2800);
+  ringStart(RB);
   const minT=sleep(2600+Math.random()*2400);
   let first;
   try{first=await ask(H_OUT)}
-  catch(e){clearInterval(rt);if(my===tok){toast(e.message);hang(true)}return}
-  await minT;clearInterval(rt);if(my!==tok)return;
+  catch(e){ringStop();if(my===tok){toast(e.message);hang(true)}return}
+  await minT;ringStop();if(my!==tok)return;
   connected();say(first)}
 
 /* ---------- 他说话 ---------- */
@@ -137,19 +180,21 @@ async function apiTTS(text){
     headers:{'Content-Type':'application/json',Authorization:'Bearer '+S.apiKey},
     body:JSON.stringify({model:S.callTtsModel||'tts-1',input:text,voice:S.callApiVoice||'onyx',speed:S.callRate||1})});
   if(!r.ok){let m='';try{const j=await r.json();m=j.error?.message||''}catch(e){}throw new Error(m||('请求失败 '+r.status))}
-  const ab=await r.arrayBuffer();
-  return await new Promise((ok,no)=>ctx.decodeAudioData(ab,ok,no))}
+  const b=await r.blob();if(!b.size)throw new Error('没有收到声音');
+  return URL.createObjectURL(b)}
 function speak(text){
   return new Promise(async res=>{
     let done=false;const fin=()=>{if(done)return;done=true;stopSpeak=null;res()};
     stopSpeak=fin;
-    if(S.callVoice==='api'&&S.provider!=='gemini'&&ctx){
-      try{const buf=await apiTTS(text);if(done)return;
-        await ctx.resume();const s=ctx.createBufferSource();s.buffer=buf;s.connect(ctx.destination);s.onended=fin;
-        stopSpeak=()=>{try{s.stop()}catch(e){}fin()};s.start();return}
+    if(S.callVoice==='api'&&S.provider!=='gemini'){
+      try{const url=await apiTTS(text);if(done){URL.revokeObjectURL(url);return}
+        const end=()=>{URL.revokeObjectURL(url);fin()};
+        vo.onended=end;vo.onerror=end;vo._ok=1;vo.loop=false;vo.src=url;
+        stopSpeak=()=>{try{vo.pause()}catch(e){}end()};
+        await vo.play();return}
       catch(e){if(done)return;if(!warned){warned=true;toast('中转站的声音用不了，先用系统的声音')}}}
     try{
-      const u=new SpeechSynthesisUtterance(text);u.lang='zh-CN';u.rate=S.callRate||1;u.pitch=.9;
+      const u=new SpeechSynthesisUtterance(text);u.lang='zh-CN';u.rate=S.callRate||1;u.pitch=.9;u.volume=1;
       const v=voice();if(v)u.voice=v;
       u.onend=fin;u.onerror=fin;
       stopSpeak=()=>{try{speechSynthesis.cancel()}catch(e){}fin()};
@@ -196,25 +241,29 @@ $('#clNo').onclick=()=>miss('拒接');
 
 /* ---------- 换声音 ---------- */
 const AV=[['onyx','低沉的男声'],['echo','温和的男声'],['fable','清亮的男声'],['alloy','中性的声音'],['nova','女声'],['shimmer','女声']];
-$('#clSet').onclick=()=>{
-  const acts=[[`系统的声音${S.callVoice!=='api'?' ✓':''}`,()=>{S.callVoice='sys';saveSettings();
+function voiceMenu(){
+  const acts=[['试一下他的声音',()=>testVoice()],
+    [`系统的声音${S.callVoice!=='api'?' ✓':''}`,()=>{S.callVoice='sys';saveSettings();
     const L=zh();if(!L.length)return toast('这台手机没有中文的系统声音');
-    sheet(L.slice(0,12).map(v=>[`${v.name}${v.name===voice()?.name?' ✓':''}`,()=>{S.callSysVoice=v.name;saveSettings();toast('下一句开始换成这个声音')}]))}]];
+    sheet(L.slice(0,12).map(v=>[`${v.name}${v.name===voice()?.name?' ✓':''}`,()=>{S.callSysVoice=v.name;saveSettings();toast('换好了')}]))}]];
   if(S.provider!=='gemini')acts.push([`中转站的声音${S.callVoice==='api'?' ✓':''}`,()=>{S.callVoice='api';warned=false;saveSettings();
-    sheet(AV.map(([k,n])=>[`${k} · ${n}${(S.callApiVoice||'onyx')===k?' ✓':''}`,()=>{S.callApiVoice=k;saveSettings();toast('下一句开始换成这个声音')}]))}]);
+    sheet(AV.map(([k,n])=>[`${k} · ${n}${(S.callApiVoice||'onyx')===k?' ✓':''}`,()=>{S.callApiVoice=k;saveSettings();toast('换好了')}]))}]);
   acts.push([`语速 ${S.callRate||1}`,()=>{const v=prompt('语速（0.7 到 1.5，1 是正常）',S.callRate||1);const n=parseFloat(v);
     if(n>=.5&&n<=2){S.callRate=n;saveSettings()}}]);
-  sheet(acts)};
+  sheet(acts)}
+$('#clSet').onclick=voiceMenu;
+function testVoice(){unlockTTS();prime();if(st!=='idle')return toast('通话中，直接听就好');
+  warned=false;speak('听得到我说话吗？')}
 
 /* ---------- 挂断 ---------- */
 async function hang(silent){
   if(st==='idle')return;
   if(st==='incoming')return miss('未接');
   tok++;const dur=t0?Math.round((Date.now()-t0)/1000):0,d=dir;
-  clearInterval(tick);clearTimeout(silT);
+  clearInterval(tick);clearTimeout(silT);ringStop();
   const a=rec;rec=null;try{a?.abort()}catch(e){}
-  try{stopSpeak?.()}catch(e){}try{speechSynthesis.cancel()}catch(e){}
-  set('idle','');$('#callUI').classList.remove('show','in');
+  try{stopSpeak?.()}catch(e){}try{speechSynthesis.cancel()}catch(e){}try{vo.pause()}catch(e){}
+  set('idle','');mini=false;$('#callUI').classList.remove('show','in');$('#callFloat').classList.remove('show');
   if(silent||!dur)return;
   const c={id:uid(),t:t0,dur,dir:d,lines:lines.map(x=>({role:x.role,text:x.text}))};
   DATA.calls.push(c);DATA.calls=DATA.calls.slice(-30);await saveData('calls');
@@ -242,13 +291,12 @@ function incoming(reason,force){
   localStorage.setItem(IK,isoDate(today()));
   inc={reason};
   open('incoming','邀请你语音通话…','in');
-  ringIn();clearInterval(ringT);ringT=setInterval(ringIn,2600);
+  ringStart(ringSrc());
   clearTimeout(incT);incT=setTimeout(()=>miss('未接'),30000)}
 async function accept(){
   if(st!=='incoming')return;
-  clearInterval(ringT);clearTimeout(incT);
-  getCtx();try{await ctx?.resume()}catch(e){}
-  unlockTTS();
+  unlockTTS();prime();
+  clearTimeout(incT);ringStop();
   const r=inc?.reason;inc=null;
   $('#callUI').classList.remove('in');
   connected();set('think','接通中…');
@@ -258,7 +306,7 @@ async function accept(){
   catch(e){if(my===tok){toast(e.message);listen()}}}
 async function miss(kind){
   if(st!=='incoming')return;
-  clearInterval(ringT);clearTimeout(incT);inc=null;tok++;
+  clearTimeout(incT);ringStop();inc=null;tok++;
   set('idle','');$('#callUI').classList.remove('show','in');
   DATA.chat.push({role:'model',text:kind==='拒接'?'通话已被拒绝':'未接来电',missed:kind,t:Date.now()});
   await saveData('chat');refresh();
@@ -281,7 +329,8 @@ function maybe(delay){
   setTimeout(()=>{pend=false;if(!canRing())return;const r=why();if(r)incoming(r)},delay)}
 setInterval(()=>maybe(1000),10*60000);
 
-/* 开关放在「我的 → 他的消息」 */
+/* ---------- 设置：放在「我的 → 他的消息」 ---------- */
+function ringLabel(){const el=$('#ciRingName');if(el)el.textContent='来电铃声：'+(S.callRing?(S.callRingName||'你自己的铃声'):'默认铃声')}
 function mount(){
   if($('#ciSet'))return;
   const sec=[...$$('#page-me .sec')].find(s=>(s.querySelector('h3')?.textContent||'').trim().startsWith('他的消息'));
@@ -289,12 +338,30 @@ function mount(){
   const html=`<div id="ciSet" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
     <label class="chk"><input type="checkbox" id="ciOn"><span>他会主动给你打电话</span></label>
     <p class="hint">365 开着的时候才会打来：很久没聊天，或者睡前 22:30 以后。一天最多一次</p>
-    <div class="btns"><button class="pill ghost" id="ciTest">现在让他打过来试试</button></div></div>`;
+    <div class="btns"><button class="pill ghost" id="ciTest">现在让他打过来试试</button><button class="pill ghost" id="ciVoice">试一下他的声音</button></div>
+    <p class="hint" id="ciRingName" style="margin-top:12px"></p>
+    <div class="btns"><button class="pill ghost" id="ciRing">换一个铃声</button><button class="pill ghost" id="ciPlay">试听</button><button class="pill ghost" id="ciDef">用默认的</button></div>
+    <input type="file" id="ciFile" accept="audio/*" style="display:none"></div>`;
   const a=[...sec.querySelectorAll('label.f,label.chk,.btns,.hint')].at(-1);
   if(a)a.insertAdjacentHTML('afterend',html);else sec.insertAdjacentHTML('beforeend',html);
   $('#ciOn').checked=S.callIn!==false;
   $('#ciOn').onchange=e=>{S.callIn=e.target.checked;saveSettings()};
-  $('#ciTest').onclick=()=>{toast('3 秒后他会打过来');setTimeout(()=>incoming('miss',true),3000)}}
+  $('#ciTest').onclick=()=>{toast('3 秒后他会打过来');setTimeout(()=>incoming('miss',true),3000)};
+  $('#ciVoice').onclick=testVoice;
+  $('#ciRing').onclick=()=>{const f=$('#ciFile');f.value='';f.click()};
+  $('#ciFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+    if(f.size>4e6)return toast('文件太大了，选一个 4MB 以内的');
+    const data=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)});
+    const[id]=await IMG.putAll([data]);
+    if(S.callRing)try{await IMG.del([S.callRing])}catch(x){}
+    S.callRing=id;S.callRingName=f.name.replace(/\.\w+$/,'');saveSettings();ringData=data;ringLabel();toast('铃声换好了 ♡')};
+  $('#ciPlay').onclick=()=>{if(!rg.paused&&rg.src!==SIL){ringStop();$('#ciPlay').textContent='试听';return}
+    ringStart(ringSrc());$('#ciPlay').textContent='停止';
+    setTimeout(()=>{if(st==='idle'){ringStop();$('#ciPlay').textContent='试听'}},8000)};
+  $('#ciDef').onclick=async()=>{if(!S.callRing)return toast('现在就是默认的');
+    try{await IMG.del([S.callRing])}catch(x){}
+    S.callRing=null;S.callRingName='';saveSettings();ringData=null;ringLabel();toast('换回默认铃声了')};
+  ringLabel()}
 
 /* ---------- 他记得电话的事 ---------- */
 HOOKS.context.push(()=>{const out=[];
@@ -306,9 +373,9 @@ HOOKS.context.push(()=>{const out=[];
   return out.join('\n')});
 
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){if(st!=='idle')hang()}
+  if(document.hidden){if(st!=='idle')hang();ringStop()}
   else maybe(20000+Math.random()*40000)});
 mount();
-HOOKS.ready.push(()=>{if(!Array.isArray(DATA.calls))DATA.calls=[];mount();maybe(30000+Math.random()*60000)});
-HOOKS.page.push(n=>{if(n==='me')mount();if(n!=='chat'&&st!=='idle'&&st!=='incoming')hang()});
+HOOKS.ready.push(()=>{if(!Array.isArray(DATA.calls))DATA.calls=[];mount();loadRing();maybe(30000+Math.random()*60000)});
+HOOKS.page.push(n=>{if(n==='me')mount()});
 })();
