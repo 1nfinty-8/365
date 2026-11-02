@@ -1,12 +1,15 @@
-/* ===== 365 · deeptalk.js · deeptalk ===== */
+/* ===== 365 · deeptalk.js · deeptalk + 收进记忆 ===== */
 (()=>{
 if(!Array.isArray(DATA.deep))DATA.deep=[];
+if(!Array.isArray(DATA.dmem))DATA.dmem=[];
+if(typeof LISTS!=='undefined'&&!LISTS.includes('dmem'))LISTS.push('dmem');
 const save=()=>saveData('deep');
+const msave=()=>saveData('dmem');
 const find=id=>DATA.deep.find(x=>x.id===id);
 const md=t=>{const d=new Date(t);return `${d.getMonth()+1}月${d.getDate()}日`};
 const paras=t=>String(t).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<p>${esc(s)}</p>`).join('');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
-let cur=null,page='home';
+let cur=null,page='home',ask=null,mEdit=null,mBusy=false;
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 .dl-item{display:block;width:100%;text-align:left;padding:18px 20px;margin-bottom:12px;transition:transform .15s}
@@ -37,6 +40,15 @@ body.dt #tabbar{display:none}
 .dt-typing{flex:1;display:grid;place-items:center}
 .dt-compose textarea{flex:1;width:100%;min-height:180px;border:0;background:transparent;outline:none;resize:none;font:16.5px/2 var(--ti);color:var(--ink)}
 .dt-btns{flex:none;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+.dm-h{display:flex;align-items:center;gap:10px;width:100%;padding:13px 20px;margin:0 0 10px;border-radius:99px;font-size:15px;color:var(--ink);letter-spacing:3px}
+.dm-h em{font-family:var(--num);font-style:italic;color:var(--sub);letter-spacing:0;font-size:15px}
+.dm-h i{margin-left:auto;width:8px;height:8px;border-right:1.5px solid var(--sub);border-bottom:1.5px solid var(--sub);transform:rotate(-45deg);transition:transform .2s}
+.dm-h.open i{transform:rotate(45deg)}
+.dm-add{display:block;width:100%;padding:4px 6px 12px;font-size:13px;color:var(--accent-t);letter-spacing:1px;text-align:left}
+.dm-t{display:block;font-weight:500;letter-spacing:2px;margin-bottom:4px}
+.dm-q{display:flex;flex-direction:column;align-items:center;gap:12px;margin:10px 0 4px}
+.dm-q span{font-size:15px;color:var(--sys-txt);letter-spacing:1px}
+#dmTitle{width:100%;text-align:center;font-size:17px;padding:10px 12px;border:0;border-radius:12px;background:var(--sys-card);color:var(--sys-txt);outline:none}
 </style>`);
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -57,13 +69,29 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
   </div>
   <div id="dtTrack"></div>
 </section>`);
+$('#app').insertAdjacentHTML('beforeend',`
+<div class="modal" id="dmAsk"><div class="mbox">
+  <h3>收进记忆</h3>
+  <div class="dm-q"><input id="dmTitle" placeholder="给这一场起个标题"><span>需要添加到记忆里吗？</span></div>
+  <p class="hint" id="dmHint" style="color:var(--sys-sub);text-align:center"></p>
+  <div class="mbtns"><button class="pill ghost" data-close="dmAsk">取消</button><button class="pill" id="dmOk">添加</button></div>
+</div></div>
+<div class="modal" id="dmEdit"><div class="mbox">
+  <h3>改一改</h3>
+  <label class="f"><span>标题</span><input class="ti" id="dmETitle"></label>
+  <label class="f"><span>回忆</span><textarea class="tall" id="dmEText"></textarea></label>
+  <div class="mbtns"><button class="pill ghost" data-close="dmEdit">取消</button><button class="pill" id="dmESave">保存</button></div>
+</div></div>`);
+$('#mmList')?.insertAdjacentHTML('afterend','<div id="dmSec"></div>');
+
+const memOf=d=>DATA.dmem.find(m=>m.did===d.id);
 
 /* 列表 */
 function renderList(){
   const L=[...DATA.deep].sort((a,b)=>(b.at||b.t)-(a.at||a.t));
   $('#dlList').innerHTML=L.length?L.map(d=>{const last=d.cards.at(-1);
     return `<button class="dl-item glass" data-dl="${d.id}"><div class="dl-title">${esc(d.title)}</div>
-      <div class="dl-meta">${d.cards.length} 张 · ${md(d.at||d.t)}${d._busy?' · '+esc(S.hisName)+'在写…':''}</div>
+      <div class="dl-meta">${d.cards.length} 张 · ${md(d.at||d.t)}${memOf(d)?' · 已收进记忆':''}${d._busy?' · '+esc(S.hisName)+'在写…':''}</div>
       ${last?`<div class="dl-prev">${last.role==='user'?'我':esc(S.hisName)}：${esc(last.text.slice(0,80))}</div>`:''}</button>`}).join('')
     :'<div class="empty">还没有 deeptalk<br>点「＋ 新的」，慢慢说</div>'}
 $('#dlAdd').onclick=async()=>{
@@ -130,15 +158,65 @@ $('#dtTrack').addEventListener('click',e=>{const d=cur;if(!d)return;
   acts.push(['删除这张',async()=>{if(!confirm('删除这张卡片？'))return;d.cards.splice(i,1);await save();renderTalk(Math.min(i,d.cards.length))}]);
   sheet(acts)});
 
-/* 改名、删除 */
+/* 收进记忆、改名、删除 */
 $('#dtMenu').onclick=()=>{const d=cur;if(!d)return;
-  sheet([['改名字',async()=>{const v=prompt('新的名字',d.title);if(!v||!v.trim())return;d.title=v.trim();await save();$('#dtName').textContent=d.title}],
-    ['删除这场 deeptalk',async()=>{if(!confirm(`删除「${d.title}」？所有卡片都会删掉。`))return;DATA.deep=DATA.deep.filter(x=>x!==d);await save();cur=null;go('deep')}]])};
+  sheet([['收进记忆',()=>openAsk(d)],
+    ['改名字',async()=>{const v=prompt('新的名字',d.title);if(!v||!v.trim())return;d.title=v.trim();await save();$('#dtName').textContent=d.title}],
+    ['删除这场 deeptalk',async()=>{if(!confirm(`删除「${d.title}」？所有卡片都会删掉。收进记忆的那段不会删。`))return;DATA.deep=DATA.deep.filter(x=>x!==d);await save();cur=null;go('deep')}]])};
+
+/* ---------- 收进记忆 ---------- */
+function openAsk(d){
+  if(!d.cards.length)return toast('这一场还没有卡片');
+  ask=d;const m=memOf(d);
+  $('#dmTitle').value=m?.title||d.title;
+  $('#dmHint').textContent=m?'这一场已经收过了，再添加会重新整理一遍':`一共 ${d.cards.length} 张卡片，${S.hisName}会把它写成一段回忆`;
+  openModal('dmAsk')}
+$('#dmOk').onclick=()=>{const d=ask;if(!d)return;const title=$('#dmTitle').value.trim()||d.title;closeModal('dmAsk');addMem(d,title)};
+async function addMem(d,title){
+  if(mBusy)return toast(`${S.hisName}还在整理上一场`);
+  mBusy=true;renderMem();toast(`${S.hisName}在整理这一场…`);
+  try{
+    const lines=d.cards.slice(-30).map(c=>`${c.role==='user'?'她':'你'}：${c.text.slice(0,800)}`).join('\n\n');
+    const t=await callAI(sceneSystem('你在回看你们在 deeptalk 里认真聊过的一场，要把它记下来，以后一直记得。'),
+      [{role:'user',text:`这一场 deeptalk 叫「${title}」，${md(d.t)}开始：\n\n${lines}\n\n请以${S.hisName}的视角，把这一场写成一段回忆，120到250字。写清楚聊了什么、她说了哪些心里话和想法、你是怎么回答的、你们达成的共识或说好的事。用“小狗”指她，用“我”指你自己。不要用 emoji。只输出这段回忆。`}]);
+    const old=memOf(d);
+    if(old)Object.assign(old,{title,text:clean(t),t:Date.now()});
+    else DATA.dmem.push({id:uid(),did:d.id,title,text:clean(t),t:Date.now()});
+    await msave();toast('收进记忆了 ♡');renderList()}
+  catch(e){toast(e.message)}
+  finally{mBusy=false;renderMem()}}
+
+/* 记忆页里的「deeptalk」分类 */
+function renderMem(){const el=$('#dmSec');if(!el)return;
+  const L=[...DATA.dmem].sort((a,b)=>b.t-a.t),open=localStorage.getItem('365-dmopen')==='1';
+  el.innerHTML=`<button class="dm-h glass${open?' open':''}" id="dmHead"><span>deeptalk</span><em>${L.length}</em><i></i></button>`
+    +(open?`<button class="dm-add" id="dmAdd2">${mBusy?esc(S.hisName)+'正在整理…':'＋ 从 deeptalk 收一场'}</button>`
+      +(L.length?L.map(m=>`<div class="mm-item glass" data-dm="${m.id}"><div class="mm-l"><div class="mm-text"><b class="dm-t">${esc(m.title)}</b>${esc(m.text)}</div><div class="mm-meta">${fmtDate(m.t)}</div></div></div>`).join('')
+        :'<p class="hint" style="margin:0 4px 10px">还没有收进来的 deeptalk</p>'):'')}
+$('#dmSec')?.addEventListener('click',e=>{
+  if(e.target.closest('#dmHead')){localStorage.setItem('365-dmopen',localStorage.getItem('365-dmopen')==='1'?'0':'1');return renderMem()}
+  if(e.target.closest('#dmAdd2')){
+    const L=DATA.deep.filter(d=>d.cards.length).sort((a,b)=>(b.at||b.t)-(a.at||a.t));
+    if(!L.length)return toast('还没有聊过 deeptalk');
+    return sheet(L.map(d=>[d.title+(memOf(d)?' · 已收':''),()=>openAsk(d)]))}
+  const c=e.target.closest('[data-dm]');if(!c)return;
+  const m=DATA.dmem.find(x=>x.id===c.dataset.dm);if(!m)return;
+  const d=DATA.deep.find(x=>x.id===m.did);
+  const acts=[['编辑',()=>{mEdit=m;$('#dmETitle').value=m.title;$('#dmEText').value=m.text;openModal('dmEdit')}]];
+  if(d&&d.cards.length)acts.push(['重新整理',()=>addMem(d,m.title)]);
+  acts.push(['删除',async()=>{if(!confirm('从记忆里删掉这段？deeptalk 本身不会删。'))return;DATA.dmem=DATA.dmem.filter(x=>x!==m);await msave();renderMem();renderList()}]);
+  sheet(acts)});
+$('#dmESave').onclick=async()=>{if(!mEdit)return;const t=$('#dmEText').value.trim();if(!t)return toast('写点什么吧');
+  mEdit.title=$('#dmETitle').value.trim()||mEdit.title;mEdit.text=t;await msave();closeModal('dmEdit');renderMem();toast('改好了')};
+
+/* 他一直记得收进来的 deeptalk */
+HOOKS.persona.push(()=>{const L=[...DATA.dmem].sort((a,b)=>a.t-b.t).slice(-15);if(!L.length)return '';
+  return '【deeptalk 的回忆】你们在 deeptalk 里认真聊过的事，你都记得。合适的时候自然地接上，不要一条条复述：\n'+L.map(m=>`- 「${m.title}」：${m.text}`).join('\n')});
 
 addMore({go:'deep',cn:'deeptalk'});
-HOOKS.ready.push(()=>{if(!Array.isArray(DATA.deep))DATA.deep=[];renderList()});
-HOOKS.refresh.push(()=>{renderList();if(cur&&page==='dtalk')renderTalk()});
-HOOKS.page.push(n=>{page=n;document.body.classList.toggle('dt',n==='dtalk');if(n==='deep')renderList()});
+HOOKS.ready.push(()=>{if(!Array.isArray(DATA.deep))DATA.deep=[];if(!Array.isArray(DATA.dmem))DATA.dmem=[];renderList();renderMem()});
+HOOKS.refresh.push(()=>{renderList();renderMem();if(cur&&page==='dtalk')renderTalk()});
+HOOKS.page.push(n=>{page=n;document.body.classList.toggle('dt',n==='dtalk');if(n==='deep')renderList();if(n==='memory')renderMem()});
 HOOKS.context.push(()=>{
   const d=[...DATA.deep].filter(x=>x.cards.length&&Date.now()-(x.at||x.t)<3*864e5).sort((a,b)=>b.at-a.at)[0];
   if(!d)return '';const last=d.cards.at(-1);
