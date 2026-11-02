@@ -100,7 +100,7 @@ function predicted(iso,I){
   return false}
 function status(I){
   if(!I.last)return {t:'还没有记录',s:'来了就点下面的按钮'};
-  if(I.cur)return {t:'照顾好自己',s:I.cur.end?`${dt(I.cur.end)} 结束`:'结束那天点「今天结束了」',p:'生理期第',n:diff(I.cur.start,I.t)+1,u:'天'};
+  if(I.cur)return {t:'照顾好自己',s:I.cur.end?`${dt(I.cur.end)} 结束`:'结束那天点「生理期结束了」',p:'生理期第',n:diff(I.cur.start,I.t)+1,u:'天'};
   const left=diff(I.t,I.next);
   if(left>0)return {t:'下一次生理期',s:`预计 ${dt(I.next)} · 周期约 ${I.cycle} 天`,p:'大约还有',n:left,u:'天',left};
   if(left===0)return {t:'预计就是今天',s:'来了记得点一下',n:'♡',left};
@@ -159,10 +159,10 @@ function dayMenu(iso){
   const p=I.P.find(x=>iso>=x.start&&iso<=I.endOf(x));
   const before=I.P.filter(x=>x.start<iso).at(-1);
   if(p){
-    if(iso>p.start)acts.push(['这天结束了（生理期最后一天）',async()=>{p.end=iso;await sv();toast('记下了 ♡')}]);
+    if(iso>p.start)acts.push(['生理期结束了（生理期最后一天）',async()=>{p.end=iso;await sv();toast('记下了 ♡')}]);
     acts.push(['删除这次生理期记录',async()=>{if(!confirm('删除这次生理期记录？'))return;DATA.period=DATA.period.filter(x=>x!==p);await sv()}]);
   }else if(iso<=I.t){
-    acts.push(['这天来了（生理期开始）',()=>startAt(iso)]);
+    acts.push(['生理期来了（生理期开始）',()=>startAt(iso)]);
     if(before&&diff(before.start,iso)<=14)acts.push(['这天结束了（生理期最后一天）',async()=>{before.end=iso;await sv();toast('记下了 ♡')}]);
   }
   acts.push(['记一个特殊日子',()=>openMark(iso)]);
