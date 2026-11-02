@@ -166,6 +166,7 @@ function dayMenu(iso){
     if(before&&diff(before.start,iso)<=14)acts.push(['生理期结束了（生理期最后一天）',async()=>{before.end=iso;await sv();toast('记下了 ♡')}]);
   }
   acts.push(['记一个特殊日子',()=>openMark(iso)]);
+  acts.push(['记一个纪念日',()=>openAnniv(iso)]);
   DATA.marks.filter(x=>x.date===iso).forEach(mk=>{
     acts.push([`编辑「${mk.text}」`,()=>openMark(iso,mk)]);
     acts.push([`删除「${mk.text}」`,()=>delMark(mk)])});
