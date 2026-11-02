@@ -185,6 +185,7 @@ $('#sxMsgs').onclick=e=>{
   const text=idx.map(k=>L[k]?.text||'').join('\n'),first=idx[0];
   const acts=[['复制',()=>navigator.clipboard?.writeText(text).then(()=>toast('已复制'),()=>toast('复制失败'))]];
   if(L[first]?.role==='model'&&!busy&&L.slice(first).every(x=>x.role==='model'))acts.push(['让他重新说',reroll]);
+  acts.push(['收进图书馆',()=>window.libImport?.(idx)]);
   acts.push(['删除',async()=>{DATA.secret=DATA.secret.filter((_,k)=>!idx.includes(k));await save();render()}]);
   sheet(acts)};
 
