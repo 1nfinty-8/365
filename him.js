@@ -12,7 +12,7 @@ const arr=v=>Array.isArray(v)?v:[];
 const J=t=>JSON.parse((t.match(/\{[\s\S]*\}/)||['{}'])[0]);
 const ink=s=>esc(s).replace(/~~(.+?)~~/g,'<s>$1</s>');
 const md=s=>{const d=parseDate(s);return `${d.getMonth()+1}.${d.getDate()}`};
-let dayBusy=false,noteBusy=false,di=null,ni=0,anim='';
+let dayBusy=false,noteBusy=false,di=null,ni=0,anim='',hv='top',hmon='';
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 #moreGrid .card[data-go="phone"],#phGrid [data-app="memo"]{display:none!important}
@@ -66,6 +66,24 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .hn-nav{display:flex;align-items:center;justify-content:center;gap:24px;margin:30px 0 10px}
 .hn-nav button:disabled{opacity:.3}
 .hn-nav span{font-size:12px;color:var(--sub);letter-spacing:2px}
+.hn-tape{display:block;margin:30px auto 16px;padding:9px 36px 8px;background:rgba(255,255,255,.5);border-left:1.5px dashed rgba(255,255,255,.9);border-right:1.5px dashed rgba(255,255,255,.9);transform:rotate(-3deg);box-shadow:0 2px 10px rgba(60,30,40,.08);font-family:var(--ti);font-size:16px;letter-spacing:6px;color:var(--ink);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:transform .15s}
+.hn-tape small{display:block;font-family:var(--en);font-style:italic;font-size:12px;letter-spacing:1px;color:var(--sub);margin-top:-1px}
+.hn-tape:active{transform:rotate(-3deg) scale(.95)}
+.hm-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px 20px;margin:30px 10px 20px}
+.hm-st{position:relative;display:block;aspect-ratio:4/5;text-align:left;color:var(--ink)}
+.hm-pp{position:relative;height:100%;padding:18px 16px 14px;border-radius:6px;display:flex;flex-direction:column;
+  background:color-mix(in srgb,var(--accent) 30%,rgba(255,255,255,.45));border:1px solid rgba(255,255,255,.45);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 10px 22px rgba(60,30,40,.12),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .15s}
+.hm-st:nth-child(odd) .hm-pp{transform:rotate(-1.8deg)}
+.hm-st:nth-child(even) .hm-pp{transform:rotate(1.4deg)}
+.hm-st:active .hm-pp{transform:scale(.96)}
+.hm-pp::before{content:"";position:absolute;top:-9px;left:50%;width:58px;height:18px;margin-left:-29px;background:rgba(255,255,255,.5);transform:rotate(-3deg)}
+.hm-pp b{font-family:var(--en);font-style:italic;font-weight:400;font-size:24px}
+.hm-m{margin:auto 0;font-family:var(--num);font-style:italic;font-weight:300;font-size:58px;line-height:1}
+.hm-m small{font-size:16px;font-style:normal;font-family:var(--ti);margin-left:4px}
+.hm-f{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);letter-spacing:1px}
+.hm-st .hn-bk.b1{transform:rotate(4deg) translate(6px,5px)}
+.hm-st .hn-bk.b2{transform:rotate(-3.5deg) translate(-5px,9px)}
 </style>`);
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -83,7 +101,7 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
   <div id="hdBody"></div>
 </div></section>
 <section class="page" id="page-hmemo"><div class="wrap">
-  <div class="head"><button class="iconbtn glass" data-go="him" aria-label="返回">${BACK}</button><h2>他的备忘录</h2><em>notes</em><span class="sp"></span><button class="pill ghost" id="hnMore">再翻一页</button></div>
+  <div class="head"><button class="iconbtn glass" id="hnBack" aria-label="返回">${BACK}</button><h2>他的备忘录</h2><em id="hnSub">notes</em><span class="sp"></span><button class="pill ghost" id="hnMore">再翻一页</button></div>
   <div id="hnList"></div>
 </div></section>`);
 
@@ -136,21 +154,32 @@ $('#hdMore').onclick=()=>{const r=days()[di];const acts=[];
   if(r)acts.push(['删除这一天',async()=>{if(!confirm('删除这一天的时间轴？'))return;DATA.hday=DATA.hday.filter(x=>x!==r);di=null;await saveData('hday');renderDay();renderNow()}]);
   sheet(acts)};
 
-/* ---------- 他的备忘录：一叠便签，左右翻 ---------- */
+/* ---------- 他的备忘录：最新一页 → 回顾（按月一叠） → 某个月 ---------- */
 const notes=()=>[...DATA.hnote].sort((a,b)=>b.t-a.t);
+const months=()=>{const m={};DATA.hnote.forEach(n=>{const k=String(n.date).slice(0,7);(m[k]=m[k]||[]).push(n)});
+  return Object.entries(m).sort((a,b)=>b[0].localeCompare(a[0]))};
+const list=()=>hv==='one'?DATA.hnote.filter(n=>String(n.date).startsWith(hmon)).sort((a,b)=>a.t-b.t):notes();
 function renderNotes(){
-  const L=notes();if(ni>=L.length)ni=Math.max(0,L.length-1);
-  $('#hnMore').textContent=noteBusy?'在翻…':'再翻一页';
   const el=$('#hnList');
-  if(!L.length){el.innerHTML=`<div class="empty">${noteBusy?esc(S.hisName)+'的本子翻开了…':'本子还是空的'}</div>`;return}
+  $('#hnMore').style.display=hv==='top'?'':'none';
+  $('#hnMore').textContent=noteBusy?'在翻…':'再翻一页';
+  $('#hnSub').textContent=hv==='top'?'notes':hv==='mon'?'review':`${+hmon.slice(5)}月`;
+  if(hv==='mon'){const M=months();
+    el.innerHTML=M.length?`<div class="hm-grid">${M.map(([k,L])=>`<button class="hm-st" data-mon="${k}">${L.length>2?'<i class="hn-bk b2"></i>':''}${L.length>1?'<i class="hn-bk b1"></i>':''}<div class="hm-pp"><b>Notes</b><div class="hm-m">${+k.slice(5)}<small>月</small></div><div class="hm-f"><span>${k.slice(0,4)}</span><span>${L.length} 页</span></div></div></button>`).join('')}</div>`
+      :'<div class="empty">本子还是空的</div>';
+    return}
+  const L=list();if(ni>=L.length)ni=Math.max(0,L.length-1);
+  if(!L.length){if(hv==='one'){hv='mon';return renderNotes()}
+    el.innerHTML=`<div class="empty">${noteBusy?esc(S.hisName)+'的本子翻开了…':'本子还是空的'}</div>`;return}
   const n=L[ni];
   el.innerHTML=`<div class="hn-wrap">${L.length>2?'<div class="hn-bk b2"></div>':''}${L.length>1?'<div class="hn-bk b1"></div>':''}
     <div class="hn ${anim}" id="hnCard"><div class="hn-h"><b>Notes</b><span>${md(n.date)}</span></div>
     ${n.title?`<div class="hn-tt">${ink(n.title)}</div>`:''}<div class="hn-x">${ink(n.text)}</div>
     <div class="hn-f"><span>${md(n.date)} · ${esc(S.hisName)}写的</span><i>${ni+1}/${L.length}</i></div></div></div>
-    <div class="hn-nav"><button class="iconbtn glass" data-nv="-1"${ni>0?'':' disabled'}>${BACK}</button><span>${noteBusy?'在翻…':'左右滑动翻页'}</span><button class="iconbtn glass" data-nv="1"${ni<L.length-1?'':' disabled'}>${NEXT}</button></div>`;
+    <div class="hn-nav"><button class="iconbtn glass" data-nv="-1"${ni>0?'':' disabled'}>${BACK}</button><span>${noteBusy?'在翻…':'左右滑动翻页'}</span><button class="iconbtn glass" data-nv="1"${ni<L.length-1?'':' disabled'}>${NEXT}</button></div>
+    ${hv==='top'?'<button class="hn-tape" id="hnRev">回顾<small>review</small></button>':''}`;
   anim=''}
-function flip(d){const k=ni+d;if(k<0||k>=notes().length)return;ni=k;anim=d>0?'in-l':'in-r';renderNotes()}
+function flip(d){const k=ni+d;if(k<0||k>=list().length)return;ni=k;anim=d>0?'in-l':'in-r';renderNotes()}
 async function genNotes(k){
   if(noteBusy)return;noteBusy=true;renderNotes();
   try{
@@ -162,19 +191,26 @@ ${had?'之前写过的，不要重复：\n'+had+'\n':''}${recent?'你们最近�
     if(!L.length)throw new SyntaxError('empty');
     const now=Date.now();
     L.slice(0,k).forEach((n,i)=>DATA.hnote.push({id:uid(),title:String(n.title||''),text:String(n.text),date:T(),t:now+i}));
-    await saveData('hnote');ni=0;anim='in-l'}
+    await saveData('hnote');if(hv==='top'){ni=0;anim='in-l'}}
   catch(e){toast(e instanceof SyntaxError?'没读出来，再试一次':e.message)}
   finally{noteBusy=false;renderNotes()}}
 $('#hnMore').onclick=()=>genNotes(1);
+$('#hnBack').onclick=()=>{
+  if(hv==='one'){hv='mon';renderNotes()}
+  else if(hv==='mon'){hv='top';ni=0;renderNotes()}
+  else go('him');
+  $('#page-hmemo').scrollTop=0};
 let sx=null,sy=0,swiped=false;
 $('#hnList').addEventListener('touchstart',e=>{if(!e.target.closest('#hnCard'))return;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
 $('#hnList').addEventListener('touchend',e=>{if(sx==null)return;
   const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;
   if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)){swiped=true;flip(dx<0?1:-1);setTimeout(()=>swiped=false,350)}});
 $('#hnList').onclick=e=>{
+  if(e.target.closest('#hnRev')){hv='mon';renderNotes();$('#page-hmemo').scrollTop=0;return}
+  const mo=e.target.closest('[data-mon]');if(mo){hv='one';hmon=mo.dataset.mon;ni=0;anim='in-l';renderNotes();$('#page-hmemo').scrollTop=0;return}
   const v=e.target.closest('[data-nv]');if(v){if(!v.disabled)flip(+v.dataset.nv);return}
   if(swiped||!e.target.closest('#hnCard'))return;
-  const n=notes()[ni];if(!n)return;
+  const n=list()[ni];if(!n)return;
   sheet([['复制',()=>navigator.clipboard?.writeText((n.title?n.title+'\n':'')+n.text.replace(/~~/g,'')).then(()=>toast('已复制'))],
     ['撕掉这页',async()=>{if(!confirm('撕掉这页？'))return;DATA.hnote=DATA.hnote.filter(x=>x!==n);await saveData('hnote');renderNotes()}]])};
 
@@ -187,5 +223,5 @@ HOOKS.ready.push(renderNow);
 HOOKS.page.push(n=>{
   if(n==='him')renderNow();
   if(n==='hday'){di=null;renderDay();if(!DATA.hday.some(x=>x.date===T()))genDay()}
-  if(n==='hmemo'){ni=0;renderNotes();if(!DATA.hnote.some(x=>x.date===T()))genNotes(2)}});
+  if(n==='hmemo'){hv='top';ni=0;renderNotes();if(!DATA.hnote.some(x=>x.date===T()))genNotes(2)}});
 })();
