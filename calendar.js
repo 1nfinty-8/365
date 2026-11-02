@@ -108,7 +108,7 @@ function status(I){
 
 /* ---------- 画日历 ---------- */
 function annivMap(y,m){const map={},last=new Date(y,m+1,0).getDate();
-  for(const a of DATA.anniv||[]){const[ay,am,ad]=a.date.split('-').map(Number);
+  for(const a of DATA.anniv||[]){const[ay,am,ad]=String(a.date||'').split('-').map(Number);
     if(am-1!==m)continue;
     if(a.type==='yearly'||ay===y){const d=Math.min(ad,last);(map[d]=map[d]||[]).push(a.name)}}
   return map}
@@ -118,8 +118,8 @@ function render(){
   pg.style.setProperty('--pd',pd);pg.style.setProperty('--pdt',onText(pd));
   const[y,m]=ym,I=info(),st=status(I);
   const q=[];
-  if(I.cur){if(I.t>I.cur.start&&I.cur.end!==I.t)q.push(['end','生理期结束了'])}
-  else q.push(['start','生理期开始了']);
+  if(I.cur){if(I.t>I.cur.start&&I.cur.end!==I.t)q.push(['end','今天结束了'])}
+  else q.push(['start','今天来了']);
   $('#calSum').innerHTML=`<div class="cal-r1"><div class="l"><div class="t">${st.t}</div><div class="s">${st.s}</div></div>${st.n!=null?`<div class="r">${st.p?`<div class="p">${st.p}</div>`:''}<div class="n">${st.n}</div>${st.u?`<div class="p">${st.u}</div>`:''}</div>`:''}</div>
     ${q.length?`<div class="cal-q">${q.map(([k,n])=>`<button class="pill" data-q="${k}">${n}</button>`).join('')}</div>`:''}
     <p class="hint">补记以前的：点日历上那一天</p>`;
@@ -138,7 +138,7 @@ function render(){
   const items=[...DATA.marks.filter(x=>x.date.startsWith(pre)).map(x=>({d:+x.date.slice(8),x:x.text,id:x.id})),
     ...Object.entries(an).flatMap(([d,ns])=>ns.map(nm=>({d:+d,x:nm,a:1})))].sort((a,b)=>a.d-b.d);
   $('#calMonth').innerHTML=items.length?`<div class="cal-h">这个月</div>`+items.map(it=>
-  <button class="cal-it glass"${it.id?` data-mk="${it.id}"`:''}${it.a?' data-go="anniv"':''}>
+    `<button class="cal-it glass"${it.id?` data-mk="${it.id}"`:''}${it.a?' data-go="anniv"':''}><b>${it.d}</b><span>${esc(it.x)}</span>${it.a?'<small>纪念日 ♡</small>':''}</button>`).join(''):'';
   const H=[...I.P].reverse().slice(0,6);
   $('#calHist').innerHTML=H.length?`<div class="cal-h">最近几次 · 周期约 ${I.cycle} 天 · 每次约 ${I.plen} 天</div>`+H.map(p=>{
     const e=p.end||(p===I.cur?'':I.endOf(p));
@@ -159,11 +159,11 @@ function dayMenu(iso){
   const p=I.P.find(x=>iso>=x.start&&iso<=I.endOf(x));
   const before=I.P.filter(x=>x.start<iso).at(-1);
   if(p){
-    if(iso>p.start)acts.push(['生理期结束了（生理期最后一天）',async()=>{p.end=iso;await sv();toast('记下了 ♡')}]);
+    if(iso>p.start)acts.push(['这天结束了（生理期最后一天）',async()=>{p.end=iso;await sv();toast('记下了 ♡')}]);
     acts.push(['删除这次生理期记录',async()=>{if(!confirm('删除这次生理期记录？'))return;DATA.period=DATA.period.filter(x=>x!==p);await sv()}]);
   }else if(iso<=I.t){
-    acts.push(['生理期开始了（生理期开始）',()=>startAt(iso)]);
-    if(before&&diff(before.start,iso)<=14)acts.push(['生理期结束了（生理期最后一天）',async()=>{before.end=iso;await sv();toast('记下了 ♡')}]);
+    acts.push(['这天来了（生理期开始）',()=>startAt(iso)]);
+    if(before&&diff(before.start,iso)<=14)acts.push(['这天结束了（生理期最后一天）',async()=>{before.end=iso;await sv();toast('记下了 ♡')}]);
   }
   acts.push(['记一个特殊日子',()=>openMark(iso)]);
   acts.push(['记一个纪念日',()=>openAnniv(iso)]);
@@ -175,13 +175,16 @@ $('#calGrid').onclick=e=>{const b=e.target.closest('[data-d]');if(b)dayMenu(b.da
 $('#calPrev').onclick=()=>{ym=ym[1]?[ym[0],ym[1]-1]:[ym[0]-1,11];render()};
 $('#calNext').onclick=()=>{ym=ym[1]<11?[ym[0],ym[1]+1]:[ym[0]+1,0];render()};
 $('#calYm').onclick=()=>{ym=null;render()};
+
 /* ---------- 纪念日：用纪念日原来的窗口 ---------- */
 function openAnniv(iso){const b=$('#anAdd');if(!b)return toast('没找到纪念日');
   b.click();
   setTimeout(()=>{const d=$('#anDate');if(!d)return;d.value=iso;
     d.dispatchEvent(new Event('input',{bubbles:true}));d.dispatchEvent(new Event('change',{bubbles:true}))},80)}
-new MutationObserver(()=>{if(!$('#anModal').classList.contains('show')&&$('#page-cal').classList.contains('active'))render()})
-  .observe($('#anModal'),{attributes:true,attributeFilter:['class']});
+const anM=$('#anModal');
+if(anM)new MutationObserver(()=>{if(!anM.classList.contains('show')&&$('#page-cal').classList.contains('active'))render()})
+  .observe(anM,{attributes:true,attributeFilter:['class']});
+
 /* ---------- 特殊日子 ---------- */
 function openMark(iso,mk){mkEdit=mk||null;
   $('#calMkT').textContent=mk?'改一改':'特殊日子';
