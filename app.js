@@ -26,7 +26,7 @@ const DB={db:null,
   keys(){return this.req('readonly',s=>s.getAllKeys())}
 };
 
-/* ---------- 照片单独存放：每张照片一个键 img:xxx ---------- */
+/* ---------- 照片、语音、铃声：每个文件一个键 img:xxx ---------- */
 const IMG={cache:new Map(),fresh:new Set(),
   async put(d){const id='img:'+uid();await DB.set(id,d);this.cache.set(id,d);this.fresh.add(id);return id},
   async putAll(list){const out=[];for(const v of list||[])out.push(String(v).startsWith('data:')?await this.put(v):v);return out},
@@ -55,10 +55,11 @@ const SW={theme:['#B4848D','#D4B5BA','#E8CDD2','#8C7A80','#9AA8B8','#2E1A1F'],
   hisBubble:['#FCF6F7','#FFFFFF','#F0EBED','#E6E1EC','#E8CDD2'],
   glassTint:['#FFFFFF','#FFFAFB','#F7ECEE','#EFEFF3','#FFF8EE']};
 let S={},AV={him:'',me:''};
-/* 所有数据：聊天、朋友圈、纪念日、日记、胶囊、记忆、图书馆、deeptalk、生理期、特殊日子、心愿、屏幕时间、秘密 */
-const DATA={chat:[],moments:[],anniv:null,diary:[],capsule:[],memory:[],library:[],deep:[],period:[],marks:[],wish:[],screen:[],secret:[]};
-/* 里面会放照片的数据（清理照片时要看这些） */
-const LISTS=['chat','moments','diary','capsule','wish','screen'];
+/* 所有功能的数据都登记在这里：就算某个功能的文件坏了，它的数据也照样会读进来、进备份 */
+const DATA={chat:[],moments:[],anniv:null,diary:[],capsule:[],memory:[],library:[],deep:[],dmem:[],period:[],marks:[],wish:[],screen:[],secret:[],
+  sxlog:[],todo:[],memo:[],cards:[],recap:[],hday:[],hnote:[],phone:[],review:[],calls:[]};
+/* 里面会放照片的数据（旧照片搬家时要看这些） */
+const LISTS=['chat','moments','diary','capsule','wish','screen','phone'];
 const strip=v=>Array.isArray(v)?v.map(o=>{if(!o||typeof o!=='object')return o;const c={};for(const k in o)if(k[0]!=='_')c[k]=o[k];return c}):v;
 const saveData=k=>DB.set(k,strip(DATA[k]));
 let saveT;
@@ -77,7 +78,7 @@ function readImage(file,max=1600,q=.85){return new Promise((res,rej)=>{const url
     const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q))};
   img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('这张图片读不出来'))};img.src=url})}
 function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,118)+'px'}
-function clean(t){return t.trim().replace(new RegExp('^'+S.hisName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*[:：]\\s*'),'').replace(/^["“「]|["”」]$/g,'').trim()}
+function clean(t){return String(t||'').trim().replace(new RegExp('^'+S.hisName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*[:：]\\s*'),'').replace(/^["“「]|["”」]$/g,'').trim()}
 function nowLine(){const d=new Date();return `【现在】${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 星期${'日一二三四五六'[d.getDay()]} ${fmtTime(d)}，是你们在一起的第${dayCount()}天。`}
 function rgb(h){const n=parseInt(String(h||'#FFFFFF').slice(1),16)||0;return[n>>16&255,n>>8&255,n&255]}
 function isLight(h){const[r,g,b]=rgb(h);return .299*r+.587*g+.114*b>160}
@@ -93,27 +94,32 @@ function prep(msgs){const out=[];
   if(out[0]?.role==='model')out.unshift({role:'user',text:'（开始聊天）'});
   if(out.at(-1)?.role==='model')out.push({role:'user',text:'（她没有说话，在等你继续说）'});
   return out}
-async function callAI(system,msgs){
-  if(!S.apiKey)throw new Error('还没有填 API Key，去「我的」里填一下');
+/* 用哪个模型：平时的，或者秘密的（秘密没单独设置就用平时的） */
+function aiCfg(sx){
+  if(sx&&S.sxProvider)return {provider:S.sxProvider,apiKey:S.sxKey||S.apiKey,model:S.sxModel||(S.sxProvider==='gemini'?'gemini-2.5-flash':'deepseek-chat'),baseUrl:S.sxBase||S.baseUrl};
+  return {provider:S.provider,apiKey:S.apiKey,model:S.model,baseUrl:S.baseUrl}}
+async function callAI(system,msgs,opt){
+  const c=aiCfg(opt&&opt.sx);
+  if(!c.apiKey)throw new Error('还没有填 API Key，去「我的」里填一下');
   const full=[];
   for(const m of msgs){const im=m.images?.length?await IMG.many(m.images):[];full.push({role:m.role,text:m.text,images:im.length?im:undefined})}
   const list=prep(full);let r,j;
   try{
-    if(S.provider==='gemini'){
+    if(c.provider==='gemini'){
       const contents=list.map(m=>{const parts=(m.images||[]).map(d=>({inlineData:{mimeType:d.slice(5,d.indexOf(';')),data:d.split(',')[1]}}));
         if(m.text)parts.push({text:m.text});if(!parts.length)parts.push({text:'…'});return {role:m.role,parts}});
       const cats=['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT'];
-      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(S.model)}:generateContent?key=${encodeURIComponent(S.apiKey)}`,{
+      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.model)}:generateContent?key=${encodeURIComponent(c.apiKey)}`,{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:1},safetySettings:cats.map(c=>({category:c,threshold:'BLOCK_NONE'}))})});
+        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:1},safetySettings:cats.map(x=>({category:x,threshold:'BLOCK_NONE'}))})});
       j=await r.json();
       if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      const c=j.candidates?.[0];const t=(c?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
-      if(!t)throw new Error('他没有回话（原因：'+(c?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次');
+      const cd=j.candidates?.[0];const t=(cd?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
+      if(!t)throw new Error('他没有回话（原因：'+(cd?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次');
       return t;
     }else{
       const messages=[{role:'system',content:system},...list.map(m=>({role:m.role==='model'?'assistant':'user',content:(m.text||'')+(m.images?.length?'\n[发了照片]':'')}))];
-      r=await fetch(S.baseUrl.replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.apiKey},body:JSON.stringify({model:S.model,messages,temperature:1})});
+      r=await fetch(String(c.baseUrl||'').replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.apiKey},body:JSON.stringify({model:c.model,messages,temperature:1})});
       j=await r.json();
       if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
       const t=(j.choices?.[0]?.message?.content||'').trim();
@@ -122,6 +128,8 @@ async function callAI(system,msgs){
     }
   }catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}
 }
+/* 秘密的模型：第二个参数可以是消息列表，也可以直接是一段话 */
+const sxAI=(system,msgs)=>callAI(system,typeof msgs==='string'?[{role:'user',text:msgs}]:msgs,{sx:true});
 function personaText(){let s=S.persona;
   for(const f of HOOKS.persona){try{const x=f();if(x)s+='\n\n'+x}catch(e){}}
   return s}
@@ -131,6 +139,8 @@ function chatSystem(){
   for(const f of HOOKS.context){try{const x=f();if(x)s+='\n'+x}catch(e){}}
   return s}
 function sceneSystem(scene){return personaText()+'\n\n'+nowLine()+'\n【场景】'+scene}
+/* 秘密里的场景：会加上秘密设定 */
+function secretSystem(scene){let s=sceneSystem(scene);if((S.sxExtra||'').trim())s+='\n\n'+S.sxExtra.trim();return s}
 
 /* ---------- 导航 ---------- */
 const TABS=['home','chat','moments','me'];
@@ -187,7 +197,7 @@ async function pickPhotos(max,size=1280,q=.82){const fs=await pickImages(max);co
 
 /* ---------- 底部菜单 / 编辑框 / 看大图 ---------- */
 function sheet(acts){const s=$('#sheet');
-  s.innerHTML=`<div class="sh-group">${acts.map((a,i)=>`<button data-a="${i}"${/删除|清空/.test(a[0])?' class="danger"':''}>${esc(a[0])}</button>`).join('')}</div><div class="sh-group sh-cancel"><button>取消</button></div>`;
+  s.innerHTML=`<div class="sh-group">${acts.map((a,i)=>`<button data-a="${i}"${/删除|清空|撕掉|擦掉/.test(a[0])?' class="danger"':''}>${esc(a[0])}</button>`).join('')}</div><div class="sh-group sh-cancel"><button>取消</button></div>`;
   s.classList.add('show');
   s.onclick=e=>{const b=e.target.closest('button');if(e.target===s||b){s.classList.remove('show');if(b&&b.dataset.a!=null)acts[+b.dataset.a][1]()}}}
 function openModal(id){$('#'+id).classList.add('show')}
@@ -240,9 +250,10 @@ async function shareFile(file){
 $('#exportBtn').onclick=async()=>{
   toast('正在打包…');
   try{
-    const data={v:5,t:Date.now(),settings:S,avatars:AV,bg:await DB.get('bg'),images:{}};
+    const data={v:6,t:Date.now(),settings:S,avatars:AV,bg:await DB.get('bg'),images:{},ls:{}};
     for(const k of Object.keys(DATA))data[k]=strip(DATA[k]);
     for(const k of await DB.keys())if(String(k).startsWith('img:'))data.images[k]=await DB.get(k);
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('365-'))data.ls[k]=localStorage.getItem(k)}
     const file=new File([JSON.stringify(data)],`365-backup-${isoDate(new Date())}.json`,{type:'application/json'});
     const mb=(file.size/1048576).toFixed(1);
     sheet([[`保存备份文件（${mb} MB）`,()=>shareFile(file)]]);
@@ -255,22 +266,26 @@ $('#importFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';
     const ex=d.extra||{};
     for(const k of Object.keys(DATA)){const v=d[k]!==undefined?d[k]:ex[k];await DB.set(k,v!==undefined?v:(k==='anniv'?null:[]))}
     for(const k in (d.images||{}))await DB.set(k,d.images[k]);
+    for(const k in (d.ls||{}))localStorage.setItem(k,d.ls[k]);
     location.reload()}
   catch(err){toast('这个文件读不了')}};
 $('#clearChatBtn').onclick=async()=>{if(!confirm('真的要清空和'+S.hisName+'的聊天记录吗？清空就找不回来了。'))return;
-  const ids=DATA.chat.flatMap(m=>m.images||[]);DATA.chat=[];await saveData('chat');await IMG.del(ids);refreshAll();toast('已清空')};
+  const ids=DATA.chat.flatMap(m=>[...(m.images||[]),...(m.voice?.id?[m.voice.id]:[])]);
+  DATA.chat=[];await saveData('chat');await IMG.del(ids);refreshAll();toast('已清空')};
 
 /* ---------- 键盘适配 ---------- */
 function fit(){const v=window.visualViewport;if(!v)return;const r=document.documentElement.style;r.setProperty('--app-h',v.height+'px');r.setProperty('--app-top',v.offsetTop+'px')}
-/* ---------- 旧照片搬家 + 清理没用的照片 ---------- */
+
+/* ---------- 旧照片搬家 + 清理没用的文件 ---------- */
 async function migrateImages(){
   for(const k of LISTS){let ch=false;
     for(const o of DATA[k]||[])if(Array.isArray(o.images))for(let i=0;i<o.images.length;i++){
       const v=o.images[i];if(typeof v==='string'&&v.startsWith('data:')){o.images[i]=await IMG.put(v);ch=true}}
     if(ch)await saveData(k)}}
+/* 所有数据和设置里提到的 img:xxx（照片、语音、铃声、壁纸）都算在用，只删真的没人用的 */
 async function cleanImages(){try{
   const keys=(await DB.keys()).filter(k=>String(k).startsWith('img:'));
-  const used=new Set();for(const k of LISTS)for(const o of DATA[k]||[])for(const id of o.images||[])used.add(id);
+  const used=new Set((JSON.stringify(DATA)+JSON.stringify(S)).match(/img:[a-z0-9]+/g)||[]);
   for(const k of keys)if(!used.has(k)&&!IMG.fresh.has(k))await DB.del(k)}catch(e){}}
 
 /* ---------- 启动 ---------- */
@@ -291,4 +306,3 @@ async function boot(){
 }
 document.addEventListener('DOMContentLoaded',boot);
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-
