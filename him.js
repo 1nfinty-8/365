@@ -220,8 +220,9 @@ HOOKS.context.push(()=>{const r=DATA.hday.find(x=>x.date===T());if(!r||!arr(r.it
 
 addMore({go:'him',cn:'关于他',ce:'about him'});
 HOOKS.ready.push(renderNow);
+function autoDay(){const r=DATA.hday.find(x=>x.date===T());if(!r)genDay();else if(mins(hm(new Date()))-mins(r.upto)>=60)genDay(true)}
 HOOKS.page.push(n=>{
-  if(n==='him')renderNow();
-  if(n==='hday'){di=null;renderDay();if(!DATA.hday.some(x=>x.date===T()))genDay()}
+  if(n==='him'){renderNow();autoDay()}
+  if(n==='hday'){di=null;renderDay();autoDay()}
   if(n==='hmemo'){hv='top';ni=0;renderNotes();if(!DATA.hnote.some(x=>x.date===T()))genNotes(2)}});
 })();
