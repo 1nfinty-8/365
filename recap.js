@@ -1,9 +1,9 @@
-/* ===== 365 · recap.js · 聊过的事（自动总结） ===== */
+/* ===== 365 · recap.js · 聊过的事（自动总结）+ 记忆页折叠 ===== */
 (()=>{
 if(!Array.isArray(DATA.recap))DATA.recap=[];
 Object.assign(DEFAULT,{recapOn:true,recapUpTo:0});
 const save=()=>saveData('recap');
-const CHUNK=40,SHOW=20;
+const CHUNK=40,NEAR=3;
 const md=t=>{const d=new Date(t);return `${d.getMonth()+1}月${d.getDate()}日`};
 const range=(a,b)=>md(a)===md(b)?md(a):md(a)+' – '+md(b);
 let busy=false,editing=null,ready=false;
@@ -45,11 +45,11 @@ async function run(force){
 
 function render(){
   const el=$('#rpSec');if(!el)return;
-  const n=pending().length,L=[...DATA.recap].reverse(),cut=DATA.recap.length-SHOW;
+  const n=pending().length,L=[...DATA.recap].reverse(),cut=DATA.recap.length-NEAR;
   const st=busy?`${esc(S.hisName)}正在翻以前的聊天…`:!S.recapOn?'自动整理：关':`自动整理：开${n?` · 还有 ${n} 条没整理`:''}`;
   el.innerHTML=`<div class="mm-h" style="margin-top:22px">聊过的事 · ${L.length}</div>
     <button class="rp-st" id="rpSt">${st}</button>
-    ${L.length?L.map(r=>`<div class="mm-item glass" data-rp="${r.id}"><div class="mm-l"><div class="mm-text">${esc(r.text)}</div><div class="mm-meta">${range(r.from,r.to)}${DATA.recap.indexOf(r)<cut?' · 太早了，他暂时想不起来':''}</div></div></div>`).join('')
+    ${L.length?L.map(r=>`<div class="mm-item glass" data-rp="${r.id}"><div class="mm-l"><div class="mm-text">${esc(r.text)}</div><div class="mm-meta">${range(r.from,r.to)}${DATA.recap.indexOf(r)<cut?' · 聊到相关的才想起来':''}</div></div></div>`).join('')
       :'<p class="hint" style="margin:0 4px 10px">聊天每多出大约 40 条，他会把更早的那一段写成一小段回忆放在这里。</p>'}`}
 
 $('#rpSec').onclick=e=>{
@@ -64,7 +64,14 @@ $('#rpSec').onclick=e=>{
 $('#rpSave').onclick=async()=>{const v=$('#rpText').value.trim();if(!v||!editing)return;
   editing.text=v;await save();closeModal('rpModal');render();toast('改好了')};
 
-HOOKS.persona.push(()=>{const L=DATA.recap.slice(-SHOW);if(!L.length)return '';
+/* ---------- 交给他：最近 3 段每次都带，更早的聊到相关的才想起最多 3 段 ---------- */
+const rbg=s=>{s=String(s||'').replace(/[^\p{L}\p{N}]/gu,'');const o=new Set();
+  for(let i=0;i<s.length-1;i++){const x=s.slice(i,i+2);if(x!=='小狗'&&!(S.hisName||'').includes(x))o.add(x)}return o};
+HOOKS.persona.push(()=>{const A=DATA.recap;if(!A.length)return '';
+  const near=A.slice(-NEAR),q=rbg(DATA.chat.slice(-4).map(m=>m.text||'').join(' ').slice(-300));
+  const old=A.slice(0,-NEAR).map(r=>{const b=rbg(r.text);let n=0;for(const x of q)if(b.has(x))n++;return {r,n}})
+    .filter(o=>o.n>=3).sort((a,b)=>b.n-a.n).slice(0,3).map(o=>o.r);
+  const L=[...old,...near].sort((a,b)=>a.from-b.from);
   return '【聊过的事】这是你们以前聊天的回忆，按时间先后。你都记得，合适的时候自然地接上，不要一条条复述：\n'+L.map(r=>`- ${range(r.from,r.to)}：${r.text}`).join('\n')});
 
 HOOKS.ready.push(()=>{if(!Array.isArray(DATA.recap))DATA.recap=[];ready=true;render();setTimeout(()=>run(),8000)});
@@ -99,5 +106,4 @@ roots.forEach(r=>{fold(r);new MutationObserver(()=>fold(r)).observe(r,{childList
 $('#page-memory').addEventListener('click',e=>{const h=e.target.closest('.mm-h.fh');if(!h)return;
   const lb=h.dataset.lb;open=open.includes(lb)?open.filter(x=>x!==lb):[...open,lb];
   localStorage.setItem(KEY,JSON.stringify(open));roots.forEach(fold)});
-HOOKS.ready.push(()=>$('#mmTabs button')?.click());
 })();
