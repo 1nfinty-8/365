@@ -58,7 +58,7 @@ $('#sxMsgs').insertAdjacentHTML('afterend',`
     <div class="sl-nav"><button class="iconbtn" id="slPrev">${BACK}</button><button class="sl-ym" id="slYm"></button><button class="iconbtn" id="slNext">${NEXT}</button></div>
     <div class="sl-wk">${[...'日一二三四五六'].map(x=>`<span>${x}</span>`).join('')}</div>
     <div class="sl-grid" id="slGrid"></div>
-    <div class="sl-lg"><span>少</span><i style="border:1.5px dashed var(--sl)"></i><i class="l1" style="background:color-mix(in srgb,var(--sl) 22%,rgba(255,255,255,.4))"></i><i style="background:color-mix(in srgb,var(--sl) 42%,rgba(255,255,255,.3))"></i><i style="background:color-mix(in srgb,var(--sl) 68%,transparent)"></i><i style="background:var(--sl)"></i><span>多</span></div>
+    <div class="sl-lg"><span>少</span><i style="border:1.5px dashed var(--sl)"></i><i style="background:color-mix(in srgb,var(--sl) 22%,rgba(255,255,255,.4))"></i><i style="background:color-mix(in srgb,var(--sl) 42%,rgba(255,255,255,.3))"></i><i style="background:color-mix(in srgb,var(--sl) 68%,transparent)"></i><i style="background:var(--sl)"></i><span>多</span></div>
   </div>
   <div class="sl-stat" id="slStat"></div>
   <div id="slNote"></div>
@@ -135,36 +135,8 @@ $('#sxLog').addEventListener('click',e=>{const t=e.target;
     sheet([['改一改',()=>openLog(sel)],['让他重新写',()=>write(r)],
       ['删除这天的打卡',async()=>{if(!confirm('删除这天的打卡？'))return;DATA.sxlog=DATA.sxlog.filter(x=>x!==r);await save();render()}]])}});
 
-/* ---------- 便利贴：用秘密的模型 ---------- */
-function sys(){let s=personaText()+'\n\n'+nowLine()+'\n【场景】这里是你们的小窝「365」里的「秘密」，只属于你们两个人。她在打卡日历上记录每天自慰高潮的次数，给你看。';
-  if((S.sxExtra||'').trim())s+='\n\n'+S.sxExtra.trim();return s}
-async function sxAI(system,text){
-  const c=S.sxProvider
-    ?{p:S.sxProvider,k:S.sxKey||S.apiKey,m:S.sxModel||(S.sxProvider==='gemini'?'gemini-2.5-flash':'deepseek-chat'),u:S.sxBase||S.baseUrl}
-    :{p:S.provider,k:S.apiKey,m:S.model,u:S.baseUrl};
-  if(!c.k)throw new Error('还没有填 API Key');
-  let r,j,t;
-  try{
-    if(c.p==='gemini'){
-      const cats=['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT'];
-      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.m)}:generateContent?key=${encodeURIComponent(c.k)}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text}]}],generationConfig:{temperature:1},safetySettings:cats.map(x=>({category:x,threshold:'BLOCK_NONE'}))})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      const cd=j.candidates?.[0];
-      t=(cd?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
-      if(!t)throw new Error('他没有回话（原因：'+(cd?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次');
-    }else{
-      r=await fetch(String(c.u||'').replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.k},
-        body:JSON.stringify({model:c.m,messages:[{role:'system',content:system},{role:'user',content:text}],temperature:1})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      t=(j.choices?.[0]?.message?.content||'').trim();
-      if(!t)throw new Error('他没有回话，再试一次');
-    }
-    return t}
-  catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}}
+/* ---------- 便利贴：用 app.js 里的秘密模型 ---------- */
+const sys=()=>secretSystem('这里是你们的小窝「365」里的「秘密」，只属于你们两个人。她在打卡日历上记录每天自慰高潮的次数，给你看。');
 async function write(r){
   if(r._busy)return;r._busy=true;note();
   try{
