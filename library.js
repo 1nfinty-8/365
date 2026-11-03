@@ -7,6 +7,10 @@ const arr=v=>Array.isArray(v)?v:[];
 const U=s=>s.src?'章':'段';
 const lines=t=>String(t||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
 const J=t=>JSON.parse((t.match(/\{[\s\S]*\}/)||['{}'])[0]);
+/* 荧光笔：主题色从深到浅五档，最后是下划线 */
+const HK=[['k1','color-mix(in srgb,var(--accent) 55%,#000)'],['k2','var(--accent-t)'],['k3','var(--accent)'],['k4','color-mix(in srgb,var(--accent) 60%,#fff)'],['k5','color-mix(in srgb,var(--accent) 32%,#fff)']];
+const HIDS=[...HK.map(k=>k[0]),'u'];
+const hc=()=>HIDS.includes(S.hlColor)?S.hlColor:'k2';
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 .lb-item{display:block;width:100%;text-align:left;padding:18px 20px;margin-bottom:12px;transition:transform .15s}
@@ -57,10 +61,17 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .rd-text{max-width:620px;margin:0 auto;font-family:var(--ti);font-size:var(--rd-size,17px);line-height:2;letter-spacing:.5px;text-align:justify;-webkit-user-select:text;user-select:text}
 .rd-text p{margin:0 0 1em;text-indent:2em;cursor:pointer}
 .rd-text mark.hl{background:none;color:inherit;border-radius:3px;padding:1px 0;-webkit-box-decoration-break:clone;box-decoration-break:clone}
-.rd-text mark.hl.me{background:color-mix(in srgb,var(--accent) 45%,transparent)}
+.rd-text mark.hl.me{background:color-mix(in srgb,var(--accent-t) 60%,transparent)}
+${HK.map(([k,c])=>`.rd-text mark.hl.me[data-c="${k}"]{background:color-mix(in srgb,${c} 72%,transparent)}`).join('\n')}
+.rd-text mark.hl.me[data-c="k1"]{color:#fff}
+.rd-text mark.hl.me[data-c="k4"],.rd-text mark.hl.me[data-c="k5"]{color:#2E1A1F}
+.rd-text mark.hl.me[data-c="u"]{background:none;text-decoration:underline;text-decoration-color:var(--accent-t);text-decoration-thickness:2.5px;text-underline-offset:5px}
 .rd-text mark.hl.him{text-decoration:underline;text-decoration-color:var(--accent-t);text-decoration-thickness:2px;text-underline-offset:5px}
-#rdHl{position:absolute;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);z-index:3;display:none;padding:11px 24px;box-shadow:0 8px 20px rgba(0,0,0,.18);-webkit-user-select:none;user-select:none}
-#rdHl.show{display:block;animation:fd .2s ease}
+#hlBar{position:absolute;left:50%;bottom:calc(var(--sb) + 20px);transform:translateX(-50%);z-index:4;display:none;align-items:center;gap:14px;padding:12px 18px;border-radius:99px;background:rgba(40,40,44,.84);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 8px 24px rgba(0,0,0,.25);-webkit-user-select:none;user-select:none}
+#hlBar.show{display:flex;animation:fd .2s ease}
+#hlBar button{width:26px;height:26px;border-radius:50%;flex:none}
+#hlBar button.on{box-shadow:0 0 0 2px rgba(40,40,44,.9),0 0 0 4px #fff}
+#hlBar .u{background:none;color:#fff;font-size:18px;text-decoration:underline;text-underline-offset:3px;font-family:var(--en)}
 .rd-ct{font-family:var(--ti);font-size:1.15em;font-weight:500;text-align:center;letter-spacing:2px;margin:0 0 1.4em}
 .rd-div{display:block;width:100%;margin:.6em auto 1.4em;font-family:var(--num);font-style:italic;font-size:15px;opacity:.5;letter-spacing:4px;text-align:center;color:inherit}
 .rd-nt{margin:-.4em 0 1.3em;padding:8px 12px;border-left:2px solid var(--accent);background:rgba(127,127,127,.1);border-radius:0 12px 12px 0;font-size:14px;line-height:1.75;text-indent:0;text-align:left;cursor:pointer;white-space:pre-wrap;word-break:break-word;-webkit-user-select:none;user-select:none}
@@ -117,7 +128,7 @@ $('#app').insertAdjacentHTML('beforeend',`
   </div>
   <div class="rd-line"><i id="rdPg"></i></div>
   <div id="rdBody"></div>
-  <button class="pill" id="rdHl">荧光笔划线</button>
+  <div id="hlBar">${HK.map(([k,c])=>`<button data-hc="${k}" style="background:${c}"></button>`).join('')}<button class="u" data-hc="u">U</button></div>
 </div>
 <div class="modal" id="lbModal"><div class="mbox">
   <h3>新的故事</h3>
@@ -283,7 +294,7 @@ function hl(i,x,M){
   const P=[...b].sort((a,c)=>a-c);let h='';
   for(let k=0;k<P.length-1;k++){const a=P[k],c=P[k+1];if(c<=a)continue;
     const seg=esc(x.slice(a,c));
-        const me=L.filter(m=>m.who==='me'&&m.s<=a&&m.e>=c).at(-1),him=L.some(m=>m.who==='him'&&m.s<=a&&m.e>=c);
+    const me=L.filter(m=>m.who==='me'&&m.s<=a&&m.e>=c).at(-1),him=L.some(m=>m.who==='him'&&m.s<=a&&m.e>=c);
     h+=me||him?`<mark class="hl${me?' me':''}${him?' him':''}"${me?` data-c="${me.c||''}"`:''} data-o="${a}">${seg}</mark>`:seg}
   return h}
 function renderCh(){const s=cur,n=s.parts.length,p=s.parts[ch],u=U(s),k=p.id,H=esc(S.hisName);
@@ -308,7 +319,7 @@ function openCh(i){
   const b=$('#rdBody'),p=getPos(cur.id);
   requestAnimationFrame(()=>{b.scrollTop=p&&p.c===i?(p.r||0)*(b.scrollHeight-b.clientHeight):0;setPos(cur.id,{c:i,r:prog()})});
   cur.readAt=Date.now();save()}
-function closeReader(){$('#reader').classList.remove('show');$('#rdHl').classList.remove('show');cur=null;if(book)renderDetail();render()}
+function closeReader(){$('#reader').classList.remove('show');$('#hlBar').classList.remove('show');cur=null;if(book)renderDetail();render()}
 function refreshIf(p){
   if(cur&&cur.parts[ch]===p&&$('#reader').classList.contains('show')){const b=$('#rdBody'),y=b.scrollTop;renderCh();b.scrollTop=y}
   else if(book)renderDetail()}
@@ -338,7 +349,7 @@ $('#rdMore').onclick=()=>{if(cur)partMenu()};
 /* ---------- 荧光笔 ---------- */
 function addMark(p,m){p.marks=arr(p.marks);let s=m.s,e=m.e;
   p.marks=p.marks.filter(x=>{if(x.who===m.who&&x.pi===m.pi&&x.s<=e&&x.e>=s){s=Math.min(s,x.s);e=Math.max(e,x.e);return false}return true});
-  p.marks.push({pi:m.pi,s,e,who:m.who,t:Date.now()})}
+  p.marks.push({pi:m.pi,s,e,who:m.who,c:m.who==='me'?hc():'',t:Date.now()})}
 const quotes=(p,w)=>{const L=lines(p.text);return arr(p.marks).filter(m=>m.who===w&&L[m.pi]).map(m=>L[m.pi].slice(m.s,m.e)).filter(Boolean)};
 function offIn(P,node,off){const r=document.createRange();r.selectNodeContents(P);try{r.setEnd(node,off)}catch(e){return 0}return r.toString().length}
 function selParts(){
@@ -352,20 +363,22 @@ function selParts(){
     const e=P.contains(r.endContainer)?offIn(P,r.endContainer,r.endOffset):L;
     if(e>s)out.push({pi:+P.dataset.p,s,e})});
   return out.length?out:null}
+const markBar=()=>$$('#hlBar button').forEach(b=>b.classList.toggle('on',b.dataset.hc===hc()));
 let pendSel=null,hadSel=false,selEnd=0;
 document.addEventListener('selectionchange',()=>{
   if(!cur||!$('#reader').classList.contains('show'))return;
   const P=selParts();
-  if(P){pendSel=P;hadSel=true;$('#rdHl').classList.add('show')}
+  if(P){pendSel=P;hadSel=true;markBar();$('#hlBar').classList.add('show')}
   else{if(hadSel){hadSel=false;selEnd=Date.now()}
-    setTimeout(()=>{if(!hadSel)$('#rdHl').classList.remove('show')},400)}});
-function applyHl(){
-  if(!cur||!pendSel)return;const p=cur.parts[ch];
+    setTimeout(()=>{if(!hadSel)$('#hlBar').classList.remove('show')},400)}});
+function applyHl(k){
+  if(!cur||!pendSel)return;if(k){S.hlColor=k;saveSettings()}
+  const p=cur.parts[ch];
   pendSel.forEach(m=>addMark(p,{...m,who:'me'}));pendSel=null;hadSel=false;selEnd=Date.now();
   try{getSelection().removeAllRanges()}catch(e){}
-  $('#rdHl').classList.remove('show');save();refreshIf(p);toast('划好了')}
-$('#rdHl').addEventListener('pointerdown',e=>{e.preventDefault();applyHl()});
-$('#rdHl').addEventListener('click',applyHl);
+  $('#hlBar').classList.remove('show');save();refreshIf(p);toast('划好了')}
+$('#hlBar').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-hc]');if(!b)return;e.preventDefault();applyHl(b.dataset.hc)});
+$('#hlBar').addEventListener('click',e=>{const b=e.target.closest('[data-hc]');if(b)applyHl(b.dataset.hc)});
 function markMenu(i,o){const s=cur,p=s.parts[ch],L=lines(p.text);
   const M=arr(p.marks).filter(m=>m.pi===i&&m.s<=o&&m.e>o);if(!M.length)return paraMenu(i);
   const q=(L[i]||'').slice(M[0].s,M[0].e);
@@ -375,40 +388,12 @@ function markMenu(i,o){const s=cur,p=s.parts[ch],L=lines(p.text);
     [M.some(m=>m.who==='me')?'擦掉这条划线':`擦掉${S.hisName}的划线`,async()=>{p.marks=arr(p.marks).filter(m=>!M.includes(m));await save();refreshIf(p)}]])}
 
 /* ---------- 共读：批注和读后感 ---------- */
-async function sxAI(system,text){
-  const c=S.sxProvider
-    ?{p:S.sxProvider,k:S.sxKey||S.apiKey,m:S.sxModel||(S.sxProvider==='gemini'?'gemini-2.5-flash':'deepseek-chat'),u:S.sxBase||S.baseUrl}
-    :{p:S.provider,k:S.apiKey,m:S.model,u:S.baseUrl};
-  if(!c.k)throw new Error('还没有填 API Key');
-  let r,j,t;
-  try{
-    if(c.p==='gemini'){
-      const cats=['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT'];
-      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.m)}:generateContent?key=${encodeURIComponent(c.k)}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text}]}],generationConfig:{temperature:1},safetySettings:cats.map(x=>({category:x,threshold:'BLOCK_NONE'}))})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      const cd=j.candidates?.[0];
-      t=(cd?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
-      if(!t)throw new Error('他没有回话（原因：'+(cd?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次');
-    }else{
-      r=await fetch(String(c.u||'').replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.k},
-        body:JSON.stringify({model:c.m,messages:[{role:'system',content:system},{role:'user',content:text}],temperature:1})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      t=(j.choices?.[0]?.message?.content||'').trim();
-      if(!t)throw new Error('他没有回话，再试一次');
-    }
-    return t}
-  catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}}
 const scene=s=>`你们在「365」的图书馆里一起读${s.src?'一本书':'你们俩一起写的故事'}《${s.title}》。她在读，你在旁边陪她一起读，会在书页边上写批注、划出你喜欢的句子给她看。`;
 function ai(s,text){
-  if(s.sx){let sys=personaText()+'\n\n'+nowLine()+'\n【场景】'+scene(s)+'这里只属于你们两个人。';
-    if((S.sxExtra||'').trim())sys+='\n\n'+S.sxExtra.trim();return sxAI(sys,text)}
+  if(s.sx)return sxAI(secretSystem(scene(s)+'这里只属于你们两个人。'),text);
   return callAI(sceneSystem(scene(s)),[{role:'user',text}])}
 const where=(s,p)=>`《${s.title}》第 ${s.parts.indexOf(p)+1} ${U(s)}${p.title?'「'+p.title+'」':''}`;
-const herHl=p=>{const q=quotes(p,'me');return q.length?'她在这一'+'部分用荧光笔划了这些句子：'+q.slice(0,8).map(x=>'「'+x.slice(0,80)+'」').join('、')+'\n':''};
+const herHl=p=>{const q=quotes(p,'me');return q.length?'她在这一部分用荧光笔划了这些句子：'+q.slice(0,8).map(x=>'「'+x.slice(0,80)+'」').join('、')+'\n':''};
 async function run(key,p,fn){if(nb.has(key))return;nb.add(key);refreshIf(p);
   try{await fn();await save()}catch(e){toast(e instanceof SyntaxError?'没读出来，再试一次':e.message)}
   finally{nb.delete(key);refreshIf(p)}}
@@ -527,5 +512,5 @@ HOOKS.ready.push(render);
 HOOKS.page.push(n=>{
   if(n!=='secret')$('#lbImp').classList.remove('show');
   if(n==='library'){if(book)renderDetail();else render()}
-  else{if(cur){$('#reader').classList.remove('show');$('#rdHl').classList.remove('show');cur=null}if(book)showShelf()}});
+  else{if(cur){$('#reader').classList.remove('show');$('#hlBar').classList.remove('show');cur=null}if(book)showShelf()}});
 })();
