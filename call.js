@@ -1,4 +1,4 @@
-/* ===== 365 · call.js · 打电话 + 他打给你 + 悬浮窗 + 自定义铃声 ===== */
+/* ===== 365 · call.js · 打电话（你说话，他打字回）+ 他打给你 + 悬浮窗 + 铃声 ===== */
 (()=>{
 if(!Array.isArray(DATA.calls))DATA.calls=[];
 if(typeof LISTS!=='undefined'&&!LISTS.includes('calls'))LISTS.push('calls');
@@ -7,12 +7,12 @@ const PHONE='<svg class="i" viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.6 4.2-2 1.
 const PH='<svg viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.6 4.2-2 1.3a11.5 11.5 0 0 0 5.8 5.8l1.3-2 4.2 1.6v3a2 2 0 0 1-2.1 2.1A15.5 15.5 0 0 1 4.5 5.6a2 2 0 0 1 2.1-2.1z"/></svg>';
 const MIC='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>';
 const MINI='<svg viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>';
+const KEY='<svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>';
 const mmss=s=>`${pad(Math.floor(s/60))}:${pad(s%60)}`;
 const IK='365-incall',MK='365-inmiss';
-let st='idle',rec=null,heard='',silT=null,tick=null,t0=0,lines=[],muted=false,stopSpeak=null,tok=0,warned=false,dir='out',inc=null,incT=null,pend=false,mini=false,ringData=null;
-try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>{}}catch(e){}
+let st='idle',rec=null,heard='',silT=null,tick=null,t0=0,lines=[],muted=false,tok=0,dir='out',inc=null,incT=null,pend=false,mini=false,ringData=null,typeT=null;
 
-/* ---------- 生成声音（铃声、嘟嘟声） ---------- */
+/* ---------- 铃声 ---------- */
 function wav(len,notes){
   const sr=16000,n=Math.max(1,Math.floor(len*sr)),b=new ArrayBuffer(44+n*2),v=new DataView(b);
   const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
@@ -22,45 +22,42 @@ function wav(len,notes){
     for(const[fs,a,d,vol]of notes)if(t>=a&&t<a+d){const e=Math.min(1,(t-a)/.02,(a+d-t)/.03);for(const f of fs)s+=Math.sin(6.2832*f*t)*vol*e}
     v.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true)}
   return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
-const SIL=wav(.15,[]);
 const RB=wav(5,[[[450],0,1,.3]]);
 const RIN=wav(2.6,[0,1.1].flatMap(o=>[659,784,988,784].map((f,i)=>[[f],o+i*.2,.18,.22])));
-const vo=new Audio(),rg=new Audio();
-[vo,rg].forEach(a=>{a.setAttribute('playsinline','');a.preload='auto'});
-function prime(){[vo,rg].forEach(el=>{if(el._ok||el._busy)return;el._busy=1;el.src=SIL;
-  let p;try{p=el.play()}catch(e){}
-  Promise.resolve(p).then(()=>{if(el.src===SIL)el.pause();el._ok=1}).catch(()=>{}).finally(()=>{el._busy=0})})}
-function unlockTTS(){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+const rg=new Audio();rg.setAttribute('playsinline','');rg.preload='auto';
 const ringSrc=()=>ringData||RIN;
-function ringStart(src){try{rg._ok=1;rg.loop=true;if(rg.src!==src)rg.src=src;rg.currentTime=0;rg.play().catch(()=>{})}catch(e){}}
+function ringStart(src){try{rg.loop=true;if(rg.src!==src)rg.src=src;rg.currentTime=0;rg.play().catch(()=>{})}catch(e){}}
 function ringStop(){try{rg.pause()}catch(e){}}
 function loadRing(){ringData=null;if(S.callRing)IMG.get(S.callRing).then(d=>{ringData=d||null}).catch(()=>{})}
 
 document.head.insertAdjacentHTML('beforeend',`<style>
-#callUI{position:absolute;inset:0;z-index:35;display:none;flex-direction:column;align-items:center;color:#fff;background:rgba(18,14,22,.62);-webkit-backdrop-filter:blur(30px) saturate(1.3);backdrop-filter:blur(30px) saturate(1.3);padding:calc(var(--st) + 14px) 28px calc(var(--sb) + 34px)}
+#callUI{position:absolute;inset:0;z-index:35;display:none;flex-direction:column;align-items:center;color:#fff;background:rgba(18,14,22,.62);-webkit-backdrop-filter:blur(30px) saturate(1.3);backdrop-filter:blur(30px) saturate(1.3);padding:calc(var(--st) + 14px) 26px calc(var(--sb) + 30px)}
 #callUI.show{display:flex;animation:fd .3s ease}
 .cl-top{align-self:stretch;display:flex;justify-content:space-between;align-items:center;min-height:34px}
-.cl-top button{color:#fff;opacity:.75;font-size:13px;letter-spacing:2px;padding:6px 4px}
+.cl-top button{color:#fff;opacity:.75;padding:6px 4px}
 .cl-top svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
 #callUI.in .cl-top button{visibility:hidden}
-.cl-av{position:relative;margin-top:6vh;border-radius:50%}
-.cl-av .av{width:116px;height:116px;font-size:42px;position:relative;z-index:1}
+.cl-av{position:relative;margin-top:2vh;border-radius:50%}
+.cl-av .av{width:96px;height:96px;font-size:36px;position:relative;z-index:1}
 .cl-av::before,.cl-av::after{content:"";position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);opacity:0}
-#callUI.speak .cl-av::before,#callUI.incoming .cl-av::before{animation:clP 1.6s infinite}
-#callUI.speak .cl-av::after,#callUI.incoming .cl-av::after{animation:clP 1.6s .8s infinite}
+#callUI.talk .cl-av::before,#callUI.incoming .cl-av::before{animation:clP 1.6s infinite}
+#callUI.talk .cl-av::after,#callUI.incoming .cl-av::after{animation:clP 1.6s .8s infinite}
 #callUI.ring .cl-av::before{animation:clP 1.2s infinite}
 @keyframes clP{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.7);opacity:0}}
-.cl-name{font-family:var(--ti);font-size:28px;letter-spacing:6px;margin-top:22px}
-.cl-time{font-family:var(--num);font-style:italic;font-size:18px;opacity:.75;margin-top:6px;letter-spacing:2px;min-height:24px}
-.cl-st{font-size:13px;opacity:.6;letter-spacing:3px;margin-top:2px;min-height:20px}
-.cl-sub{flex:1;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:12px;text-align:center;font-family:var(--ti);overflow:hidden}
-.cl-sub .h{font-size:18px;line-height:1.8;letter-spacing:1px}
-.cl-sub .m{font-size:14px;line-height:1.7;opacity:.55}
-#callUI.nosub .cl-sub>*{visibility:hidden}
+.cl-name{font-family:var(--ti);font-size:26px;letter-spacing:6px;margin-top:16px}
+.cl-time{font-family:var(--num);font-style:italic;font-size:17px;opacity:.75;margin-top:4px;letter-spacing:2px;min-height:22px}
+.cl-st{font-size:12.5px;opacity:.6;letter-spacing:3px;margin-top:2px;min-height:20px}
+.cl-sub{flex:1;align-self:stretch;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:14px;padding:16px 2px;font-family:var(--ti);-webkit-mask-image:linear-gradient(180deg,transparent,#000 12%);mask-image:linear-gradient(180deg,transparent,#000 12%)}
+.cl-sub>:first-child{margin-top:auto}
+.cl-ln{max-width:88%;line-height:1.75;word-break:break-word}
+.cl-ln.h{align-self:flex-start;font-size:18px;letter-spacing:.5px}
+.cl-ln.m{align-self:flex-end;text-align:right;font-size:14px;opacity:.6}
+.cl-ln.live{opacity:.35}
 .cl-btns{display:flex;align-items:flex-start;justify-content:space-around;align-self:stretch}
 #callUI.in .cl-btns.nm,#callUI:not(.in) .cl-btns.ic{display:none}
+#callUI.in .cl-sub{visibility:hidden}
 .cl-b{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;letter-spacing:2px;color:#fff}
-.cl-b i{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);font-style:normal;font-size:16px;font-family:var(--ti);transition:background .2s}
+.cl-b i{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);font-style:normal;transition:background .2s}
 .cl-b.on i{background:#fff;color:#222}
 .cl-b.end i,.cl-b.ok i{width:72px;height:72px}
 .cl-b.end i{background:#E5484D}
@@ -79,7 +76,7 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 </style>`);
 
 $('#app').insertAdjacentHTML('beforeend',`<div id="callUI">
-  <div class="cl-top"><button id="clMin" aria-label="缩小">${MINI}</button><button id="clSet">声音</button></div>
+  <div class="cl-top"><button id="clMin" aria-label="缩小">${MINI}</button><span></span></div>
   <div class="cl-av" id="clAv"></div>
   <div class="cl-name" id="clName"></div>
   <div class="cl-time" id="clTime"></div>
@@ -88,7 +85,7 @@ $('#app').insertAdjacentHTML('beforeend',`<div id="callUI">
   <div class="cl-btns nm">
     <button class="cl-b" id="clMute"><i>${MIC}</i>静音</button>
     <button class="cl-b end" id="clEnd"><i>${PH}</i>挂断</button>
-    <button class="cl-b" id="clCap"><i>字</i>字幕</button>
+    <button class="cl-b" id="clKey"><i>${KEY}</i>打字</button>
   </div>
   <div class="cl-btns ic">
     <button class="cl-b end" id="clNo"><i>${PH}</i>拒绝</button>
@@ -105,19 +102,16 @@ $('#callBtn').addEventListener('pointerdown',e=>e.preventDefault());
 $('#callBtn').onclick=()=>start();
 document.addEventListener('click',e=>{if(st!=='idle'&&e.target.closest?.('#micBtn')){e.stopPropagation();e.preventDefault();toast('通话中不能录语音')}},true);
 
-function set(s,t){st=s;const u=$('#callUI');['ring','listen','think','speak','incoming'].forEach(x=>u.classList.toggle(x,x===s));$('#clSt').textContent=t||'';upd()}
-function upd(){const f=$('#callFloat');if(!f)return;f.classList.toggle('speak',st==='speak');$('#cfT').textContent=t0?mmss(Math.floor((Date.now()-t0)/1000)):'呼叫中'}
-function sub(live){
-  const H=[...lines].reverse().find(x=>x.role==='model');
-  const lastMe=lines.at(-1)?.role==='user'?lines.at(-1).text:'';
-  const M=live||lastMe;
-  $('#clSub').innerHTML=(H?`<div class="h">${esc(H.text)}</div>`:'')+(M?`<div class="m">${esc(M)}</div>`:'')}
+function set(s,t){st=s;const u=$('#callUI');['ring','listen','think','incoming'].forEach(x=>u.classList.toggle(x,x===s));$('#clSt').textContent=t||'';upd()}
+function upd(){const f=$('#callFloat');if(!f)return;f.classList.toggle('speak',$('#callUI').classList.contains('talk'));$('#cfT').textContent=t0?mmss(Math.floor((Date.now()-t0)/1000)):'呼叫中'}
+function sub(live){const box=$('#clSub');
+  box.innerHTML=lines.map(x=>`<div class="cl-ln ${x.role==='model'?'h':'m'}">${esc(x._n!=null?x.text.slice(0,x._n):x.text)}</div>`).join('')+(live?`<div class="cl-ln m live">${esc(live)}</div>`:'');
+  box.scrollTop=box.scrollHeight}
 function refresh(){HOOKS.refresh.forEach(f=>{try{f()}catch(e){}})}
 function open(s,t,d){
-  tok++;dir=d;lines=[];heard='';t0=0;muted=false;mini=false;
-  $('#callFloat').classList.remove('show');
+  tok++;dir=d;lines=[];heard='';t0=0;muted=false;mini=false;clearInterval(typeT);
+  $('#callFloat').classList.remove('show');$('#callUI').classList.remove('talk');
   $('#clAv').innerHTML=avatarHTML('him');$('#clName').textContent=S.hisName;$('#clTime').textContent='';
-  $('#callUI').classList.toggle('nosub',S.callSub===false);$('#clCap').classList.toggle('on',S.callSub!==false);
   $('#clMute').classList.remove('on');sub();
   $('#callUI').classList.toggle('in',s==='incoming');$('#callUI').classList.add('show');set(s,t)}
 function connected(){t0=Date.now();$('#clTime').textContent='00:00';clearInterval(tick);
@@ -125,7 +119,7 @@ function connected(){t0=Date.now();$('#clTime').textContent='00:00';clearInterva
 
 /* ---------- 悬浮窗 ---------- */
 function minimize(){if(st==='idle'||st==='incoming')return;mini=true;$('#callUI').classList.remove('show');$('#callFloat').classList.add('show');upd()}
-function restore(){if(st==='idle')return;mini=false;$('#callFloat').classList.remove('show');$('#callUI').classList.add('show')}
+function restore(){if(st==='idle')return;mini=false;$('#callFloat').classList.remove('show');$('#callUI').classList.add('show');sub(heard)}
 $('#clMin').onclick=minimize;
 (()=>{const fl=$('#callFloat');let fx=0,fy=0,ox=0,oy=0,moved=false,down=false;
   fl.addEventListener('pointerdown',e=>{down=true;moved=false;fx=e.clientX;fy=e.clientY;
@@ -146,9 +140,7 @@ const H_NIGHT='（系统提示，不是她说的话：快睡觉了，是你主�
 const H_MISS='（系统提示，不是她说的话：你们好久没说话了，是你主动给她打的电话，她接起来了。先开口，说说你为什么打给她。）';
 async function start(){
   if(st!=='idle'){if(mini)restore();return}
-  if(!SR)return toast('这台手机不支持语音识别，打不了电话');
   if(!S.apiKey)return toast('还没有填 API Key');
-  unlockTTS();prime();
   $('#chatInput')?.blur();
   open('ring','正在呼叫…','out');const my=tok;
   ringStart(RB);
@@ -159,8 +151,8 @@ async function start(){
   await minT;ringStop();if(my!==tok)return;
   connected();say(first)}
 
-/* ---------- 他说话 ---------- */
-const RULE=`\n\n【通话】你们正在打语音电话。她说的话是语音识别转出来的，可能有错字，按意思理解。你说的话会被直接念给她听：只说口语，像真的在打电话，每次一到三句、不超过六十字；不要动作描写、括号、星号、表情、emoji，不要分行，不要加名字前缀。`;
+/* ---------- 他回话：文字一个字一个字打出来 ---------- */
+const RULE=`\n\n【通话】你们正在打电话。她是开口说话的，语音识别转成文字给你，可能有错字，按意思理解。你的回答会以文字显示在通话画面上：要像打电话时说话那样口语、自然，每次一到三句、不超过八十字；不要动作描写、括号、星号、emoji，不要分行，不要加名字前缀。`;
 function tidy(t){return clean(String(t||'')).replace(/[（(【\[][^）)】\]]*[）)】\]]/g,'').replace(/\*[^*]*\*/g,'')
   .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu,'').replace(/\s*\n+\s*/g,'，').trim()||'嗯。'}
 async function ask(hint){
@@ -168,44 +160,25 @@ async function ask(hint){
   const msgs=[...base,...lines.map(x=>({role:x.role,text:x.text}))];
   if(hint)msgs.push({role:'user',text:hint});
   return tidy(await (window.webReply||callAI)(chatSystem()+RULE,msgs))}
-async function say(text){
-  const my=tok;lines.push({role:'model',text,t:Date.now()});sub();set('speak','点一下可以打断');
-  await speak(text);
-  if(my!==tok)return;listen()}
-const zh=()=>{try{return speechSynthesis.getVoices().filter(v=>/^(zh|cmn)/i.test(v.lang))}catch(e){return []}};
-function voice(){const L=zh();return L.find(v=>v.name===S.callSysVoice)||L.find(v=>/zh[-_]CN/i.test(v.lang))||L[0]||null}
-async function apiTTS(text){
-  const r=await fetch(String(S.baseUrl||'').replace(/\/+$/,'')+'/audio/speech',{method:'POST',
-    headers:{'Content-Type':'application/json',Authorization:'Bearer '+S.apiKey},
-    body:JSON.stringify({model:S.callTtsModel||'tts-1',input:text,voice:S.callApiVoice||'onyx',speed:S.callRate||1})});
-  if(!r.ok){let m='';try{const j=await r.json();m=j.error?.message||''}catch(e){}throw new Error(m||('请求失败 '+r.status))}
-  const b=await r.blob();if(!b.size)throw new Error('没有收到声音');
-  return URL.createObjectURL(b)}
-function speak(text){
-  return new Promise(async res=>{
-    let done=false;const fin=()=>{if(done)return;done=true;stopSpeak=null;res()};
-    stopSpeak=fin;
-    if(S.callVoice==='api'&&S.provider!=='gemini'){
-      try{const url=await apiTTS(text);if(done){URL.revokeObjectURL(url);return}
-        const end=()=>{URL.revokeObjectURL(url);fin()};
-        vo.onended=end;vo.onerror=end;vo._ok=1;vo.loop=false;vo.src=url;
-        stopSpeak=()=>{try{vo.pause()}catch(e){}end()};
-        await vo.play();return}
-      catch(e){if(done)return;if(!warned){warned=true;toast('中转站的声音用不了，先用系统的声音')}}}
-    try{
-      const u=new SpeechSynthesisUtterance(text);u.lang='zh-CN';u.rate=S.callRate||1;u.pitch=.9;u.volume=1;
-      const v=voice();if(v)u.voice=v;
-      u.onend=fin;u.onerror=fin;
-      stopSpeak=()=>{try{speechSynthesis.cancel()}catch(e){}fin()};
-      speechSynthesis.cancel();speechSynthesis.speak(u);
-      setTimeout(fin,4000+text.length*400)}
-    catch(e){fin()}})}
+function say(text){
+  const my=tok,ln={role:'model',text,t:Date.now(),_n:0};lines.push(ln);
+  $('#callUI').classList.add('talk');upd();clearInterval(typeT);
+  typeT=setInterval(()=>{if(my!==tok){clearInterval(typeT);return}
+    ln._n+=1;if(ln._n>=text.length){delete ln._n;clearInterval(typeT);$('#callUI').classList.remove('talk');upd()}
+    sub(heard)},60);
+  listen()}
+async function userSays(t){
+  const my=tok;lines.push({role:'user',text:t,t:Date.now()});sub();set('think','他在想…');
+  try{const out=await ask();if(my!==tok)return;say(out)}
+  catch(e){if(my!==tok)return;toast(e.message);listen()}}
 
 /* ---------- 听你说 ---------- */
 function listen(){
   if(st==='idle'||st==='incoming')return;
   clearTimeout(silT);heard='';
-  if(muted){set('listen','静音中');return}
+  if(rec){const a=rec;rec=null;try{a.abort()}catch(e){}}
+  if(muted){set('listen','静音中 · 可以点「打字」');return}
+  if(!SR){set('listen','点「打字」和他说话');return}
   set('listen','在听…');
   const my=tok;
   try{const a=new SR();a.lang='zh-CN';a.continuous=true;a.interimResults=true;
@@ -214,55 +187,39 @@ function listen(){
       clearTimeout(silT);silT=setTimeout(()=>finish(my),1300)};
     a.onend=()=>{if(rec!==a)return;rec=null;if(my!==tok||st!=='listen')return;
       if(heard)finish(my);else setTimeout(()=>{if(my===tok&&st==='listen'&&!rec&&!muted)listen()},250)};
-    a.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){toast('没有麦克风或语音识别的权限');hang()}};
+    a.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){toast('没有麦克风或语音识别的权限，可以点「打字」');muted=true;$('#clMute').classList.add('on');set('listen','点「打字」和他说话')}};
     rec=a;a.start()}
-  catch(e){toast('听不到你：'+e.message)}}
-async function finish(my){
+  catch(e){set('listen','点「打字」和他说话')}}
+function finish(my){
   if(my!==tok||st!=='listen')return;clearTimeout(silT);
   const t=heard.trim();heard='';
   const a=rec;rec=null;try{a?.stop()}catch(e){}
   if(!t){listen();return}
-  lines.push({role:'user',text:t,t:Date.now()});sub();set('think','…');
-  try{const out=await ask();if(my!==tok)return;say(out)}
-  catch(e){if(my!==tok)return;toast(e.message);listen()}}
+  userSays(t)}
 
 /* ---------- 按钮 ---------- */
-const cut=()=>{if(st==='speak'&&stopSpeak)stopSpeak()};
-$('#clAv').onclick=cut;$('#clSub').onclick=cut;
 $('#clMute').onclick=()=>{muted=!muted;$('#clMute').classList.toggle('on',muted);
   if(st!=='listen')return;
-  if(muted){const a=rec;rec=null;clearTimeout(silT);try{a?.abort()}catch(e){}set('listen','静音中')}else listen()};
-$('#clCap').onclick=()=>{S.callSub=S.callSub===false;saveSettings();
-  $('#callUI').classList.toggle('nosub',S.callSub===false);$('#clCap').classList.toggle('on',S.callSub!==false)};
+  if(muted){const a=rec;rec=null;clearTimeout(silT);try{a?.abort()}catch(e){}heard='';sub();set('listen','静音中 · 可以点「打字」')}else listen()};
+$('#clKey').onclick=()=>{
+  if(st==='idle'||st==='incoming'||st==='ring')return;
+  if(st==='think')return toast('他还在想，等一下');
+  const a=rec;rec=null;clearTimeout(silT);try{a?.abort()}catch(e){}heard='';
+  const v=prompt('想跟他说的');
+  if(!v||!v.trim()){listen();return}
+  userSays(v.trim())};
 $('#clEnd').onclick=()=>hang();
 $('#clYes').onclick=()=>accept();
 $('#clNo').onclick=()=>miss('拒接');
-
-/* ---------- 换声音 ---------- */
-const AV=[['onyx','低沉的男声'],['echo','温和的男声'],['fable','清亮的男声'],['alloy','中性的声音'],['nova','女声'],['shimmer','女声']];
-function voiceMenu(){
-  const acts=[['试一下他的声音',()=>testVoice()],
-    [`系统的声音${S.callVoice!=='api'?' ✓':''}`,()=>{S.callVoice='sys';saveSettings();
-    const L=zh();if(!L.length)return toast('这台手机没有中文的系统声音');
-    sheet(L.slice(0,12).map(v=>[`${v.name}${v.name===voice()?.name?' ✓':''}`,()=>{S.callSysVoice=v.name;saveSettings();toast('换好了')}]))}]];
-  if(S.provider!=='gemini')acts.push([`中转站的声音${S.callVoice==='api'?' ✓':''}`,()=>{S.callVoice='api';warned=false;saveSettings();
-    sheet(AV.map(([k,n])=>[`${k} · ${n}${(S.callApiVoice||'onyx')===k?' ✓':''}`,()=>{S.callApiVoice=k;saveSettings();toast('换好了')}]))}]);
-  acts.push([`语速 ${S.callRate||1}`,()=>{const v=prompt('语速（0.7 到 1.5，1 是正常）',S.callRate||1);const n=parseFloat(v);
-    if(n>=.5&&n<=2){S.callRate=n;saveSettings()}}]);
-  sheet(acts)}
-$('#clSet').onclick=voiceMenu;
-function testVoice(){unlockTTS();prime();if(st!=='idle')return toast('通话中，直接听就好');
-  warned=false;speak('听得到我说话吗？')}
 
 /* ---------- 挂断 ---------- */
 async function hang(silent){
   if(st==='idle')return;
   if(st==='incoming')return miss('未接');
   tok++;const dur=t0?Math.round((Date.now()-t0)/1000):0,d=dir;
-  clearInterval(tick);clearTimeout(silT);ringStop();
+  clearInterval(tick);clearInterval(typeT);clearTimeout(silT);ringStop();
   const a=rec;rec=null;try{a?.abort()}catch(e){}
-  try{stopSpeak?.()}catch(e){}try{speechSynthesis.cancel()}catch(e){}try{vo.pause()}catch(e){}
-  set('idle','');mini=false;$('#callUI').classList.remove('show','in');$('#callFloat').classList.remove('show');
+  set('idle','');mini=false;$('#callUI').classList.remove('show','in','talk');$('#callFloat').classList.remove('show');
   if(silent||!dur)return;
   const c={id:uid(),t:t0,dur,dir:d,lines:lines.map(x=>({role:x.role,text:x.text}))};
   DATA.calls.push(c);DATA.calls=DATA.calls.slice(-30);await saveData('calls');
@@ -273,7 +230,7 @@ async function hang(silent){
 
 /* ---------- 他打给你 ---------- */
 function canRing(force){
-  if(!SR||!S.apiKey||st!=='idle'||document.hidden)return false;
+  if(!S.apiKey||st!=='idle'||document.hidden)return false;
   if(!force&&(S.callIn===false||localStorage.getItem(IK)===isoDate(today())))return false;
   if($('#page-secret')?.classList.contains('active'))return false;
   if($('#vrec')?.classList.contains('on')||$('#reader')?.classList.contains('show')||$('.modal.show'))return false;
@@ -294,12 +251,10 @@ function incoming(reason,force){
   clearTimeout(incT);incT=setTimeout(()=>miss('未接'),30000)}
 async function accept(){
   if(st!=='incoming')return;
-  unlockTTS();prime();
   clearTimeout(incT);ringStop();
   const r=inc?.reason;inc=null;
   $('#callUI').classList.remove('in');
   connected();set('think','接通中…');
-  go('chat');
   const my=tok;
   try{const first=await ask(r==='night'?H_NIGHT:H_MISS);if(my!==tok)return;say(first)}
   catch(e){if(my===tok){toast(e.message);listen()}}}
@@ -337,7 +292,7 @@ function mount(){
   const html=`<div id="ciSet" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
     <label class="chk"><input type="checkbox" id="ciOn"><span>他会主动给你打电话</span></label>
     <p class="hint">365 开着的时候才会打来：很久没聊天，或者睡前 22:30 以后。一天最多一次</p>
-    <div class="btns"><button class="pill ghost" id="ciTest">现在让他打过来试试</button><button class="pill ghost" id="ciVoice">试一下他的声音</button></div>
+    <div class="btns"><button class="pill ghost" id="ciTest">现在让他打过来试试</button></div>
     <p class="hint" id="ciRingName" style="margin-top:12px"></p>
     <div class="btns"><button class="pill ghost" id="ciRing">换一个铃声</button><button class="pill ghost" id="ciPlay">试听</button><button class="pill ghost" id="ciDef">用默认的</button></div>
     <input type="file" id="ciFile" accept="audio/*" style="display:none"></div>`;
@@ -346,7 +301,6 @@ function mount(){
   $('#ciOn').checked=S.callIn!==false;
   $('#ciOn').onchange=e=>{S.callIn=e.target.checked;saveSettings()};
   $('#ciTest').onclick=()=>{toast('3 秒后他会打过来');setTimeout(()=>incoming('miss',true),3000)};
-  $('#ciVoice').onclick=testVoice;
   $('#ciRing').onclick=()=>{const f=$('#ciFile');f.value='';f.click()};
   $('#ciFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
     if(f.size>4e6)return toast('文件太大了，选一个 4MB 以内的');
@@ -354,7 +308,7 @@ function mount(){
     const[id]=await IMG.putAll([data]);
     if(S.callRing)try{await IMG.del([S.callRing])}catch(x){}
     S.callRing=id;S.callRingName=f.name.replace(/\.\w+$/,'');saveSettings();ringData=data;ringLabel();toast('铃声换好了 ♡')};
-  $('#ciPlay').onclick=()=>{if(!rg.paused&&rg.src!==SIL){ringStop();$('#ciPlay').textContent='试听';return}
+  $('#ciPlay').onclick=()=>{if(!rg.paused){ringStop();$('#ciPlay').textContent='试听';return}
     ringStart(ringSrc());$('#ciPlay').textContent='停止';
     setTimeout(()=>{if(st==='idle'){ringStop();$('#ciPlay').textContent='试听'}},8000)};
   $('#ciDef').onclick=async()=>{if(!S.callRing)return toast('现在就是默认的');
