@@ -1,4 +1,4 @@
-/* ===== 365 · daily.js · 首页提醒、早安晚安、回忆、通知横幅、主动消息 ===== */
+/* ===== 365 · daily.js · 首页提醒、早安晚安、回忆、通知横幅、快捷回复、主动消息 ===== */
 (()=>{
 Object.assign(DEFAULT,{greet:true,idleMin:20,chaseMax:4,awayHours:3,awayMax:2,quietFrom:'01:00',quietTo:'07:30',recallTalk:true});
 
@@ -31,11 +31,38 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .rc-p{font-size:14.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
 .tm{display:flex;align-items:center;gap:8px}
 .tm input{flex:1}
+#qr{position:fixed;inset:0;z-index:97;display:none}
+#qr.show{display:block}
+.qr-bg{position:absolute;inset:0;background:rgba(0,0,0,.2);animation:fd .2s ease}
+.qr-s{position:absolute;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;height:62vh;display:flex;flex-direction:column;border-radius:26px 26px 0 0;background:var(--sys-bg);color:var(--sys-txt);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 -8px 30px rgba(0,0,0,.16);padding-bottom:calc(var(--sb) + 8px);font-family:var(--cn);animation:qrUp .32s cubic-bezier(.2,.9,.3,1.1)}
+.qr-s.kb{padding-bottom:8px}
+@keyframes qrUp{from{transform:translateY(100%)}to{transform:none}}
+.qr-h{position:relative;flex:none;display:flex;align-items:center;gap:8px;padding:18px 14px 10px;border-bottom:1px solid rgba(127,127,127,.15)}
+.qr-hd{position:absolute;top:7px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:5px;background:rgba(127,127,127,.35)}
+.qr-who{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
+.qr-who .av{width:32px;height:32px;font-size:13px}
+.qr-who b{font-weight:600;font-size:15px;letter-spacing:1px}
+.qr-go,.qr-x{font-size:13px;padding:6px 12px;border-radius:99px;background:rgba(127,127,127,.14);color:inherit;letter-spacing:1px}
+.qr-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.qr-r{display:flex}
+.qr-r.me{justify-content:flex-end}
+.qr-b{max-width:78%;padding:8px 12px;border-radius:18px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word;background:rgba(127,127,127,.14)}
+.qr-r.me .qr-b{background:var(--accent);color:var(--acct,#fff)}
+.qr-ty{opacity:.6;font-size:13px}
+.qr-e{margin:auto;color:var(--sys-sub);font-size:13px;letter-spacing:1px}
+.qr-in{flex:none;display:flex;align-items:flex-end;gap:8px;padding:8px 12px 0}
+.qr-in textarea{flex:1;min-height:38px;max-height:120px;resize:none;border:0;outline:none;border-radius:19px;padding:9px 14px;font:15px/1.4 var(--cn);background:var(--sys-card,rgba(127,127,127,.12));color:var(--sys-txt)}
+.qr-in .pill{flex:none;padding:9px 16px;font-size:14px}
 </style>`);
 
 /* ---------- 页面元素 ---------- */
 $('#since').insertAdjacentHTML('afterend','<div class="hm-tips" id="hmTips"></div>');
-document.body.insertAdjacentHTML('beforeend','<div id="nb"></div>');
+document.body.insertAdjacentHTML('beforeend',`<div id="nb"></div>
+<div id="qr"><div class="qr-bg" id="qrBg"></div><div class="qr-s" id="qrS">
+  <div class="qr-h" id="qrH"><i class="qr-hd"></i><div class="qr-who"><span id="qrAv"></span><b id="qrName"></b></div><button class="qr-go" id="qrGo">打开聊天</button><button class="qr-x" id="qrX">返回</button></div>
+  <div class="qr-list" id="qrList"></div>
+  <div class="qr-in"><textarea id="qrIn" rows="1" placeholder="回他…"></textarea><button class="pill" id="qrSend">发送</button></div>
+</div></div>`);
 $('.card[data-go="chat"]')?.insertAdjacentHTML('beforeend','<i class="ndot"></i>');
 $('#tabbar [data-go="chat"]')?.insertAdjacentHTML('beforeend','<i class="ndot"></i>');
 $('#app').insertAdjacentHTML('beforeend',`
@@ -81,7 +108,45 @@ $('#nb').addEventListener('touchmove',e=>{if(e.touches[0].clientY-sy<-15)hide()}
 const markSeen=()=>LS.set('seen',Date.now());
 function unread(){const s=LS.get('seen',0);
   for(let i=DATA.chat.length-1;i>=0;i--){const m=DATA.chat[i];if(m.t<=s)return false;if(m.role==='model')return true}return false}
-function dots(){const on=page!=='chat'&&unread();$$('.card[data-go="chat"]>.ndot,#tabbar [data-go="chat"]>.ndot').forEach(d=>d.parentElement.classList.toggle('has-dot',on))}
+function dots(){const on=page!=='chat'&&!qrOpen&&unread();$$('.card[data-go="chat"]>.ndot,#tabbar [data-go="chat"]>.ndot').forEach(d=>d.parentElement.classList.toggle('has-dot',on))}
+
+/* ---------- 快捷回复小窗 ---------- */
+let qrOpen=false,qrSig='',qrT=null;
+function qrText(m){if(m.voice)return `[语音 ${m.voice.dur}″] ${m.voice.tx||''}`;return m.text||(m.images?.length?'[照片]':'')}
+function qrRender(force){
+  const st=$('#status')?.textContent||'',C=DATA.chat,sig=C.length+'|'+(C.at(-1)?.t||0)+'|'+st;
+  if(!force&&sig===qrSig)return;qrSig=sig;
+  const L=C.slice(-30).filter(m=>qrText(m)),box=$('#qrList');
+  box.innerHTML=(L.length?L.map(m=>`<div class="qr-r ${m.role==='user'?'me':'him'}"><div class="qr-b">${esc(qrText(m))}</div></div>`).join(''):`<div class="qr-e">和${esc(S.hisName)}说点什么吧</div>`)
+    +(st?`<div class="qr-r him"><div class="qr-b qr-ty">${esc(st)}</div></div>`:'');
+  box.scrollTop=box.scrollHeight}
+function qrFit(){const vv=window.visualViewport,s=$('#qrS');if(!s||!qrOpen)return;
+  const kb=vv?Math.max(0,window.innerHeight-vv.height-vv.offsetTop):0;
+  s.style.bottom=kb+'px';s.classList.toggle('kb',kb>80);
+  s.style.height=Math.min(window.innerHeight*.62,(vv?vv.height:window.innerHeight)-40)+'px';
+  const b=$('#qrList');if(b)b.scrollTop=b.scrollHeight}
+window.visualViewport?.addEventListener('resize',qrFit);
+window.visualViewport?.addEventListener('scroll',qrFit);
+function openQR(){if(page==='chat')return go('chat');
+  qrOpen=true;$('#qrName').textContent=S.hisName;$('#qrAv').innerHTML=avatarHTML('him');
+  $('#qr').classList.add('show');qrFit();qrRender(true);markSeen();dots();
+  clearInterval(qrT);qrT=setInterval(()=>qrRender(),400)}
+function closeQR(){if(!qrOpen)return;qrOpen=false;clearInterval(qrT);$('#qrIn').blur();$('#qr').classList.remove('show');markSeen();dots()}
+function qrSend(){const ta=$('#qrIn'),v=ta.value.trim();if(!v)return;
+  const ci=$('#chatInput'),sb=$('#sendBtn');if(!ci||!sb){closeQR();return go('chat')}
+  const draft=ci.value,n=DATA.chat.length;ci.value=v;sb.click();
+  if(DATA.chat.length===n){ci.value=draft;toast(`${S.hisName}还在回上一条，等一下再发`);return}
+  ci.value=draft;ta.value='';ta.style.height='';qrRender(true)}
+$('#qrSend').addEventListener('pointerdown',e=>e.preventDefault());
+$('#qrSend').onclick=qrSend;
+$('#qrIn').addEventListener('input',e=>{const t=e.target;t.style.height='';t.style.height=Math.min(120,t.scrollHeight)+'px'});
+$('#qrIn').addEventListener('focus',()=>setTimeout(qrFit,350));
+$('#qrBg').onclick=closeQR;
+$('#qrX').onclick=closeQR;
+$('#qrGo').onclick=()=>{closeQR();go('chat')};
+let qy=0;
+$('#qrH').addEventListener('touchstart',e=>{qy=e.touches[0].clientY},{passive:true});
+$('#qrH').addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-qy>60)closeQR()},{passive:true});
 
 /* ---------- 新动静 → 横幅 ---------- */
 function counts(){let dy=0,mo=0,tc=0,dyL=null,moL=null;
@@ -92,7 +157,7 @@ function counts(){let dy=0,mo=0,tc=0,dyL=null,moL=null;
   return {chat:DATA.chat.length,dy,mo,tc,dyL,moL}}
 function watch(){const c=counts();
   if(prev){
-    if(c.chat>prev.chat&&page!=='chat'){const m=DATA.chat.slice(prev.chat).filter(x=>x.role==='model').at(-1);if(m)banner(m.text||'[照片]',()=>go('chat'))}
+    if(c.chat>prev.chat&&page!=='chat'&&!qrOpen){const m=DATA.chat.slice(prev.chat).filter(x=>x.role==='model').at(-1);if(m)banner(m.text||'[照片]',openQR)}
     if(c.dy>prev.dy&&page!=='diary')banner('批注了你的日记：'+(c.dyL?.text||''),()=>go('diary'));
     if(c.mo>prev.mo&&page!=='moments')banner((c.moL?.post?'发了一条朋友圈：':'评论了你：')+(c.moL?.text||''),()=>go('moments'));
     if(c.tc>prev.tc&&page!=='capsule')banner('也写好了一封信，封进时间胶囊里了 ✉︎',()=>go('capsule'))}
@@ -234,12 +299,12 @@ document.addEventListener('visibilitychange',()=>{
 function tick(){if(document.hidden||!ready)return;const now=Date.now();
   if(awake&&now-lastW>15000){LS.set('last',now);lastW=now}
   const c=darken(S.theme||'#B4848D',.7);if(c!==dc){document.documentElement.style.setProperty('--dot',c);dc=c}
-  watch();if(page==='chat')markSeen();dots();
+  watch();if(page==='chat'||qrOpen)markSeen();dots();
   if(page==='home'&&now-tipsAt>60000)renderTips();
   idle(now)}
 setInterval(tick,1000);
 
 HOOKS.ready.push(()=>{if(!LS.get('seen',0))markSeen();prev=counts();ready=true;renderTips();dots();setTimeout(onReturn,800)});
 HOOKS.refresh.push(renderTips);
-HOOKS.page.push(n=>{page=n;if(n==='chat'){markSeen();hide()}if(n==='home')renderTips();dots()});
+HOOKS.page.push(n=>{page=n;if(n==='chat'){closeQR();markSeen();hide()}if(n==='home')renderTips();dots()});
 })();
