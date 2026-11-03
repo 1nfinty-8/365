@@ -237,6 +237,8 @@ $('#tpMenu').onclick=()=>{const a=active(),acts=[[`他住在：${S.homeCity}（�
     if(!d)DATA.trips=DATA.trips.filter(x=>x!==a);
     else{a.days=d;a.stops=a.stops.filter(s=>s.from<d);a.stops.forEach(s=>s.to=Math.min(s.to,d-1))}
     S.tripNext=add(T(),R(10,25));saveSettings();await saveData('trips');renderAll()}]);
+    if(DATA.coins.length)acts.push(['删除一枚硬币',()=>sheet([...DATA.coins].sort((a,b)=>a.no-b.no).map(c=>[`删除 No.${c.no} ${c.city}`,async()=>{if(!confirm(`删除 No.${c.no} ${c.city} 这枚硬币？`))return;DATA.coins=DATA.coins.filter(x=>x!==c);DATA.coins.sort((a,b)=>a.no-b.no).forEach((x,i)=>x.no=i+1);await saveData('coins');renderAll()}]))]);
+  if(DATA.trips.length)acts.push(['删除一趟行程',()=>sheet([...DATA.trips].sort((a,b)=>b.start.localeCompare(a.start)).map(t=>[`删除「${t.title}」`,async()=>{if(!confirm(`删除「${t.title}」？这趟留下的硬币也会一起删掉。`))return;const ids=arr(t.stops).map(s=>s.id);DATA.trips=DATA.trips.filter(x=>x!==t);DATA.coins=DATA.coins.filter(c=>!ids.includes(c.sid));DATA.coins.sort((a,b)=>a.no-b.no).forEach((x,i)=>x.no=i+1);if(!active()){S.tripNext=add(T(),R(10,25));saveSettings()}await saveData('trips');await saveData('coins');renderAll()}]))]);
   sheet(acts)};
 
 /* ---------- 他的一天、聊天都跟着行程走 ---------- */
