@@ -251,4 +251,5 @@ HOOKS.persona.push(()=>{const t=active();
 HOOKS.ready.push(()=>{if(!Array.isArray(DATA.trips))DATA.trips=[];if(!Array.isArray(DATA.coins))DATA.coins=[];card();geoHome();renderNow();setTimeout(tick,6000)});
 HOOKS.page.push(n=>{page=n;if(n==='trip'){render();tick()}if(n==='him'){card();renderNow();tick()}});
 setInterval(()=>{if(!document.hidden)tick()},30*60000);
-window.addEventListener('res
+window.addEventListener('resize',()=>{if(page==='trip')drawMap()});
+})();
