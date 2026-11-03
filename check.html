@@ -17,47 +17,43 @@ small{color:#6e6e73;word-break:break-all;display:block;margin-top:2px}
 </head>
 <body>
 <h1>365 文件检查</h1>
-<p class="tip">点「复制代码」可以把整个文件复制下来</p>
+<p class="tip">自动检查 index.html 里加载的所有文件 · 点「复制代码」可以复制整个文件</p>
 <div id="out">检查中…</div>
 <button id="clr">清除缓存（不会删数据）</button>
 <script>
-const JS=['app','chat','moments','anniv','diary','capsule','memory','wordcloud','library','daily','hub','deeptalk','calendar','weather','wish','screen','secret'];
-const FILES=['index.html','style.css',...JS.map(n=>n+'.js'),'sw.js','manifest.json'];
-const IDS=['anAdd','anModal','postBtn','feed','dyAdd','tcAdd','mmAdd','tabbar','replyBar','picker','importFile','since','page-library'];
 const TEXT={};
 const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-function row(f,ok,msg,has){return `<div class="r"><b class="${ok?'ok':'bad'}">${ok?'✓':'✗'} ${f}</b>${msg.map(m=>`<small>${esc(m)}</small>`).join('')}${has?`<button class="cp" data-f="${f}">复制代码</button>`:''}</div>`}
+const get=async f=>{const r=await fetch(f+'?t='+Date.now(),{cache:'no-store'});return {ok:r.ok,status:r.status,text:r.ok?await r.text():''}};
+function row(f,ok,msg,has){return `<div class="r"><b class="${ok?'ok':'bad'}">${ok?'✓':'✗'} ${esc(f)}</b>${msg.map(m=>`<small>${esc(m)}</small>`).join('')}${has?`<button class="cp" data-f="${esc(f)}">复制代码</button>`:''}</div>`}
 (async()=>{
-  let h='',bad=0;
-  for(const f of FILES){
-    let ok=true,has=false;const msg=[];
+  let h='',bad=0,idx='';
+  const I=await get('index.html').catch(()=>({ok:false,status:0,text:''}));idx=I.text;
+  const JS=[...idx.matchAll(/<script\s+src="([^"]+)"/g)].map(m=>m[1]);
+  const uniq=[...new Set(JS)];
+  {const msg=[],ok0=I.ok;let ok=ok0;
+    if(!ok0)msg.push('⚠️ 读不到 index.html');
+    else{TEXT['index.html']=idx;
+      msg.push(idx.length+' 字 · 加载了 '+uniq.length+' 个 js 文件');
+      if(!idx.trim().endsWith('</html>')){ok=false;msg.push('⚠️ 结尾不是 </html>，被截断了')}
+      const dup=uniq.filter(n=>JS.filter(x=>x===n).length>1);
+      if(dup.length){ok=false;msg.push('⚠️ 加载了两遍：'+dup.join('、'))}
+      if(uniq[0]!=='app.js'){ok=false;msg.push('⚠️ 第一个加载的必须是 app.js')}}
+    if(!ok)bad++;h+=row('index.html',ok,msg,ok0)}
+  for(const f of ['style.css',...uniq,'sw.js','manifest.json']){
+    let ok=true;const msg=[];
     try{
-      const r=await fetch(f+'?t='+Date.now(),{cache:'no-store'});
-      if(!r.ok){bad++;h+=row(f,false,['⚠️ 找不到这个文件（'+r.status+'），检查文件名'],false);continue}
-      const s=await r.text();TEXT[f]=s;has=true;
+      const r=await get(f);
+      if(!r.ok){bad++;h+=row(f,false,[uniq.includes(f)?'⚠️ index.html 里加载了它，但仓库里没有这个文件（'+r.status+'）。要么新建这个文件，要么把 index.html 里那一行删掉':'⚠️ 找不到这个文件（'+r.status+'）'],false);continue}
+      const s=r.text;TEXT[f]=s;
       msg.push(s.length+' 字 · 最后一行：'+s.trim().split('\n').pop().trim().slice(-40));
       if(f.endsWith('.js')){
-        if(!s.slice(0,150).includes(f)){ok=false;msg.push('⚠️ 开头不是 '+f+' 的代码，可能粘错文件了')}
-        try{new Function(s)}catch(e){ok=false;msg.push('⚠️ 代码不完整或有错：'+e.message)}
-      }
-      if(f==='index.html'){
-        if(!s.trim().endsWith('</html>')){ok=false;msg.push('⚠️ 结尾不是 </html>，被截断了')}
-        const miss=IDS.filter(id=>!s.includes('id="'+id+'"'));
-        if(miss.length){ok=false;msg.push('⚠️ 缺少：'+miss.join('、'))}
-        const no=JS.filter(n=>!s.includes('src="'+n+'.js"'));
-        if(no.length){ok=false;msg.push('⚠️ 没有加载：'+no.map(n=>n+'.js').join('、'))}
-        const dup=JS.filter(n=>s.split('src="'+n+'.js"').length>2);
-        if(dup.length){ok=false;msg.push('⚠️ 加载了两遍：'+dup.map(n=>n+'.js').join('、'))}
-      }
-      if(f==='style.css'){
-        const a=(s.match(/{/g)||[]).length,b=(s.match(/}/g)||[]).length;
-        if(a!==b){ok=false;msg.push(`⚠️ 括号对不上（{ ${a} 个，} ${b} 个）`)}
-      }
+        if(f!=='app.js'&&f!=='sw.js'&&!s.slice(0,200).includes(f)){ok=false;msg.push('⚠️ 开头不是 '+f+' 的代码，可能粘错文件了')}
+        try{new Function(s)}catch(e){ok=false;msg.push('⚠️ 代码不完整或有错：'+e.message)}}
+      if(f==='style.css'){const a=(s.match(/{/g)||[]).length,b=(s.match(/}/g)||[]).length;
+        if(a!==b){ok=false;msg.push(`⚠️ 括号对不上（{ ${a} 个，} ${b} 个）`)}}
       if(f==='manifest.json'){try{JSON.parse(s)}catch(e){ok=false;msg.push('⚠️ 格式不对')}}
     }catch(e){ok=false;msg.push('读取失败：'+e.message)}
-    if(!ok)bad++;
-    h+=row(f,ok,msg,has);
-  }
+    if(!ok)bad++;h+=row(f,ok,msg,!!TEXT[f])}
   out.innerHTML=(bad?`<div class="r bad">有 ${bad} 个文件需要看一下</div>`:'<div class="r ok">全部正常 ✓</div>')+h;
 })();
 out.onclick=e=>{const b=e.target.closest('.cp');if(!b)return;const t=TEXT[b.dataset.f];
