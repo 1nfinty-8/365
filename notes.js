@@ -72,7 +72,7 @@ function tdRender(){
   const U=DATA.todo.filter(x=>!x.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')||b.t-a.t);
   const D=DATA.todo.filter(x=>x.done).sort((a,b)=>b.doneAt-a.doneAt);
   const it=x=>{const late=!x.done&&x.due&&x.due<T();
-    const meta=[x.due?dueLabel(x.due):'',x.by==='him'?esc(S.hisName)+'加的':''].filter(Boolean).join(' · ');
+    const meta=[x.due?dueLabel(x.due)+(x.time?' '+x.time:''):'',x.by==='him'?esc(S.hisName)+'加的':''].filter(Boolean).join(' · ');
     return `<div class="td-it glass${x.done?' done':''}" data-td="${x.id}"><button class="td-ck" data-tck="${x.id}" aria-label="完成">${CK}</button><div class="td-l"><div class="td-x">${esc(x.text)}</div>${meta?`<div class="td-m${late?' late':''}">${meta}</div>`:''}</div></div>`};
   $('#tdList').innerHTML=(U.map(it).join('')||'<div class="empty">没有要做的事了</div>')
     +(D.length?`<div class="td-h">做完了 · ${D.length}<button id="tdClr">清掉做完的</button></div>`+D.slice(0,30).map(it).join(''):'');
