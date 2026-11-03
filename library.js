@@ -1,4 +1,4 @@
-/* ===== 365 · library.js · 图书馆 + 导入书 + 共读批注 ===== */
+/* ===== 365 · library.js · 图书馆 + 导入书 + 共读批注 + 荧光笔 ===== */
 (()=>{
 if(!Array.isArray(DATA.library))DATA.library=[];
 const save=()=>saveData('library');
@@ -54,11 +54,16 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .rd-line{flex:none;height:2px;background:rgba(127,127,127,.15)}
 .rd-line i{display:block;height:100%;width:0;background:var(--accent)}
 #rdBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:12px 26px calc(var(--sb) + 40px)}
-.rd-text{max-width:620px;margin:0 auto;font-family:var(--ti);font-size:var(--rd-size,17px);line-height:2;letter-spacing:.5px;text-align:justify}
+.rd-text{max-width:620px;margin:0 auto;font-family:var(--ti);font-size:var(--rd-size,17px);line-height:2;letter-spacing:.5px;text-align:justify;-webkit-user-select:text;user-select:text}
 .rd-text p{margin:0 0 1em;text-indent:2em;cursor:pointer}
+.rd-text mark.hl{background:none;color:inherit;border-radius:3px;padding:1px 0;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.rd-text mark.hl.me{background:color-mix(in srgb,var(--accent) 45%,transparent)}
+.rd-text mark.hl.him{text-decoration:underline;text-decoration-color:var(--accent-t);text-decoration-thickness:2px;text-underline-offset:5px}
+#rdHl{position:absolute;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);z-index:3;display:none;padding:11px 24px;box-shadow:0 8px 20px rgba(0,0,0,.18);-webkit-user-select:none;user-select:none}
+#rdHl.show{display:block;animation:fd .2s ease}
 .rd-ct{font-family:var(--ti);font-size:1.15em;font-weight:500;text-align:center;letter-spacing:2px;margin:0 0 1.4em}
 .rd-div{display:block;width:100%;margin:.6em auto 1.4em;font-family:var(--num);font-style:italic;font-size:15px;opacity:.5;letter-spacing:4px;text-align:center;color:inherit}
-.rd-nt{margin:-.4em 0 1.3em;padding:8px 12px;border-left:2px solid var(--accent);background:rgba(127,127,127,.1);border-radius:0 12px 12px 0;font-size:14px;line-height:1.75;text-indent:0;text-align:left;cursor:pointer;white-space:pre-wrap;word-break:break-word}
+.rd-nt{margin:-.4em 0 1.3em;padding:8px 12px;border-left:2px solid var(--accent);background:rgba(127,127,127,.1);border-radius:0 12px 12px 0;font-size:14px;line-height:1.75;text-indent:0;text-align:left;cursor:pointer;white-space:pre-wrap;word-break:break-word;-webkit-user-select:none;user-select:none}
 .rd-nt>div+div{margin-top:6px}
 .rd-nt small,.rd-say small{display:block;font-size:11px;opacity:.55;letter-spacing:1px}
 .rd-nt .me{opacity:.8}
@@ -112,6 +117,7 @@ $('#app').insertAdjacentHTML('beforeend',`
   </div>
   <div class="rd-line"><i id="rdPg"></i></div>
   <div id="rdBody"></div>
+  <button class="pill" id="rdHl">荧光笔划线</button>
 </div>
 <div class="modal" id="lbModal"><div class="mbox">
   <h3>新的故事</h3>
@@ -241,10 +247,10 @@ function renderDetail(){const s=book;if(!s)return;
       <div class="bk-meta">${s.author?esc(s.author)+' · ':''}${n} ${u} · 约 ${fmtN(len(s))} 字</div>
       <div class="bk-pct">${pct}<small>%</small></div>
       <div class="bk-bar"><i style="width:${pct}%"></i></div>
-      <div class="bk-at">${!n?`还没有${u === '章'?'章节':'段落'}`:p?`读到第 ${c+1} ${u}${s.parts[c]?.title?' · '+esc(s.parts[c].title):''}`:'还没开始读'}</div>
+      <div class="bk-at">${!n?`还没有${u==='章'?'章节':'段落'}`:p?`读到第 ${c+1} ${u}${s.parts[c]?.title?' · '+esc(s.parts[c].title):''}`:'还没开始读'}</div>
       <div class="bk-btns">${n?`<button class="pill" id="bkGo">${p?'继续读':'开始读'}</button>`:''}${s.src?'':'<button class="pill ghost" id="bkAdd">＋ 接着写一段</button>'}</div>
     </div>
-    ${n?`<div class="bk-h">目录</div><div class="bk-grid">${s.parts.map((x,i)=>`<button class="bk-c${p&&i<c?' read':''}${p&&i===c?' on':''}${arr(x.notes).length||arr(x.after).length?' nt':''}" data-ci="${i}">${i+1}</button>`).join('')}</div>`:''}`}
+    ${n?`<div class="bk-h">目录</div><div class="bk-grid">${s.parts.map((x,i)=>`<button class="bk-c${p&&i<c?' read':''}${p&&i===c?' on':''}${arr(x.notes).length||arr(x.after).length||arr(x.marks).length?' nt':''}" data-ci="${i}">${i+1}</button>`).join('')}</div>`:''}`}
 $('#bkBody').onclick=e=>{if(!book)return;
   if(e.target.closest('#bkGo')){const p=getPos(book.id);openCh(p?Math.min(p.c,book.parts.length-1):0);return}
   if(e.target.closest('#bkAdd')){openPart(null);return}
@@ -253,10 +259,10 @@ $('#bkBack').onclick=showShelf;
 $('#bkMore').onclick=()=>{const s=book;if(!s)return;
   sheet([['改名字',async()=>{const v=prompt('新的名字',s.title);if(!v||!v.trim())return;s.title=v.trim();await save();renderDetail()}],
     [s.sx?'批注改用平时的模型':'批注改用秘密的模型',async()=>{s.sx=!s.sx;await save();toast(s.sx?'这本书的批注会用秘密的模型':'这本书的批注会用平时的模型')}],
-    ['删除这本书',async()=>{if(!confirm(`删除「${s.title}」？里面所有的内容和批注都会删掉。`))return;
+    ['删除这本书',async()=>{if(!confirm(`删除「${s.title}」？里面所有的内容、批注和划线都会删掉。`))return;
       DATA.library=DATA.library.filter(x=>x!==s);setPos(s.id,null);await save();showShelf();toast('删掉了')}]])};
 
-/* ---------- 第三层：读一段 ---------- */
+/* ---------- 第三层：读一章 ---------- */
 function applyReader(){
   const base=S.readBg||themeBg(),[r,g,b]=rgb(base),el=$('#reader');
   el.style.setProperty('--rd-bg',`rgba(${r},${g},${b},.86)`);
@@ -268,20 +274,32 @@ function renderSet(){
   $('#rdBg').innerHTML=BGS.map(([c,n])=>`<button data-bg="${c}" aria-label="${n}" class="${(S.readBg||'')===c?'on':''}" style="background:${c||themeBg()}"></button>`).join('')
     +`<input type="color" id="rdBgC" value="${String(S.readBg||'#f7f3ec').toLowerCase()}">`}
 const who=x=>x.who==='me'?'我':esc(S.hisName);
+
+/* 把划线画进一段文字里 */
+function hl(i,x,M){
+  const L=M.filter(m=>m.pi===i&&m.e>m.s);if(!L.length)return esc(x);
+  const b=new Set([0,x.length]);
+  L.forEach(m=>{b.add(Math.max(0,Math.min(x.length,m.s)));b.add(Math.max(0,Math.min(x.length,m.e)))});
+  const P=[...b].sort((a,c)=>a-c);let h='';
+  for(let k=0;k<P.length-1;k++){const a=P[k],c=P[k+1];if(c<=a)continue;
+    const seg=esc(x.slice(a,c));
+    const me=L.some(m=>m.who==='me'&&m.s<=a&&m.e>=c),him=L.some(m=>m.who==='him'&&m.s<=a&&m.e>=c);
+    h+=me||him?`<mark class="hl${me?' me':''}${him?' him':''}" data-o="${a}">${seg}</mark>`:seg}
+  return h}
 function renderCh(){const s=cur,n=s.parts.length,p=s.parts[ch],u=U(s),k=p.id,H=esc(S.hisName);
   $('#rdTitle').textContent=`${s.title} · ${ch+1}`;
-  const P=lines(p.text),N=arr(p.notes),last=Math.max(0,P.length-1);
+  const P=lines(p.text),N=arr(p.notes),M=arr(p.marks),last=Math.max(0,P.length-1);
   const nt=i=>{const L=N.filter(x=>Math.min(x.pi,last)===i),w=nb.has(k+':'+i);if(!L.length&&!w)return '';
     return `<div class="rd-nt" data-np="${i}">${L.map(x=>`<div class="${x.who==='me'?'me':'him'}"><small>${who(x)}</small>${esc(x.text)}</div>`).join('')}${w?`<div class="him"><small>${H}</small>在写…</div>`:''}</div>`};
   const A=arr(p.after),aw=nb.has(k+':after'),all=nb.has(k+':all');
-  $('#rdBody').innerHTML=`<div class="rd-text"><button class="rd-div" id="rdDiv">· ${ch+1} ·</button>${p.title?`<h3 class="rd-ct">${esc(p.title)}</h3>`:''}${P.map((x,i)=>`<p data-p="${i}">${esc(x)}</p>${nt(i)}`).join('')}</div>
+  $('#rdBody').innerHTML=`<div class="rd-text"><button class="rd-div" id="rdDiv">· ${ch+1} ·</button>${p.title?`<h3 class="rd-ct">${esc(p.title)}</h3>`:''}${P.map((x,i)=>`<p data-p="${i}">${hl(i,x,M)}</p>${nt(i)}`).join('')}</div>
     <div class="rd-af"><div class="rd-afh">一起读 · ${H}</div>
       ${A.map(x=>`<div class="rd-say ${x.who==='me'?'me':'him'}"><small>${who(x)}</small>${esc(x.text)}</div>`).join('')}
       ${aw?`<div class="rd-say him"><small>${H}</small>在写…</div>`:''}
       <div class="rd-afb">${all?`<span style="opacity:.6">${H}在批注…</span>`:`<button class="pill ghost" id="rdNoteAll">让${H}批注这一${u}</button>`}${aw?'':A.length?'<button class="pill ghost" id="rdAfRe">回他一句</button>':`<button class="pill" id="rdAf">让${H}写读后感</button>`}</div>
     </div>
     <div class="rd-nav">${ch>0?`<button class="pill ghost" id="rdPrev">上一${u}</button>`:''}${ch<n-1?`<button class="pill" id="rdNextCh">下一${u}</button>`:'<button class="pill" id="rdToc">回到目录</button>'}</div>
-    <div class="rd-cap">第 ${ch+1} / ${n} ${u} · 约 ${fmtN(p.text.length)} 字${N.length?` · ${N.length} 条批注`:''}</div>`}
+    <div class="rd-cap">第 ${ch+1} / ${n} ${u} · 约 ${fmtN(p.text.length)} 字${N.length?` · ${N.length} 条批注`:''}${M.length?` · ${M.length} 处划线`:''}</div>`}
 function prog(){const b=$('#rdBody'),m=b.scrollHeight-b.clientHeight,r=m>0?b.scrollTop/m:1;$('#rdPg').style.width=(r*100)+'%';return r}
 function openCh(i){
   if(!book||!book.parts[i])return;
@@ -290,7 +308,7 @@ function openCh(i){
   const b=$('#rdBody'),p=getPos(cur.id);
   requestAnimationFrame(()=>{b.scrollTop=p&&p.c===i?(p.r||0)*(b.scrollHeight-b.clientHeight):0;setPos(cur.id,{c:i,r:prog()})});
   cur.readAt=Date.now();save()}
-function closeReader(){$('#reader').classList.remove('show');cur=null;if(book)renderDetail();render()}
+function closeReader(){$('#reader').classList.remove('show');$('#rdHl').classList.remove('show');cur=null;if(book)renderDetail();render()}
 function refreshIf(p){
   if(cur&&cur.parts[ch]===p&&$('#reader').classList.contains('show')){const b=$('#rdBody'),y=b.scrollTop;renderCh();b.scrollTop=y}
   else if(book)renderDetail()}
@@ -307,6 +325,7 @@ $('#rdSet').addEventListener('input',e=>{if(e.target.id!=='rdBgC')return;
 function partMenu(){const s=cur,p=s.parts[ch],u=U(s);
   const acts=[[`让${S.hisName}批注这一${u}`,()=>noteAll(s,p)]];
   if(arr(p.notes).length||arr(p.after).length)acts.push([`清掉这一${u}的批注`,async()=>{if(!confirm('清掉这一'+u+'所有的批注和读后感？'))return;p.notes=[];p.after=[];await save();refreshIf(p)}]);
+  if(arr(p.marks).length)acts.push([`清掉这一${u}的划线`,async()=>{if(!confirm('清掉这一'+u+'所有的划线？'))return;p.marks=[];await save();refreshIf(p)}]);
   acts.push([`编辑这一${u}`,()=>openPart(ch)],
     [`删除这一${u}`,async()=>{if(!confirm(`删除第 ${ch+1} ${u}？`))return;
       s.parts.splice(ch,1);const ps=getPos(s.id);
@@ -315,6 +334,45 @@ function partMenu(){const s=cur,p=s.parts[ch],u=U(s);
     ['回到目录',closeReader]);
   sheet(acts)}
 $('#rdMore').onclick=()=>{if(cur)partMenu()};
+
+/* ---------- 荧光笔 ---------- */
+function addMark(p,m){p.marks=arr(p.marks);let s=m.s,e=m.e;
+  p.marks=p.marks.filter(x=>{if(x.who===m.who&&x.pi===m.pi&&x.s<=e&&x.e>=s){s=Math.min(s,x.s);e=Math.max(e,x.e);return false}return true});
+  p.marks.push({pi:m.pi,s,e,who:m.who,t:Date.now()})}
+const quotes=(p,w)=>{const L=lines(p.text);return arr(p.marks).filter(m=>m.who===w&&L[m.pi]).map(m=>L[m.pi].slice(m.s,m.e)).filter(Boolean)};
+function offIn(P,node,off){const r=document.createRange();r.selectNodeContents(P);try{r.setEnd(node,off)}catch(e){return 0}return r.toString().length}
+function selParts(){
+  const sel=getSelection();if(!sel||sel.isCollapsed||!sel.rangeCount)return null;
+  const r=sel.getRangeAt(0),box=$('#rdBody .rd-text');if(!box)return null;
+  if(!box.contains(r.startContainer)&&!box.contains(r.endContainer))return null;
+  const out=[];
+  box.querySelectorAll('p[data-p]').forEach(P=>{if(!r.intersectsNode(P))return;
+    const L=P.textContent.length;
+    const s=P.contains(r.startContainer)?offIn(P,r.startContainer,r.startOffset):0;
+    const e=P.contains(r.endContainer)?offIn(P,r.endContainer,r.endOffset):L;
+    if(e>s)out.push({pi:+P.dataset.p,s,e})});
+  return out.length?out:null}
+let pendSel=null,hadSel=false,selEnd=0;
+document.addEventListener('selectionchange',()=>{
+  if(!cur||!$('#reader').classList.contains('show'))return;
+  const P=selParts();
+  if(P){pendSel=P;hadSel=true;$('#rdHl').classList.add('show')}
+  else{if(hadSel){hadSel=false;selEnd=Date.now()}
+    setTimeout(()=>{if(!hadSel)$('#rdHl').classList.remove('show')},400)}});
+function applyHl(){
+  if(!cur||!pendSel)return;const p=cur.parts[ch];
+  pendSel.forEach(m=>addMark(p,{...m,who:'me'}));pendSel=null;hadSel=false;selEnd=Date.now();
+  try{getSelection().removeAllRanges()}catch(e){}
+  $('#rdHl').classList.remove('show');save();refreshIf(p);toast('划好了')}
+$('#rdHl').addEventListener('pointerdown',e=>{e.preventDefault();applyHl()});
+$('#rdHl').addEventListener('click',applyHl);
+function markMenu(i,o){const s=cur,p=s.parts[ch],L=lines(p.text);
+  const M=arr(p.marks).filter(m=>m.pi===i&&m.s<=o&&m.e>o);if(!M.length)return paraMenu(i);
+  const q=(L[i]||'').slice(M[0].s,M[0].e);
+  sheet([[`让${S.hisName}说说这句`,()=>noteOne(s,p,i,q)],
+    ['我写一句批注',()=>mine(i)],
+    ['复制这句',()=>navigator.clipboard?.writeText(q).then(()=>toast('已复制'))],
+    [M.some(m=>m.who==='me')?'擦掉这条划线':`擦掉${S.hisName}的划线`,async()=>{p.marks=arr(p.marks).filter(m=>!M.includes(m));await save();refreshIf(p)}]])}
 
 /* ---------- 共读：批注和读后感 ---------- */
 async function sxAI(system,text){
@@ -344,41 +402,48 @@ async function sxAI(system,text){
     }
     return t}
   catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}}
-const scene=s=>`你们在「365」的图书馆里一起读${s.src?'一本书':'你们俩一起写的故事'}《${s.title}》。她在读，你在旁边陪她一起读，会在书页边上写批注给她看。`;
+const scene=s=>`你们在「365」的图书馆里一起读${s.src?'一本书':'你们俩一起写的故事'}《${s.title}》。她在读，你在旁边陪她一起读，会在书页边上写批注、划出你喜欢的句子给她看。`;
 function ai(s,text){
   if(s.sx){let sys=personaText()+'\n\n'+nowLine()+'\n【场景】'+scene(s)+'这里只属于你们两个人。';
     if((S.sxExtra||'').trim())sys+='\n\n'+S.sxExtra.trim();return sxAI(sys,text)}
   return callAI(sceneSystem(scene(s)),[{role:'user',text}])}
 const where=(s,p)=>`《${s.title}》第 ${s.parts.indexOf(p)+1} ${U(s)}${p.title?'「'+p.title+'」':''}`;
+const herHl=p=>{const q=quotes(p,'me');return q.length?'她在这一'+'部分用荧光笔划了这些句子：'+q.slice(0,8).map(x=>'「'+x.slice(0,80)+'」').join('、')+'\n':''};
 async function run(key,p,fn){if(nb.has(key))return;nb.add(key);refreshIf(p);
   try{await fn();await save()}catch(e){toast(e instanceof SyntaxError?'没读出来，再试一次':e.message)}
   finally{nb.delete(key);refreshIf(p)}}
-function noteOne(s,p,i){return run(p.id+':'+i,p,async()=>{
+function noteOne(s,p,i,q){return run(p.id+':'+i,p,async()=>{
   const L=lines(p.text),last=Math.max(0,L.length-1);
   const th=arr(p.notes).filter(x=>Math.min(x.pi,last)===i).map(x=>`${x.who==='me'?'她':'你'}：${x.text}`).join('\n');
-  const t=await ai(s,`${where(s,p)}里的这一段：\n「${L[i]||''}」\n${i>0?'前一段是：「'+String(L[i-1]).slice(0,300)+'」\n':''}${th?'你们已经在这段旁边写了：\n'+th+'\n请接着回她最新说的。':'请在这一段旁边写一句批注。'}
+  const t=await ai(s,`${where(s,p)}里的这一段：\n「${L[i]||''}」\n${i>0?'前一段是：「'+String(L[i-1]).slice(0,300)+'」\n':''}${q?'她特别划出了这一句：「'+q+'」，想听你说说这句。\n':''}${herHl(p)}${th?'你们已经在这段旁边写了：\n'+th+'\n请接着回她最新说的。':'请在这一段旁边写一句批注。'}
 以${S.hisName}的身份，像在书页边上随手写给她看的：可以是你的感想、吐槽、联想到你们之间的事，或者问她一个问题。一到三句，口语，不要加名字前缀，不要用 emoji。只输出批注内容。`);
   (p.notes=arr(p.notes)).push({pi:i,who:'him',text:clean(t),t:Date.now()})})}
 function noteAll(s,p){return run(p.id+':all',p,async()=>{
   const L=lines(p.text);let out='',k=0;
   for(;k<L.length;k++){const x=`[${k}] ${L[k]}\n`;if(out.length+x.length>9000)break;out+=x}
-  const j=J(await ai(s,`${where(s,p)}，按段落编号：\n${out}${k<L.length?'（后面还有）\n':''}
-请以${S.hisName}的身份，挑 3 到 5 段你最有感觉的，在旁边写批注给她看：感想、吐槽、联想到你们之间的事，或者问她一个问题。每条一到三句，口语，不要用 emoji。只输出 JSON：{"notes":[{"p":段落编号,"text":"批注"}]}`));
+  const j=J(await ai(s,`${where(s,p)}，按段落编号：\n${out}${k<L.length?'（后面还有）\n':''}${herHl(p)}
+请以${S.hisName}的身份：1. 挑 3 到 5 段你最有感觉的，在旁边写批注给她看：感想、吐槽、联想到你们之间的事，或者问她一个问题，每条一到三句，口语；2. 划出 2 到 4 句你最喜欢的句子，必须从原文里一字不差地摘出来，每句不超过 60 字。${herHl(p)?'她划的句子你也可以回应。':''}不要用 emoji。只输出 JSON：{"notes":[{"p":段落编号,"text":"批注"}],"lines":[{"p":段落编号,"text":"原文里的一句"}]}`));
   const N=arr(j.notes).filter(x=>x&&x.text&&Number.isInteger(+x.p)&&+x.p>=0&&+x.p<L.length);
-  if(!N.length)throw new SyntaxError('empty');
+  let hit=0;
+  arr(j.lines).forEach(x=>{const t=String(x?.text||'').trim().replace(/^[「“"]|[」”"]$/g,'');if(t.length<2)return;
+    let pi=+x.p,o=L[pi]?L[pi].indexOf(t):-1;
+    if(o<0){pi=L.findIndex(l=>l.includes(t));o=pi>=0?L[pi].indexOf(t):-1}
+    if(o>=0){addMark(p,{pi,s:o,e:o+t.length,who:'him'});hit++}});
+  if(!N.length&&!hit)throw new SyntaxError('empty');
   const now=Date.now();p.notes=arr(p.notes);
   N.forEach((x,n)=>p.notes.push({pi:+x.p,who:'him',text:clean(String(x.text)),t:now+n}));
-  toast(`${S.hisName}写了 ${N.length} 条批注`)})}
+  toast(`${S.hisName}写了 ${N.length} 条批注${hit?`，划了 ${hit} 句`:''}`)})}
 function afterWrite(s,p){return run(p.id+':after',p,async()=>{
   const T=p.text,ex=T.length>7000?T.slice(0,3500)+'\n……\n'+T.slice(-3500):T;
   const A=arr(p.after),th=A.map(x=>`${x.who==='me'?'她':'你'}：${x.text}`).join('\n');
-  const t=await ai(s,`${where(s,p)}：\n${ex}\n\n${th?'读完以后你们聊的：\n'+th+'\n请以'+S.hisName+'的身份接着回她最新说的，一到四句，口语。':'请以'+S.hisName+'的身份，写这一'+U(s)+'的读后感给她：你最在意的地方、你的感受、联想到你们之间的什么，100到250字。'}不要加名字前缀，不要用 emoji。只输出内容。`);
+  const t=await ai(s,`${where(s,p)}：\n${ex}\n\n${herHl(p)}${th?'读完以后你们聊的：\n'+th+'\n请以'+S.hisName+'的身份接着回她最新说的，一到四句，口语。':'请以'+S.hisName+'的身份，写这一'+U(s)+'的读后感给她：你最在意的地方、你的感受、联想到你们之间的什么，她划的句子也可以提到，100到250字。'}不要加名字前缀，不要用 emoji。只输出内容。`);
   (p.after=A).push({who:'him',text:clean(t),t:Date.now()})})}
 async function mine(i){const s=cur,p=s.parts[ch];
   const v=prompt('写在这段旁边的话');if(!v||!v.trim())return;
   (p.notes=arr(p.notes)).push({pi:i,who:'me',text:v.trim(),t:Date.now()});await save();refreshIf(p);noteOne(s,p,i)}
 function paraMenu(i){const s=cur,p=s.parts[ch],L=lines(p.text),last=Math.max(0,L.length-1);
   const N=arr(p.notes).filter(x=>Math.min(x.pi,last)===i),acts=[];
+  acts.push(['荧光笔划整段',async()=>{addMark(p,{pi:i,s:0,e:(L[i]||'').length,who:'me'});await save();refreshIf(p)}]);
   if(!N.length)acts.push([`让${S.hisName}批注这段`,()=>noteOne(s,p,i)]);
   acts.push([N.length?'回他一句':'我写一句批注',()=>mine(i)]);
   if(N.length&&N.at(-1).who==='me')acts.push([`让${S.hisName}回`,()=>noteOne(s,p,i)]);
@@ -395,6 +460,9 @@ $('#rdBody').addEventListener('click',e=>{
   if(e.target.closest('#rdAf'))return afterWrite(cur,p);
   if(e.target.closest('#rdAfRe')){const v=prompt('想跟他说的');if(!v||!v.trim())return;
     (p.after=arr(p.after)).push({who:'me',text:v.trim(),t:Date.now()});save();refreshIf(p);return afterWrite(cur,p)}
+  if(hadSel||Date.now()-selEnd<500)return;
+  const mk=e.target.closest('mark.hl');
+  if(mk){const pe=mk.closest('[data-p]');if(pe)return markMenu(+pe.dataset.p,+mk.dataset.o)}
   const pe=e.target.closest('[data-p]'),ne=e.target.closest('[data-np]');
   if(pe)return paraMenu(+pe.dataset.p);
   if(ne)return paraMenu(+ne.dataset.np)});
@@ -407,7 +475,7 @@ $('#lbPartSave').onclick=async()=>{
   const text=$('#lbPartText').value.trim();if(!text)return toast('还没有粘贴内容');
   if(!book)return;
   if(editIdx==null)book.parts.push({id:uid(),text,t:Date.now()});
-  else book.parts[editIdx].text=text;
+  else{const pt=book.parts[editIdx];if(pt.text!==text)pt.marks=[];pt.text=text}
   await save();closeModal('lbPart');
   if(cur&&editIdx!=null)renderCh();else renderDetail();
   toast(editIdx==null?'接上了 ♡':'改好了')};
@@ -452,11 +520,12 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)$('#lbImp')
 HOOKS.context.push(()=>{
   const s=[...DATA.library].filter(x=>!x.sx&&x.readAt&&Date.now()-x.readAt<2*864e5&&x.parts.length).sort((a,b)=>b.readAt-a.readAt)[0];
   if(!s)return '';const p=getPos(s.id),c=p?Math.min(p.c,s.parts.length-1):0,pt=s.parts[c];
-  return `【她在读】她最近在图书馆读${s.src?'':'你们一起写的'}《${s.title}》，读到第 ${c+1} ${U(s)}${pt?.title?'「'+pt.title+'」':''}。可以自然地聊起，不用每句都提。`});
+  const q=pt?quotes(pt,'me').slice(-2):[];
+  return `【她在读】她最近在图书馆读${s.src?'':'你们一起写的'}《${s.title}》，读到第 ${c+1} ${U(s)}${pt?.title?'「'+pt.title+'」':''}。${q.length?'她划了：'+q.map(x=>'「'+x.slice(0,50)+'」').join('、')+'。':''}可以自然地聊起，不用每句都提。`});
 
 HOOKS.ready.push(render);
 HOOKS.page.push(n=>{
   if(n!=='secret')$('#lbImp').classList.remove('show');
   if(n==='library'){if(book)renderDetail();else render()}
-  else{if(cur){$('#reader').classList.remove('show');cur=null}if(book)showShelf()}});
+  else{if(cur){$('#reader').classList.remove('show');$('#rdHl').classList.remove('show');cur=null}if(book)showShelf()}});
 })();
