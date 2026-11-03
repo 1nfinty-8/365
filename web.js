@@ -4,8 +4,7 @@ const WK='365-web';
 const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
 const mon=()=>isoDate(today()).slice(0,7);
 const used=()=>{const c=LS(WK,{});return c.m===mon()?c.n||0:0};
-const LIMIT=()=>S.webLimit||1000;
-function count(){localStorage.setItem(WK,JSON.stringify({m:mon(),n:used()+1}));renderQ()}
+function count(){localStorage.setItem(WK,JSON.stringify({m:mon(),n:used()+1}));hint()}
 
 /* ---------- 设置：放进「我的 → 连接」 ---------- */
 function mount(){
@@ -20,7 +19,7 @@ function mount(){
   if(a)a.insertAdjacentHTML('afterend',html);else sec.insertAdjacentHTML('beforeend',html);
   $('#webOn').checked=!!S.webOn;$('#webKey').value=S.tvKey||'';
   $('#webOn').onchange=e=>{S.webOn=e.target.checked;saveSettings();hint()};
-  $('#webKey').onchange=e=>{S.tvKey=e.target.value.trim();saveSettings();hint();renderQ()};
+  $('#webKey').onchange=e=>{S.tvKey=e.target.value.trim();saveSettings();hint()};
   hint()}
 function hint(){const h=$('#webHint');if(!h)return;
   h.textContent=!S.tvKey?'先去 tavily.com 拿一个 Key 填在这里':S.webOn?`已打开 · 这个月搜了 ${used()} 次`:'Key 填好了，打开上面的开关就能用'}
@@ -52,14 +51,7 @@ window.webReply=async(sys,msgs)=>{
   const out=await callAI(sys+`\n\n【你刚上网查了「${q}」】\n${info||'什么也没查到。'}\n\n用你自己的语气、像平时聊天一样告诉她：挑她最需要知道的说，具体一点（时间、地点、价格这些），不要列网址，不要说“根据搜索结果”。${info?'':'没查到就老实说，不要编。'}`,msgs);
   return out.replace(new RegExp(TAG.source,'g'),'').trim()||out};
 
-/* ---------- 额度页：联网的卡片 ---------- */
-function renderQ(){hint();const L=$('#qpList');if(!L)return;
-  let c=$('#webQ');if(!S.tvKey){c?.remove();return}
-  if(!c){L.insertAdjacentHTML('afterend','<div class="qp-c glass" id="webQ"></div>');c=$('#webQ')}
-  const n=used(),p=Math.max(0,100-n/LIMIT()*100),low=p<(S.quotaWarn||10)?' low':'';
-  c.innerHTML=`<div class="qt-h"><b>联网</b><small>api.tavily.com</small></div><div class="qp-big${low}">${Math.round(p)}<small>%</small></div><div class="qt-bar"><i class="${low}" style="width:${p}%"></i></div><div class="qt-s${low}">这个月搜了 ${n} 次 / 每月 ${LIMIT()} 次 · 每月重置</div>`}
-
 mount();
-HOOKS.ready.push(()=>{mount();renderQ()});
-HOOKS.page.push(n=>{if(n==='me'){mount();hint()}if(n==='quota')renderQ()});
+HOOKS.ready.push(mount);
+HOOKS.page.push(n=>{if(n==='me'){mount();hint()}});
 })();
