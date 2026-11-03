@@ -283,8 +283,8 @@ function hl(i,x,M){
   const P=[...b].sort((a,c)=>a-c);let h='';
   for(let k=0;k<P.length-1;k++){const a=P[k],c=P[k+1];if(c<=a)continue;
     const seg=esc(x.slice(a,c));
-    const me=L.some(m=>m.who==='me'&&m.s<=a&&m.e>=c),him=L.some(m=>m.who==='him'&&m.s<=a&&m.e>=c);
-    h+=me||him?`<mark class="hl${me?' me':''}${him?' him':''}" data-o="${a}">${seg}</mark>`:seg}
+        const me=L.filter(m=>m.who==='me'&&m.s<=a&&m.e>=c).at(-1),him=L.some(m=>m.who==='him'&&m.s<=a&&m.e>=c);
+    h+=me||him?`<mark class="hl${me?' me':''}${him?' him':''}"${me?` data-c="${me.c||''}"`:''} data-o="${a}">${seg}</mark>`:seg}
   return h}
 function renderCh(){const s=cur,n=s.parts.length,p=s.parts[ch],u=U(s),k=p.id,H=esc(S.hisName);
   $('#rdTitle').textContent=`${s.title} · ${ch+1}`;
