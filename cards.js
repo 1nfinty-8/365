@@ -96,38 +96,10 @@ $('#app').insertAdjacentHTML('beforeend',`
   <div class="mbtns"><button class="pill ghost" data-close="cdAns">取消</button><button class="pill" id="cdASave">好了</button></div>
 </div></div>`);
 
-/* ---------- 和他说话：白天用平时的模型，夜晚用秘密的模型 ---------- */
+/* ---------- 和他说话：白天用平时的模型，夜晚用 app.js 里的秘密模型 ---------- */
 const DAY_SCENE='这是你们的小窝「365」里的「小卡片」，白天的牌堆。你们会一张一张地翻卡片：情话、任务卡、真心话、大冒险。';
-function nightSys(){let s=personaText()+'\n\n'+nowLine()+'\n【场景】这是你们的小窝「365」里的「小卡片」，夜晚的牌堆，只属于你们两个人，没有别人能看到。你们会一张一张地翻卡片：任务卡、真心话、大冒险。';
-  if((S.sxExtra||'').trim())s+='\n\n'+S.sxExtra.trim();return s}
-async function nightAI(system,msgs){
-  const c=S.sxProvider
-    ?{provider:S.sxProvider,apiKey:S.sxKey||S.apiKey,model:S.sxModel||(S.sxProvider==='gemini'?'gemini-2.5-flash':'deepseek-chat'),baseUrl:S.sxBase||S.baseUrl}
-    :{provider:S.provider,apiKey:S.apiKey,model:S.model,baseUrl:S.baseUrl};
-  if(!c.apiKey)throw new Error('还没有填 API Key');
-  const arr=prep(msgs);let r,j,t;
-  try{
-    if(c.provider==='gemini'){
-      const cats=['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT'];
-      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.model)}:generateContent?key=${encodeURIComponent(c.apiKey)}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:arr.map(m=>({role:m.role,parts:[{text:m.text||'…'}]})),generationConfig:{temperature:1},safetySettings:cats.map(x=>({category:x,threshold:'BLOCK_NONE'}))})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      const cd=j.candidates?.[0];
-      t=(cd?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
-      if(!t)throw new Error('他没有回话（原因：'+(cd?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次');
-    }else{
-      const messages=[{role:'system',content:system},...arr.map(m=>({role:m.role==='model'?'assistant':'user',content:m.text||''}))];
-      r=await fetch(String(c.baseUrl||'').replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.apiKey},body:JSON.stringify({model:c.model,messages,temperature:1})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      t=(j.choices?.[0]?.message?.content||'').trim();
-      if(!t)throw new Error('他没有回话，再试一次');
-    }
-    return t;
-  }catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}}
-const ai=(m,msgs)=>m==='night'?nightAI(nightSys(),msgs):callAI(sceneSystem(DAY_SCENE),msgs);
+const nightSys=()=>secretSystem('这是你们的小窝「365」里的「小卡片」，夜晚的牌堆，只属于你们两个人，没有别人能看到。你们会一张一张地翻卡片：任务卡、真心话、大冒险。');
+const ai=(m,msgs)=>m==='night'?sxAI(nightSys(),msgs):callAI(sceneSystem(DAY_SCENE),msgs);
 
 /* ---------- 他出一张卡 ---------- */
 const PROMPT={
