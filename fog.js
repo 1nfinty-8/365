@@ -77,9 +77,10 @@ function frame(){if(!run)return;
 
 /* ---------- 他在雾上写字 ---------- */
 async function stroke(build,len,dur,w){const t0=performance.now();
-  f.save();f.globalCompositeOperation='destination-out';f.lineWidth=w;f.lineCap='round';f.lineJoin='round';f.strokeStyle='#000';
-  for(;;){const k=Math.min(1,(performance.now()-t0)/dur);f.setLineDash([len*k+.1,len*2]);build();if(k>=1||!run)break;await nf()}
-  f.setLineDash([]);f.restore()}
+  for(;;){const k=Math.min(1,(performance.now()-t0)/dur);
+    f.save();f.globalCompositeOperation='destination-out';f.globalAlpha=1;f.lineWidth=w;f.lineCap='round';f.lineJoin='round';f.strokeStyle='#000';
+    f.setLineDash([len*k+.1,len*2]);build();f.restore();
+    if(k>=1||!run)break;await nf()}}
 const drip=(px,py,n)=>{for(let i=0;i<n;i++)add.push({x:px+(Math.random()-.5)*20,y:py,r:3+R(1.8),v:0})};
 async function writeIt(t){
   t=String(t||'').trim();
