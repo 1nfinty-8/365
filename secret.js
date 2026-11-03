@@ -119,41 +119,12 @@ function render(){
   box.innerHTML=h;scroll()}
 $('#sxSeg').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;S.sxMode=b.dataset.m;saveSettings();render()};
 
-/* ---------- 和他说话 ---------- */
+/* ---------- 和他说话：用 app.js 里的秘密模型 ---------- */
 function system(card){
-  let s=personaText()+'\n\n'+nowLine()+'\n【场景】这里是你们的小窝「365」里的「秘密」，只属于你们两个人，没有别人能看到。';
-  if((S.sxExtra||'').trim())s+='\n\n'+S.sxExtra.trim();
+  let s=secretSystem('这里是你们的小窝「365」里的「秘密」，只属于你们两个人，没有别人能看到。');
   if(card)s+='\n【格式】这次写成一整段完整的长回复，可以分成几个自然段，段落之间换行。不要拆成很多短消息，不要加名字前缀。';
   else if(S.split)s+='\n【格式】像用手机发消息一样，一次可以发几条，每条单独一行。';
   return s}
-async function secretAI(system,msgs){
-  const c=S.sxProvider
-    ?{provider:S.sxProvider,apiKey:S.sxKey||S.apiKey,model:S.sxModel||(S.sxProvider==='gemini'?'gemini-2.5-flash':'deepseek-chat'),baseUrl:S.sxBase||S.baseUrl}
-    :{provider:S.provider,apiKey:S.apiKey,model:S.model,baseUrl:S.baseUrl};
-  if(!c.apiKey)throw new Error('还没有填 API Key');
-  const list=prep(msgs);let r,j,t;
-  try{
-    if(c.provider==='gemini'){
-      const contents=list.map(m=>({role:m.role,parts:[{text:m.text||'…'}]}));
-      const cats=['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT'];
-      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.model)}:generateContent?key=${encodeURIComponent(c.apiKey)}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:1},safetySettings:cats.map(x=>({category:x,threshold:'BLOCK_NONE'}))})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      const cd=j.candidates?.[0];
-      t=(cd?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
-      if(!t)throw new Error('他没有回话（原因：'+(cd?.finishReason||j.promptFeedback?.blockReason||'未知')+'），再试一次或者换个模型');
-    }else{
-      const messages=[{role:'system',content:system},...list.map(m=>({role:m.role==='model'?'assistant':'user',content:m.text||''}))];
-      r=await fetch(String(c.baseUrl||'').replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.apiKey},body:JSON.stringify({model:c.model,messages,temperature:1})});
-      j=await r.json();
-      if(!r.ok)throw new Error(j.error?.message||('请求失败 '+r.status));
-      t=(j.choices?.[0]?.message?.content||'').trim();
-      if(!t)throw new Error('他没有回话，再试一次');
-    }
-    return t;
-  }catch(e){if(e instanceof TypeError)throw new Error('连不上，检查一下 VPN 和网络');throw e}}
 async function send(){
   if(busy)return;const ta=$('#sxInput'),v=ta.value.trim();
   if(v){DATA.secret.push({role:'user',text:v,t:Date.now()});ta.value='';autoGrow(ta);await save();render()}
@@ -162,7 +133,7 @@ async function reply(){
   busy=true;render();
   try{
     const card=S.sxMode==='card';
-    const out=await secretAI(system(card),DATA.secret.slice(-(S.ctx||24)).map(m=>({role:m.role,text:m.text})));
+    const out=await sxAI(system(card),DATA.secret.slice(-(S.ctx||24)).map(m=>({role:m.role,text:m.text})));
     if(card||!S.split)DATA.secret.push({role:'model',text:clean(out),t:Date.now()});
     else{const parts=out.split(/\n+/).map(s=>clean(s)).filter(Boolean);
       for(let k=0;k<parts.length;k++){
@@ -193,7 +164,7 @@ $('#sxMsgs').onclick=e=>{
 function updApi(){const v=$('#sxProv').value;$('#sxApi').style.display=v?'':'none';$('#sxBaseRow').style.display=v==='openai'?'':'none'}
 $('#sxProv').addEventListener('change',updApi);
 $('#sxTest').onclick=async()=>{toast('正在连接…');
-  try{const r=await secretAI(system(false),[{role:'user',text:'跟我打个招呼，一句话就好。'}]);toast('✓ 连上了：'+r.slice(0,40))}
+  try{const r=await sxAI(system(false),'跟我打个招呼，一句话就好。');toast('✓ 连上了：'+r.slice(0,40))}
   catch(e){toast('✗ '+e.message)}};
 $('#sxMenu').onclick=()=>sheet([
   ['设置',()=>{updApi();openModal('sxSet')}],
@@ -211,4 +182,3 @@ HOOKS.ready.push(()=>{if(!Array.isArray(DATA.secret))DATA.secret=[];renderLock()
 HOOKS.page.push(n=>{document.body.classList.toggle('sx',n==='secret');if(n!=='secret'&&open)lock();if(n==='secret'&&!open)renderLock()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&open)lock()});
 })();
-
