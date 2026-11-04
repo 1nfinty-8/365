@@ -220,7 +220,7 @@ async function hang(silent){
   clearInterval(tick);clearInterval(typeT);clearTimeout(silT);ringStop();
   const a=rec;rec=null;try{a?.abort()}catch(e){}
   set('idle','');mini=false;$('#callUI').classList.remove('show','in','talk');$('#callFloat').classList.remove('show');
-  if(silent||!dur)return;
+  if(silent)return;if(!dur){if(d==='out'){const n=Date.now();DATA.chat.push({role:'user',text:'已取消',missed:'取消',t:n,status:'read',readAt:n});await saveData('chat');refresh()}return}
   const c={id:uid(),t:t0,dur,dir:d,lines:lines.map(x=>({role:x.role,text:x.text}))};
   DATA.calls.push(c);DATA.calls=DATA.calls.slice(-30);await saveData('calls');
   const now=Date.now();
