@@ -1,4 +1,4 @@
-/* ===== 365 · deeptalk.js · deeptalk + 收进记忆 ===== */
+/* ===== 365 · deeptalk.js · deeptalk + 分类 + 收进记忆 ===== */
 (()=>{
 if(!Array.isArray(DATA.deep))DATA.deep=[];
 if(!Array.isArray(DATA.dmem))DATA.dmem=[];
@@ -11,7 +11,19 @@ const paras=t=>String(t).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 let cur=null,page='home',ask=null,mEdit=null,mBusy=false;
 
+/* ---------- 分类 ---------- */
+const CATS=()=>Array.isArray(S.dtCats)?S.dtCats:(S.dtCats=[]);
+const catOf=d=>d.cat&&CATS().includes(d.cat)?d.cat:'';
+let fc=localStorage.getItem('365-dtcat');if(fc==null)fc='all';
+const setFc=v=>{fc=v;localStorage.setItem('365-dtcat',v)};
+
 document.head.insertAdjacentHTML('beforeend',`<style>
+.dl-cats{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 14px;scrollbar-width:none}
+.dl-cats::-webkit-scrollbar{display:none}
+.dl-cats button{flex:none;padding:7px 15px;border-radius:99px;font-size:13px;letter-spacing:1px;color:var(--sub);background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.55)}
+.dl-cats button em{font-style:normal;font-family:var(--num);margin-left:4px;opacity:.7}
+.dl-cats button.on{background:var(--accent);color:var(--acct);border-color:transparent}
+.dl-cats .add{color:var(--accent-t);background:none;border-style:dashed;border-color:var(--accent)}
 .dl-item{display:block;width:100%;text-align:left;padding:18px 20px;margin-bottom:12px;transition:transform .15s}
 .dl-item:active{transform:scale(.98)}
 .dl-title{font-size:17px;font-weight:500;letter-spacing:2px}
@@ -59,6 +71,7 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
     <button class="pill" id="dlAdd">＋ 新的</button>
   </div>
   <div class="sub-line">慢慢说，一张一张地写给对方。</div>
+  <div class="dl-cats" id="dlCats"></div>
   <div id="dlList"></div>
 </div></section>
 <section class="page" id="page-dtalk">
@@ -86,20 +99,47 @@ $('#mmList')?.insertAdjacentHTML('afterend','<div id="dmSec"></div>');
 
 const memOf=d=>DATA.dmem.find(m=>m.did===d.id);
 
-/* 列表 */
+/* ---------- 分类那一排 ---------- */
+function renderCats(){const C=CATS();
+  if(fc!=='all'&&fc!==''&&!C.includes(fc))setFc('all');
+  const un=DATA.deep.filter(d=>!catOf(d)).length;
+  if(fc===''&&(!C.length||!un))setFc('all');
+  const chips=[['all','全部',DATA.deep.length],...C.map(c=>[c,c,DATA.deep.filter(d=>catOf(d)===c).length]),...(C.length&&un?[['','未分类',un]]:[])];
+  $('#dlCats').innerHTML=chips.map(([k,n,c])=>`<button data-fc="${esc(k)}" class="${fc===k?'on':''}">${esc(n)}<em>${c}</em></button>`).join('')
+    +'<button class="add" id="dlCatAdd">＋ 分类</button>'}
+function newCat(then){const v=prompt('新的分类叫什么？比如：关于以后');if(!v||!v.trim())return;const n=v.trim();
+  if(!CATS().includes(n)){CATS().push(n);saveSettings()}then?.(n)}
+function catMenu(c){
+  sheet([['改名字',async()=>{const v=prompt('新的名字',c);if(!v||!v.trim()||v.trim()===c)return;const n=v.trim();
+      if(CATS().includes(n))return toast('已经有这个分类了');
+      S.dtCats=CATS().map(x=>x===c?n:x);DATA.deep.forEach(d=>{if(d.cat===c)d.cat=n});saveSettings();await save();setFc(n);renderList()}],
+    ['删除这个分类',async()=>{if(!confirm(`删除分类「${c}」？里面的 deeptalk 不会删，会放回「未分类」。`))return;
+      S.dtCats=CATS().filter(x=>x!==c);DATA.deep.forEach(d=>{if(d.cat===c)d.cat=''});saveSettings();await save();setFc('all');renderList()}]])}
+$('#dlCats').onclick=e=>{
+  if(e.target.closest('#dlCatAdd'))return newCat(n=>{setFc(n);renderList()});
+  const b=e.target.closest('[data-fc]');if(!b)return;const k=b.dataset.fc;
+  if(k===fc&&k!=='all'&&k!=='')return catMenu(k);
+  setFc(k);renderList()};
+
+/* ---------- 列表 ---------- */
 function renderList(){
-  const L=[...DATA.deep].sort((a,b)=>(b.at||b.t)-(a.at||a.t));
-  $('#dlList').innerHTML=L.length?L.map(d=>{const last=d.cards.at(-1);
+  renderCats();
+  const L=[...DATA.deep].filter(d=>fc==='all'||catOf(d)===fc).sort((a,b)=>(b.at||b.t)-(a.at||a.t));
+  $('#dlList').innerHTML=L.length?L.map(d=>{const last=d.cards.at(-1),c=catOf(d);
     return `<button class="dl-item glass" data-dl="${d.id}"><div class="dl-title">${esc(d.title)}</div>
-      <div class="dl-meta">${d.cards.length} 张 · ${md(d.at||d.t)}${memOf(d)?' · 已收进记忆':''}${d._busy?' · '+esc(S.hisName)+'在写…':''}</div>
+      <div class="dl-meta">${c&&fc==='all'?esc(c)+' · ':''}${d.cards.length} 张 · ${md(d.at||d.t)}${memOf(d)?' · 已收进记忆':''}${d._busy?' · '+esc(S.hisName)+'在写…':''}</div>
       ${last?`<div class="dl-prev">${last.role==='user'?'我':esc(S.hisName)}：${esc(last.text.slice(0,80))}</div>`:''}</button>`}).join('')
-    :'<div class="empty">还没有 deeptalk<br>点「＋ 新的」，慢慢说</div>'}
-$('#dlAdd').onclick=async()=>{
-  const d={id:uid(),title:md(Date.now())+'的 deeptalk',cards:[],t:Date.now(),at:Date.now()};
-  DATA.deep.push(d);await save();openTalk(d)};
+    :`<div class="empty">${fc==='all'?'还没有 deeptalk<br>点「＋ 新的」，慢慢说':'这个分类里还没有<br>点「＋ 新的」，放一场进来'}</div>`}
+async function create(cat){
+  const d={id:uid(),title:md(Date.now())+'的 deeptalk',cat:cat||'',cards:[],t:Date.now(),at:Date.now()};
+  DATA.deep.push(d);await save();openTalk(d)}
+$('#dlAdd').onclick=()=>{const C=CATS();
+  if(fc!=='all'&&fc!=='')return create(fc);
+  if(!C.length)return create('');
+  sheet([...C.map(c=>[`放进「${c}」`,()=>create(c)]),['不分类',()=>create('')]])};
 $('#dlList').onclick=e=>{const b=e.target.closest('[data-dl]');if(!b)return;const d=find(b.dataset.dl);if(d)openTalk(d)};
 
-/* 卡片 */
+/* ---------- 卡片 ---------- */
 function openTalk(d){cur=d;go('dtalk');renderTalk(Math.max(0,d.cards.length-1))}
 function pos(){const tr=$('#dtTrack'),d=cur;if(!d)return;
   const i=Math.round(tr.scrollLeft/Math.max(1,tr.clientWidth));
@@ -138,7 +178,7 @@ async function reply(d,first){
   if(cur===d)renderTalk(d.cards.length,true);
   try{
     const msgs=d.cards.slice(-12).map(c=>({role:c.role,text:c.text}));
-    if(first||!msgs.length)msgs.push({role:'user',text:'（系统提示，不是她说的话：这是一场新的 deeptalk，请你先开口。挑一个你们之间值得认真聊的话题，主动写给她。）'});
+    if(first||!msgs.length)msgs.push({role:'user',text:`（系统提示，不是她说的话：这是一场新的 deeptalk${catOf(d)?`，放在「${catOf(d)}」这个分类里`:''}，请你先开口。挑一个你们之间值得认真聊的话题，主动写给她。）`});
     const t=await callAI(sys(),msgs);
     d.cards.push({role:'model',text:clean(t),t:Date.now()});d.at=Date.now();
     if(cur!==d||page!=='dtalk')toast(`${S.hisName}写好了一张给你`)}
@@ -158,9 +198,15 @@ $('#dtTrack').addEventListener('click',e=>{const d=cur;if(!d)return;
   acts.push(['删除这张',async()=>{if(!confirm('删除这张卡片？'))return;d.cards.splice(i,1);await save();renderTalk(Math.min(i,d.cards.length))}]);
   sheet(acts)});
 
-/* 收进记忆、改名、删除 */
+/* ---------- 改分类、收进记忆、改名、删除 ---------- */
+function pickCat(d){const C=CATS(),now=catOf(d);
+  const setC=async c=>{d.cat=c;await save();renderList();toast(c?`放进「${c}」了`:'改成不分类了')};
+  sheet([...C.filter(c=>c!==now).map(c=>[`放进「${c}」`,()=>setC(c)]),
+    ...(now?[['不分类',()=>setC('')]]:[]),
+    ['新建一个分类',()=>newCat(setC)]])}
 $('#dtMenu').onclick=()=>{const d=cur;if(!d)return;
-  sheet([['收进记忆',()=>openAsk(d)],
+  sheet([[`改分类${catOf(d)?'（现在：'+catOf(d)+'）':''}`,()=>pickCat(d)],
+    ['收进记忆',()=>openAsk(d)],
     ['改名字',async()=>{const v=prompt('新的名字',d.title);if(!v||!v.trim())return;d.title=v.trim();await save();$('#dtName').textContent=d.title}],
     ['删除这场 deeptalk',async()=>{if(!confirm(`删除「${d.title}」？所有卡片都会删掉。收进记忆的那段不会删。`))return;DATA.deep=DATA.deep.filter(x=>x!==d);await save();cur=null;go('deep')}]])};
 
