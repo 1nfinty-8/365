@@ -1,4 +1,4 @@
-/* ===== 365 · sw.js · 离线缓存（自动缓存所有文件） ===== */
+/* ===== 365 · sw.js · 离线缓存 + 推送 ===== */
 const CACHE='365-app';
 const FONTS='365-fonts';
 const CORE=['./','index.html','style.css','app.js'];
@@ -22,3 +22,16 @@ async function cacheFirst(req){
   const hit=await c.match(req);if(hit)return hit;
   const res=await fetch(req);if(res.ok)c.put(req,res.clone());return res;
 }
+
+/* ---------- 推送：收到就弹通知，图标上加数字 ---------- */
+self.addEventListener('push',e=>{
+  let d={};try{d=e.data.json()}catch(x){d={title:'365',body:e.data?e.data.text():''}}
+  e.waitUntil(self.registration.showNotification(d.title||'365',{body:d.body||'',icon:'apple-touch-icon.png',tag:'365-'+Date.now(),data:{url:'./'}})
+    .then(()=>self.registration.getNotifications())
+    .then(n=>self.navigator.setAppBadge&&self.navigator.setAppBadge(n.length))
+    .catch(()=>{}))});
+self.addEventListener('notificationclick',e=>{
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(L=>{
+    for(const c of L)if('focus' in c)return c.focus();
+    return clients.openWindow('./')}))});
