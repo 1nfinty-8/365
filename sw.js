@@ -23,10 +23,10 @@ async function cacheFirst(req){
   const res=await fetch(req);if(res.ok)c.put(req,res.clone());return res;
 }
 
-/* ---------- 推送：收到就弹通知，图标上加数字 ---------- */
+/* ---------- 推送：每条单独弹，编号不会撞，图标上加数字 ---------- */
 self.addEventListener('push',e=>{
   let d={};try{d=e.data.json()}catch(x){d={title:'365',body:e.data?e.data.text():''}}
-  e.waitUntil(self.registration.showNotification(d.title||'365',{body:d.body||'',icon:'apple-touch-icon.png',tag:'365-'+Date.now(),data:{url:'./'}})
+  e.waitUntil(self.registration.showNotification(d.title||'365',{body:d.body||'',icon:'apple-touch-icon.png',tag:'365-'+Date.now()+'-'+Math.random(),data:{url:'./'}})
     .then(()=>self.registration.getNotifications())
     .then(n=>self.navigator.setAppBadge&&self.navigator.setAppBadge(n.length))
     .catch(()=>{}))});
