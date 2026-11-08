@@ -1,10 +1,13 @@
-/* ===== 365 · chat.js · 聊天 + 语音 ===== */
+/* ===== 365 · chat.js · 聊天 + 语音 + 回复某一条 + 连发一起回 + 失败重试 ===== */
 (()=>{
-let busy=false,typing=false,playId=null,au=null;
+let busy=false,typing=false,playId=null,au=null,quoting=null,pendT=null,pendAt=0,again=false,failed=false;
 const save=()=>saveData('chat');
 const MIC='<svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>';
 const PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l11-7z"/></svg>';
 const vlabel=(dur,tx)=>`[语音 ${dur}秒] `+(tx||'（没听清说了什么）');
+const qt=m=>m.voice?'[语音] '+(m.voice.tx||''):(m.text||(m.images?.length?'[照片]':''));
+const QRULE='\n【引用】她发的某一句你想专门回的时候，可以在那一条消息最前面写 [回复:她那句话里连续的几个字]，例如「[回复:明天考试] 别紧张」。偶尔用就好，不要每条都用。';
+const QRE=/^\s*[\[【]\s*回复\s*[:：]\s*([^\]】\n]{1,60})[\]】]\s*/;
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 .vbub{display:flex;align-items:center;gap:8px;min-width:76px;max-width:100%;cursor:pointer}
@@ -31,21 +34,41 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 #vrT{font-family:var(--num);font-style:italic;font-weight:400;font-size:17px;flex:none;min-width:38px}
 #vrTx{flex:1;min-width:0;font-size:12.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vrec .pill{padding:7px 14px;font-size:13px;flex:none}
+#msgs .bubble,#msgs .cimg{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.rq-in{max-width:100%;margin-top:2px;padding:4px 9px;border-radius:10px;background:rgba(255,255,255,.42);color:var(--sub);font-size:12.5px;line-height:1.45;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+#rqBar{display:none;align-items:center;gap:8px;margin:0 12px;padding:6px 8px 6px 14px;border-radius:14px;background:rgba(255,255,255,.55);font-size:12.5px;color:var(--sub)}
+#rqBar.show{display:flex}
+#rqT{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rqX{width:24px;height:24px;border-radius:50%;background:rgba(127,127,127,.18);font-size:14px;line-height:24px;flex:none}
+.rcpt.rt{display:block;margin-left:auto;color:#C0505F}
 </style>`);
 
-/* 麦克风按钮 + 录音条 */
+/* 麦克风按钮 + 录音条 + 引用条 */
 const pb=$('#plusBtn');
 pb.insertAdjacentHTML('afterend',`<button id="micBtn" aria-label="语音">${MIC}</button>`);
 $('#micBtn').className=pb.className;
 const bar=$('#sendBtn').parentElement;
 if(getComputedStyle(bar).position==='static')bar.style.position='relative';
 bar.insertAdjacentHTML('beforeend',`<div class="vrec" id="vrec"><i class="vr-dot"></i><b id="vrT">0:00</b><span id="vrTx">正在听…</span><button class="pill ghost" id="vrNo">取消</button><button class="pill" id="vrOk">发送</button></div>`);
+$('#page-chat .inputbar').insertAdjacentHTML('beforebegin','<div id="rqBar"><span id="rqT"></span><button id="rqX" aria-label="取消回复">×</button></div>');
 
+/* ---------- 回复某一条 ---------- */
+function setQuote(m){quoting={t:m.t,role:m.role,text:qt(m).slice(0,80)};
+  $('#rqT').textContent=`回复 ${m.role==='user'?'我':S.hisName}：${quoting.text}`;$('#rqBar').classList.add('show');$('#chatInput').focus()}
+function clearQ(){quoting=null;$('#rqBar').classList.remove('show')}
+function takeQ(m){if(quoting){m.reply=quoting;clearQ()}return m}
+$('#rqX').addEventListener('pointerdown',e=>e.preventDefault());
+$('#rqX').onclick=clearQ;
+
+/* ---------- 显示 ---------- */
 function scrollChat(){const b=$('#msgs');requestAnimationFrame(()=>b.scrollTop=b.scrollHeight)}
+function needRetry(){const L=DATA.chat.at(-1);
+  return !busy&&!typing&&!pendT&&!!L&&L.role==='user'&&!L.call&&!L.missed&&(failed||L.status==='read')}
 function render(){
   const box=$('#msgs'),C=DATA.chat;
   if(!C.length&&!typing){box.innerHTML=`<div class="empty">和${esc(S.hisName)}说点什么吧</div>`;return}
   let lastUser=-1;for(let i=C.length-1;i>=0;i--)if(C[i].role==='user'){lastUser=i;break}
+  const rt=needRetry();
   let h='';
   for(let i=Math.max(0,C.length-300);i<C.length;i++){
     const m=C[i],p=C[i-1],n=C[i+1],me=m.role==='user';
@@ -60,9 +83,11 @@ function render(){
       bub=`<div class="bubble vbub${end?' tail':''}${v.id===playId?' playing':''}" data-vid="${v.id}" style="width:${Math.min(220,76+v.dur*4)}px">${PLAY}<span class="vwave"><i></i><i></i><i></i><i></i><i></i></span><span class="vdur">${v.dur}″</span></div>
         <div class="vtx${v.tx?'':' no'}">${v.tx?esc(v.tx):'没听清 · 点这里补上文字'}</div>`}
     else if(m.text)bub=`<div class="bubble${end?' tail':''}">${esc(m.text)}</div>`;
+    const q=m.reply?`<div class="rq-in" data-qt="${m.reply.t}">${m.reply.role==='user'?'我':esc(S.hisName)}：${esc(m.reply.text)}</div>`:'';
     const side=me?'':(end?avatarHTML('him'):'<div class="avsp"></div>');
-    h+=`<div class="row ${me?'me':'him'}${start?' gs':''}" data-i="${i}">${side}<div class="stack">${imgs}${bub}</div></div>`;
-    if(i===lastUser)h+=`<div class="rcpt">${m.status==='sent'?'已送达':'已读'+(m.readAt?' '+fmtTime(m.readAt):'')}</div>`;
+    h+=`<div class="row ${me?'me':'him'}${start?' gs':''}" data-i="${i}">${side}<div class="stack">${imgs}${bub}${q}</div></div>`;
+    if(i===lastUser)h+=rt&&i===C.length-1?'<button class="rcpt rt" id="rtBtn">没回成 · 点一下重试</button>'
+      :`<div class="rcpt">${m.status==='sent'?'已送达':'已读'+(m.readAt?' '+fmtTime(m.readAt):'')}</div>`;
   }
   if(typing){const l=C.at(-1);h+=`<div class="row him${l&&l.role==='model'?'':' gs'}">${avatarHTML('him')}<div class="stack"><div class="bubble tail typing"><i></i><i></i><i></i></div></div></div>`}
   box.innerHTML=h;
@@ -70,28 +95,48 @@ function render(){
   IMG.hydrate(box);scrollChat()}
 function setTyping(on){typing=on;$('#status').textContent=on?'正在输入…':'';render()}
 function ctxMsgs(){const list=DATA.chat.slice(-S.ctx),n=list.length;
-  return list.map((m,k)=>({role:m.role,text:m.text||(m.images?.length?'（发了照片）':''),images:(m.images?.length&&k>=n-6)?m.images:undefined}))}
-async function send(){
-  if(busy)return;const ta=$('#chatInput');const text=ta.value.trim();
-  if(text){DATA.chat.push({role:'user',text,t:Date.now(),status:'sent'});ta.value='';autoGrow(ta);await save();render()}
-  if(DATA.chat.length)reply()}
+  return list.map((m,k)=>{let t=m.text||(m.images?.length?'（发了照片）':'');
+    if(m.reply)t=(m.role==='user'?`（回复${m.reply.role==='user'?'自己':'你'}说的「${m.reply.text.slice(0,40)}」）`:`[回复:${m.reply.text.slice(0,12)}] `)+t;
+    return {role:m.role,text:t,images:(m.images?.length&&k>=n-6)?m.images:undefined}})}
+
+/* ---------- 发送：等她发完几条再一起回 ---------- */
+function schedule(ms=3500){if(busy){again=true;return}clearTimeout(pendT);if(!pendAt)pendAt=Date.now();pendT=setTimeout(fire,ms)}
+function fire(){pendT=null;
+  if($('#chatInput').value.trim()&&Date.now()-pendAt<20000){pendT=setTimeout(fire,2500);return}
+  pendAt=0;reply()}
+function send(){
+  const ta=$('#chatInput'),text=ta.value.trim();
+  if(text){DATA.chat.push(takeQ({role:'user',text,t:Date.now(),status:'sent'}));ta.value='';autoGrow(ta);failed=false;save();render();schedule()}
+  else if(DATA.chat.length&&!busy){failed=false;schedule(10)}}
+
+/* 他的一行里有 [回复:…] 就挂上引用 */
+function parseQ(s){const m=s.match(QRE);if(!m)return {text:s.trim()};
+  const k=m[1].replace(/^["“「『]|["”」』]$/g,'').trim(),R=DATA.chat.slice(-40).reverse();
+  const src=k&&(R.find(x=>x.role==='user'&&qt(x).includes(k))||R.find(x=>qt(x).includes(k)));
+  return {text:s.slice(m[0].length).trim(),reply:src?{t:src.t,role:src.role,text:qt(src).slice(0,80)}:null}}
 async function reply(){
-  busy=true;
+  if(busy){again=true;return}
+  busy=true;failed=false;again=false;clearTimeout(pendT);pendT=null;
   try{
     await sleep(700);
     const now=Date.now();let ch=false;
     DATA.chat.forEach(m=>{if(m.role==='user'&&m.status==='sent'){m.status='read';m.readAt=now;ch=true}});
     if(ch)save();
     setTyping(true);
-    const out=await (window.webReply||callAI)(chatSystem(),ctxMsgs());
-    const parts=S.split?out.split(/\n+/).map(s=>s.trim()).filter(Boolean):[out];
+    const out=await (window.webReply||callAI)(chatSystem()+QRULE,ctxMsgs());
+    const parts=(S.split?out.split(/\n+/):[out]).map(s=>s.trim()).filter(Boolean).map(parseQ).filter(p=>p.text);
     for(let i=0;i<parts.length;i++){
-      if(i)await sleep(Math.min(500+parts[i].length*45,2000));
-      DATA.chat.push({role:'model',text:parts[i],t:Date.now()});
+      if(i)await sleep(Math.min(500+parts[i].text.length*45,2000));
+      const m={role:'model',text:parts[i].text,t:Date.now()};if(parts[i].reply)m.reply=parts[i].reply;
+      DATA.chat.push(m);
       if(i===parts.length-1)typing=false;
       render()}
     await save();
-  }catch(e){toast(e.message)}finally{busy=false;setTyping(false)}}
+  }catch(e){failed=true;toast(e.message)}
+  finally{busy=false;setTyping(false);
+    const L=DATA.chat.at(-1);
+    if(!failed&&(again||(L&&L.role==='user'&&L.status==='sent')))schedule(1500);
+    again=false}}
 async function reroll(){while(DATA.chat.length&&DATA.chat.at(-1).role==='model')DATA.chat.pop();await save();render();reply()}
 
 /* ---------- 录音 ---------- */
@@ -133,8 +178,8 @@ async function finish(){
   const data=await new Promise(res=>{const f=new FileReader();f.onload=()=>res(f.result);f.readAsDataURL(blob)});
   const[id]=await IMG.putAll([data]);
   const dur=Math.max(1,Math.round(ms/1000)),t=tx.trim();
-  DATA.chat.push({role:'user',text:vlabel(dur,t),voice:{id,dur,tx:t},t:Date.now(),status:'sent'});
-  await save();render();if(!busy)reply()}
+  DATA.chat.push(takeQ({role:'user',text:vlabel(dur,t),voice:{id,dur,tx:t},t:Date.now(),status:'sent'}));
+  failed=false;await save();render();schedule()}
 
 /* ---------- 播放 ---------- */
 function mark(){$$('#msgs .vbub').forEach(b=>b.classList.toggle('playing',b.dataset.vid===playId))}
@@ -145,7 +190,7 @@ async function playV(id){
   au=new Audio(d);playId=id;mark();
   au.onended=stopV;au.play().catch(()=>{stopV();toast('播放不了这条语音')})}
 
-$('#chatInput').addEventListener('input',e=>autoGrow(e.target));
+$('#chatInput').addEventListener('input',e=>{autoGrow(e.target);if(pendT){clearTimeout(pendT);pendT=setTimeout(fire,3500)}});
 $('#chatInput').addEventListener('focus',()=>setTimeout(scrollChat,400));
 $('#sendBtn').addEventListener('pointerdown',e=>e.preventDefault());
 $('#sendBtn').onclick=send;
@@ -156,10 +201,11 @@ $('#vrOk').onclick=()=>stopRec(false);
 $('#plusBtn').onclick=async()=>{
   const imgs=await pickPhotos(4,1024,.8);if(!imgs.length)return;
   const ids=await IMG.putAll(imgs);
-  DATA.chat.push({role:'user',text:'',images:ids,t:Date.now(),status:'sent'});await save();render();if(!busy)reply()};
-document.head.insertAdjacentHTML('beforeend','<style>.vbub{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}</style>');
+  DATA.chat.push(takeQ({role:'user',text:'',images:ids,t:Date.now(),status:'sent'}));failed=false;await save();render();schedule()};
+
+/* ---------- 菜单 ---------- */
 function menu(i,el){
-  const m=DATA.chat[i];if(!m)return;const acts=[];
+  const m=DATA.chat[i];if(!m)return;const acts=[['回复',()=>setQuote(m)]];
   if(el&&el.matches&&el.matches('.cimg')&&el.src)acts.push(['查看大图',()=>viewImage(el.src)]);
   if(m.voice)acts.push([playId===m.voice.id?'停止播放':'播放',()=>playV(m.voice.id)]);
   const tx=m.voice?m.voice.tx:m.text;
@@ -171,18 +217,27 @@ function menu(i,el){
   if(m.role==='model'&&!busy&&DATA.chat.slice(i).every(x=>x.role==='model'))acts.push(['让他重新说',reroll]);
   acts.push(['删除这条',async()=>{if(m.voice&&playId===m.voice.id)stopV();const x=DATA.chat.splice(i,1)[0];await save();await IMG.del(x?.images);if(x?.voice)await IMG.del([x.voice.id]);render()}]);
   sheet(acts)}
+
+/* 长按任何一条都出菜单 */
 let lpT=null,lpFired=false;
-$('#msgs').addEventListener('touchstart',e=>{const vb=e.target.closest('.vbub');if(!vb)return;lpFired=false;clearTimeout(lpT);
-  lpT=setTimeout(()=>{lpFired=true;const row=vb.closest('.row[data-i]');if(row)menu(+row.dataset.i,vb)},500)},{passive:true});
+$('#msgs').addEventListener('touchstart',e=>{const t=e.target.closest('.bubble,.cimg'),row=t&&t.closest('.row[data-i]');if(!row)return;
+  lpFired=false;clearTimeout(lpT);
+  lpT=setTimeout(()=>{lpFired=true;navigator.vibrate?.(10);menu(+row.dataset.i,t)},480)},{passive:true});
 ['touchend','touchmove','touchcancel'].forEach(ev=>$('#msgs').addEventListener(ev,()=>clearTimeout(lpT),{passive:true}));
 $('#msgs').onclick=e=>{
+  if(lpFired){lpFired=false;return}
+  if(e.target.closest('#rtBtn')){failed=false;reply();return}
+  const q=e.target.closest('.rq-in');
+  if(q){const i=DATA.chat.findIndex(x=>x.t===+q.dataset.qt),el=i>=0&&$(`#msgs .row[data-i="${i}"]`);
+    if(!el)return toast('那条太早了，可以用右上角的时钟去找');
+    el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1900);return}
   const vb=e.target.closest('.vbub');
-  if(vb){if(lpFired){lpFired=false;return}playV(vb.dataset.vid);return}
+  if(vb){playV(vb.dataset.vid);return}
   const row=e.target.closest('.row[data-i]');if(!row||!e.target.closest('.stack'))return;
   menu(+row.dataset.i,e.target)};
 
-document.addEventListener('visibilitychange',()=>{if(document.hidden){stopV();if(rec)stopRec(true)}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopV();if(rec)stopRec(true)}else if($('#page-chat').classList.contains('active'))render()});
 HOOKS.ready.push(render);
 HOOKS.refresh.push(render);
-HOOKS.page.push(n=>{if(n==='chat')scrollChat();else{stopV();if(rec)stopRec(true)}});
+HOOKS.page.push(n=>{if(n==='chat'){render()}else{stopV();if(rec)stopRec(true)}});
 })();
