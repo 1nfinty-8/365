@@ -1,4 +1,4 @@
-/* ===== 365 · him.js · 关于他：他的手机、他的一天、他的备忘录 ===== */
+/* ===== 365 · him.js · 关于他：他的一天、他的备忘录 ===== */
 (()=>{
 if(!Array.isArray(DATA.hday))DATA.hday=[];
 if(!Array.isArray(DATA.hnote))DATA.hnote=[];
@@ -8,17 +8,24 @@ const T=()=>isoDate(today());
 const WK=d=>'日一二三四五六'[d.getDay()];
 const hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
 const mins=s=>{const[a,b]=String(s||'0:0').split(':').map(Number);return (a||0)*60+(b||0)};
+const okT=s=>/^\d{1,2}:\d{2}$/.test(String(s||'').trim());
 const arr=v=>Array.isArray(v)?v:[];
 const J=t=>JSON.parse((t.match(/\{[\s\S]*\}/)||['{}'])[0]);
 const ink=s=>esc(s).replace(/~~(.+?)~~/g,'<s>$1</s>');
 const md=s=>{const d=parseDate(s);return `${d.getMonth()+1}.${d.getDate()}`};
 let dayBusy=false,noteBusy=false,di=null,ni=0,anim='',hv='top',hmon='';
 
+/* ---------- 时间轴排序：昨晚的排前面，其余按北京时间从早到晚 ---------- */
+function isPrev(x,i,L){if(x.prev!=null)return !!x.prev;
+  return mins(x.time)>=1200&&L.slice(i+1).some(y=>mins(y.time)<720)}
+function sorted(L){L=arr(L);return L.map((x,i)=>({...x,prev:isPrev(x,i,L)}))
+  .sort((a,b)=>(mins(a.time)-(a.prev?1440:0))-(mins(b.time)-(b.prev?1440:0)))}
+
 document.head.insertAdjacentHTML('beforeend',`<style>
-#moreGrid .card[data-go="phone"],#phGrid [data-app="memo"]{display:none!important}
+#phGrid [data-app="memo"]{display:none!important}
 #himGrid .hm-day{grid-column:1/-1;min-height:clamp(130px,19vh,190px)}
 .hm-now{margin-top:10px;font-size:12.5px;color:var(--accent-t);letter-spacing:2px;font-family:var(--ti)}
-.hd-hero{position:relative;padding:20px 20px 14px;margin-bottom:22px}
+.hd-hero{position:relative;padding:20px 20px 14px;margin-bottom:12px}
 .hd-date{display:flex;align-items:baseline;gap:10px}
 .hd-date b{font-family:var(--num);font-style:italic;font-weight:300;font-size:60px;line-height:1;letter-spacing:-2px}
 .hd-date span{font-size:13px;color:var(--sub);letter-spacing:2px}
@@ -27,11 +34,13 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .hd-pg{display:flex;justify-content:space-between;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
 .hd-pg button{font-size:12px;color:var(--sub);letter-spacing:2px}
 .hd-pg button:disabled{opacity:.3}
+.hd-tz{font-size:11.5px;color:var(--sub);letter-spacing:1px;margin:0 4px 18px;text-align:center}
 .hd-tl{position:relative}
-.hd-tl::before{content:"";position:absolute;left:60px;top:10px;bottom:10px;width:1px;background:linear-gradient(180deg,transparent,var(--accent) 6%,var(--accent) 94%,transparent);opacity:.45}
-.hd-it{display:grid;grid-template-columns:46px 28px 1fr;align-items:start;margin-bottom:14px;animation:hdIn .6s both}
+.hd-tl::before{content:"";position:absolute;left:76px;top:10px;bottom:10px;width:1px;background:linear-gradient(180deg,transparent,var(--accent) 6%,var(--accent) 94%,transparent);opacity:.45}
+.hd-it{display:grid;grid-template-columns:62px 28px 1fr;align-items:start;margin-bottom:14px;animation:hdIn .6s both}
 @keyframes hdIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .hd-t{font-family:var(--num);font-style:italic;font-size:16px;text-align:right;padding-top:13px;color:var(--sub)}
+.hd-t small{display:block;font-family:var(--cn);font-style:normal;font-size:10.5px;line-height:1.35;margin-top:2px;letter-spacing:0}
 .hd-dot{position:relative;width:9px;height:9px;margin:19px auto 0;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px var(--accent)}
 .hd-it.now .hd-dot{background:var(--accent)}
 .hd-it.now .hd-dot::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--accent);animation:hdP 2s infinite}
@@ -105,20 +114,19 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
   <div id="hnList"></div>
 </div></section>`);
 
-/* 他的手机：返回到「关于他」 */
-$$('#page-phone [data-go="more"]').forEach(b=>b.dataset.go='him');
-
 /* ---------- 他的一天 ---------- */
 const days=()=>[...DATA.hday].sort((a,b)=>a.date.localeCompare(b.date));
 function renderNow(){const el=$('#hmNow');if(!el)return;
-  const r=DATA.hday.find(x=>x.date===T()),x=r&&arr(r.items).at(-1);
+  const r=DATA.hday.find(x=>x.date===T()),x=r&&sorted(r.items).at(-1);
   el.textContent=dayBusy?'正在回想…':x?`${x.time} · ${x.title}`:'今天还没偷看'}
+function tcell(x){
+  return `<div class="hd-t">${esc(x.time)}${x.prev?'<small>昨晚</small>':''}${x.local?`<small>当地 ${esc(x.local)}</small>${x.ld&&x.ld!=='当天'?`<small>${esc(x.ld)}</small>`:''}`:''}</div>`}
 function renderDay(){
   const L=days(),b=$('#hdBody');
   if(di==null||di>=L.length)di=L.length-1;
   const r=L[di];
   if(!r){b.innerHTML=`<div class="empty">${dayBusy?esc(S.hisName)+'正在回想今天…':'还没有记录'}</div>`;return}
-  const d=parseDate(r.date),items=arr(r.items),isT=r.date===T();
+  const d=parseDate(r.date),items=sorted(r.items),isT=r.date===T(),tz=items.some(x=>x.local);
   const stale=isT&&!dayBusy&&mins(hm(new Date()))-mins(r.upto)>=60;
   b.innerHTML=`<div class="hd-hero glass">
       <div class="hd-date"><b>${pad(d.getDate())}</b><span>${d.getMonth()+1}月 · 星期${WK(d)}${isT?' · 今天':''}</span></div>
@@ -126,23 +134,28 @@ function renderDay(){
       ${r.summary?`<p class="hd-sum">${esc(r.summary)}</p>`:''}
       <div class="hd-pg"><button data-dv="-1"${di>0?'':' disabled'}>‹ 前一天</button><button data-dv="1"${di<L.length-1?'':' disabled'}>后一天 ›</button></div>
     </div>
-    <div class="hd-tl">${items.map((x,i)=>`<div class="hd-it${isT&&i===items.length-1?' now':''}" style="animation-delay:${i*70}ms"><div class="hd-t">${esc(x.time)}</div><div class="hd-dot"></div><div class="hd-c glass"><b>${esc(x.title)}</b>${x.text?`<p>${esc(x.text)}</p>`:''}</div></div>`).join('')}</div>
+    <p class="hd-tz">${tz?'时间按你这边的北京时间排，小字是他那边的当地时间':'时间按你这边的北京时间排'}</p>
+    <div class="hd-tl">${items.map((x,i)=>`<div class="hd-it${isT&&i===items.length-1?' now':''}" style="animation-delay:${i*70}ms">${tcell(x)}<div class="hd-dot"></div><div class="hd-c glass"><b>${esc(x.title)}</b>${x.text?`<p>${esc(x.text)}</p>`:''}</div></div>`).join('')}</div>
     ${dayBusy&&isT?`<div class="hd-foot">${esc(S.hisName)}正在回想…</div>`:stale?'<button class="pill hd-up" id="hdUp">看看他后来在做什么</button>':`<div class="hd-foot">${isT?'记到 '+esc(r.upto):'这一天过去了'}</div>`}`}
 async function genDay(more){
   if(dayBusy)return;dayBusy=true;renderDay();renderNow();
   try{
-    const now=new Date(),t=T();let r=DATA.hday.find(x=>x.date===t);
-    const prev=more&&r?arr(r.items).map(x=>`${x.time} ${x.title}`).join('\n'):'';
+    const now=new Date(),t=T(),nm=mins(hm(now));let r=DATA.hday.find(x=>x.date===t);
+    const prev=more&&r?sorted(r.items).map(x=>`${x.prev?'昨晚 ':''}${x.time} ${x.title}`).join('\n'):'';
     const recent=recentChat(12);
-    const ask=`今天是${now.getMonth()+1}月${now.getDate()}日 星期${WK(now)}，现在是 ${hm(now)}。
-${prev?`你今天 ${r.upto} 之前做的事：\n${prev}\n请接着写从 ${r.upto} 到现在 ${hm(now)} 你做了什么，2到4条。`:`请写你今天从醒来到现在 ${hm(now)} 的时间轴，5到8条。如果现在还很早，就从昨晚睡前写起。`}
-${recent?'你们最近的聊天（和她聊天的时间要对得上）：\n'+recent+'\n':''}要符合你的人设、工作和生活，具体、有画面，像真实的一天，不要每件事都和她有关。时间从早到晚，不要晚于现在。不要用 emoji。只输出 JSON：
-{${prev?'':'"mood":"用两三个字形容你今天的状态","summary":"一句话总结今天，像写给自己的",'}"items":[{"time":"HH:MM","title":"四到八个字","text":"一两句具体的细节"}]}`;
+    const ask=`今天是${now.getMonth()+1}月${now.getDate()}日 星期${WK(now)}，现在是她那边（北京时间）的 ${hm(now)}。
+${prev?`你今天 ${r.upto}（北京时间）之前做的事：\n${prev}\n请接着写从 ${r.upto} 到现在 ${hm(now)} 你做了什么，2到4条。`:`请写你今天从醒来到现在的时间轴，5到8条。如果现在还很早（比如凌晨），可以从昨晚睡前写起，昨晚的那几条 prev 写 true。`}
+【时间规则，一定要遵守】time 一律写北京时间（她那边的时间），格式 HH:MM，按从早到晚写，不能晚于现在的 ${hm(now)}。如果你现在不在中国、和她有时差，local 写你那边的当地时间 HH:MM，ld 写你那边是「前一天」「当天」还是「后一天」；如果和她在同一个时区，local 和 ld 都写空字符串。
+${recent?'你们最近的聊天（和她聊天的时间要对得上）：\n'+recent+'\n':''}要符合你的人设、工作和生活，具体、有画面，像真实的一天，不要每件事都和她有关。不要用 emoji。只输出 JSON：
+{${prev?'':'"mood":"用两三个字形容你今天的状态","summary":"一句话总结今天，像写给自己的",'}"items":[{"time":"HH:MM","prev":false,"local":"","ld":"","title":"四到八个字","text":"一两句具体的细节"}]}`;
     const j=J(await callAI(sceneSystem('她在「365」的「关于他」里看你今天的时间轴，想知道你不在她身边的时候都在做什么。'),[{role:'user',text:ask}]));
-    const items=arr(j.items).filter(x=>x&&x.time&&x.title).map(x=>({time:x.time,title:x.title,text:x.text||''})).sort((a,b)=>mins(a.time)-mins(b.time));
+    let items=arr(j.items).filter(x=>x&&okT(x.time)&&x.title).map(x=>({time:pad(mins(x.time)/60|0)+':'+pad(mins(x.time)%60),prev:!more&&x.prev===true,
+      local:okT(x.local)?String(x.local).trim():'',ld:['前一天','当天','后一天'].includes(x.ld)?x.ld:'',title:String(x.title),text:String(x.text||'')}))
+      .filter(x=>x.prev||mins(x.time)<=nm);
+    if(more&&r)items=items.filter(x=>mins(x.time)>=mins(r.upto));
     if(!items.length)throw new SyntaxError('empty');
-    if(more&&r){r.items=[...arr(r.items),...items.filter(x=>mins(x.time)>=mins(r.upto))];r.upto=hm(now)}
-    else{DATA.hday=DATA.hday.filter(x=>x.date!==t);DATA.hday.push({date:t,mood:j.mood||'',summary:j.summary||'',items,upto:hm(now)})}
+    if(more&&r){r.items=sorted([...sorted(r.items),...items]);r.upto=hm(now)}
+    else{DATA.hday=DATA.hday.filter(x=>x.date!==t);DATA.hday.push({date:t,mood:j.mood||'',summary:j.summary||'',items:sorted(items),upto:hm(now)})}
     DATA.hday=days().slice(-60);di=null;await saveData('hday')}
   catch(e){toast(e instanceof SyntaxError?'没读出来，再试一次':e.message)}
   finally{dayBusy=false;renderDay();renderNow()}}
@@ -216,7 +229,7 @@ $('#hnList').onclick=e=>{
 
 /* ---------- 聊天时，他记得自己今天做了什么 ---------- */
 HOOKS.context.push(()=>{const r=DATA.hday.find(x=>x.date===T());if(!r||!arr(r.items).length)return '';
-  return '【你今天】你今天到目前为止：'+arr(r.items).map(x=>`${x.time} ${x.title}`).join('；')+'。聊天时和这些保持一致，不用主动复述。'});
+  return '【你今天】你今天到目前为止（北京时间）：'+sorted(r.items).map(x=>`${x.prev?'昨晚 ':''}${x.time}${x.local?`（你那边 ${x.local}${x.ld&&x.ld!=='当天'?' '+x.ld:''}）`:''} ${x.title}`).join('；')+'。聊天时和这些保持一致，不用主动复述。'});
 
 addMore({go:'him',cn:'关于他',ce:'about him'});
 HOOKS.ready.push(renderNow);
