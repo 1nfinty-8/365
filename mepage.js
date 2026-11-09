@@ -1,4 +1,4 @@
-/* ===== 365 · mepage.js · 「我的」每一栏单独一页 + More 的顺序 ===== */
+/* ===== 365 · mepage.js · 「我的」每一栏单独一页 + More 的顺序 + 首页小提示轮播 ===== */
 (()=>{
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 const KNOWN={'连接':'conn','他的消息':'msgset'};
@@ -18,8 +18,11 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .mp-avs .av+.av{margin-left:-14px}
 .mp-sec>h3{display:none}
 #lkSec h3{margin-bottom:8px}
+.tp-off{display:none!important}
+.tp-on{display:block!important;margin-left:auto!important;margin-right:auto!important;animation:fd .6s}
 </style>`);
 
+/* ---------- 「我的」：每一栏变成短卡片，点进去是完整设置 ---------- */
 function title(h){const c=h.cloneNode(true);c.querySelectorAll('em,.mp-avs').forEach(x=>x.remove());return c.textContent.trim()}
 function sum(k,t,sec){
   if(k==='conn')return `${S.provider==='gemini'?'Gemini 官方':(host(S.baseUrl)||'中转站')} · ${S.model||'还没填模型'}${S.webOn&&S.tvKey?' · 联网开着':''}`;
@@ -50,12 +53,20 @@ function move(){
   if(lk&&look&&lk.nextElementSibling!==look.sec){look.sec.before(lk);const h=lk.querySelector('h3');if(h)h.innerHTML='深色模式<em>dark mode</em>'}
   upd()}
 
-/* ---------- More 里卡片的顺序（原来的 order.js） ---------- */
+/* ---------- More 里卡片的顺序 ---------- */
 const ORDER=['关于他','秘密','月度回顾','游戏'];
 function sortMore(){const g=$('#moreGrid');if(!g)return;const cards=[...g.children];
   ORDER.forEach(n=>{const c=cards.find(x=>(x.querySelector('.cn')?.textContent||'').trim()===n);if(c)g.appendChild(c)})}
 
+/* ---------- 首页小提示：一次只显示一条，每 5 秒换一条 ---------- */
+let ti=0;
+const tips=()=>[...document.querySelectorAll('#hmTips > *, #calTips > *')].filter(x=>x.textContent.trim());
+function showTip(){const A=tips();if(!A.length)return;ti%=A.length;
+  A.forEach((x,k)=>{x.classList.toggle('tp-off',k!==ti);x.classList.toggle('tp-on',k===ti)})}
+setInterval(()=>{if(document.hidden||!$('#page-home')?.classList.contains('active'))return;ti++;showTip()},5000);
+['hmTips','calTips'].forEach(id=>{const e=document.getElementById(id);if(e)new MutationObserver(showTip).observe(e,{childList:true})});
+
 sortMore();
-HOOKS.ready.push(()=>{move();sortMore()});
-HOOKS.page.push(n=>{if(n==='me')move();if(n==='more')sortMore()});
+HOOKS.ready.push(()=>{move();sortMore();showTip()});
+HOOKS.page.push(n=>{if(n==='me')move();if(n==='more')sortMore();if(n==='home')showTip()});
 })();
