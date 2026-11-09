@@ -1,4 +1,4 @@
-/* ===== 365 · library.js · 图书馆 + 导入书 + 共读批注 + 荧光笔 ===== */
+/* ===== 365 · library.js · 图书馆 + 书架 + 导入书 + 共读批注 + 荧光笔 ===== */
 (()=>{
 if(!Array.isArray(DATA.library))DATA.library=[];
 const save=()=>saveData('library');
@@ -7,20 +7,37 @@ const arr=v=>Array.isArray(v)?v:[];
 const U=s=>s.src?'章':'段';
 const lines=t=>String(t||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
 const J=t=>JSON.parse((t.match(/\{[\s\S]*\}/)||['{}'])[0]);
+const find=id=>DATA.library.find(x=>x.id===id);
 /* 荧光笔：主题色从深到浅五档，最后是下划线 */
 const HK=[['k1','color-mix(in srgb,var(--accent) 55%,#000)'],['k2','var(--accent-t)'],['k3','var(--accent)'],['k4','color-mix(in srgb,var(--accent) 60%,#fff)'],['k5','color-mix(in srgb,var(--accent) 32%,#fff)']];
 const HIDS=[...HK.map(k=>k[0]),'u'];
 const hc=()=>HIDS.includes(S.hlColor)?S.hlColor:'k2';
+/* 书脊颜色 */
+const sd=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h};
+const COL=['color-mix(in srgb,var(--accent) 70%,#fff)','var(--accent-t)','color-mix(in srgb,var(--accent) 40%,#fff)','#B9AFB3','#7E7277','#D8D0CC'];
+const col=s=>COL[sd(s.id)%COL.length];
+const off=()=>Array.isArray(S.shelfOff)?S.shelfOff:(S.shelfOff=[]);
 
 document.head.insertAdjacentHTML('beforeend',`<style>
-.lb-item{display:block;width:100%;text-align:left;padding:18px 20px;margin-bottom:12px;transition:transform .15s}
-.lb-item:active{transform:scale(.98)}
-.lb-title{font-size:18px;font-weight:500;letter-spacing:3px}
-.lb-meta{font-size:12px;color:var(--sub);margin-top:4px;letter-spacing:1px}
-.lb-bar{height:2px;background:rgba(46,26,31,.08);border-radius:2px;margin-top:10px;overflow:hidden}
-.lb-bar i{display:block;height:100%;background:var(--accent)}
 .lb-imp{display:block;width:100%;padding:13px;margin-bottom:14px;text-align:center;letter-spacing:2px;font-size:14px}
 .lb-imp small{display:block;font-family:var(--en);font-style:italic;font-size:12px;color:var(--sub);letter-spacing:1px;margin-top:1px}
+.sl-h{display:flex;align-items:baseline;gap:8px;margin:8px 6px 10px}
+.sl-h b{font-weight:500;font-size:15px;letter-spacing:3px}
+.sl-h em{font-family:var(--en);font-style:italic;color:var(--sub);font-size:14px}
+.sl-it{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 16px 10px 14px;margin-bottom:8px;border-radius:16px}
+.sl-sp{width:3px;align-self:stretch;min-height:34px;border-radius:2px;flex:none}
+.sl-x{flex:1;min-width:0}
+.sl-t{display:flex;align-items:baseline;gap:10px}
+.sl-t b{flex:1;min-width:0;font-weight:400;font-size:15px;letter-spacing:1.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-t em{font-family:var(--num);font-style:italic;font-size:13px;color:var(--accent-t);flex:none}
+.sl-bar{height:1px;background:rgba(127,127,127,.18);margin:6px 0 5px;overflow:hidden}
+.sl-bar i{display:block;height:100%;background:var(--accent-t)}
+.sl-x small{display:block;font-size:11px;color:var(--sub);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-go{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:15px 18px;margin:8px 0 14px;border-radius:16px}
+.sh-go b{font-weight:500;font-size:15px;letter-spacing:3px}
+.sh-go em{font-family:var(--en);font-style:italic;color:var(--sub);font-size:14px}
+.sh-go span{margin-left:auto;font-size:12.5px;color:var(--sub);letter-spacing:1px}
+.ih-more{display:block;margin:10px auto 16px;font-size:12px;color:var(--sub);letter-spacing:1px}
 .bk-card{padding:22px 20px 18px;margin-bottom:18px;text-align:center}
 .bk-title{font-size:22px;font-weight:500;letter-spacing:4px;line-height:1.5;word-break:break-word}
 .bk-meta{font-size:12px;color:var(--sub);margin-top:4px;letter-spacing:1px}
@@ -40,7 +57,9 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .bk-c.nt::after{content:"";position:absolute;top:1px;right:1px;width:8px;height:8px;border-radius:50%;background:var(--accent-t);box-shadow:0 0 0 2px rgba(255,255,255,.8)}
 #reader{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;background:var(--rd-bg);color:var(--rd-tx);-webkit-backdrop-filter:blur(24px) saturate(1.2);backdrop-filter:blur(24px) saturate(1.2)}
 #reader.show{display:flex;animation:fd .25s ease}
-.rd-top{flex:none;display:flex;align-items:center;gap:4px;padding:calc(var(--st) + 4px) 10px 8px}
+.rd-top{flex:none;display:flex;align-items:center;gap:4px;padding:calc(var(--st) + 4px) 10px 8px;max-height:160px;overflow:hidden;transition:max-height .3s,opacity .25s,padding .3s}
+#reader.zen .rd-top{max-height:var(--st);padding-bottom:0;opacity:0;pointer-events:none}
+#reader.zen .rd-set{display:none}
 .rd-top .iconbtn{color:inherit}
 .rd-title{flex:1;text-align:center;font-size:15px;letter-spacing:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8}
 .rd-set{flex:none;display:none;padding:4px 20px 12px;font-family:var(--cn);font-size:13px}
@@ -79,7 +98,10 @@ ${HK.map(([k,c])=>`.rd-text mark.hl.me[data-c="${k}"]{background:color-mix(in sr
 .rd-nt small,.rd-say small{display:block;font-size:11px;opacity:.55;letter-spacing:1px}
 .rd-nt .me{opacity:.8}
 .rd-af{max-width:620px;margin:34px auto 0;padding-top:18px;border-top:1px solid rgba(127,127,127,.25)}
-.rd-afh{text-align:center;font-size:12px;opacity:.55;letter-spacing:3px;margin-bottom:12px}
+.rd-afh{text-align:center;font-size:12px;opacity:.55;letter-spacing:3px;margin-bottom:12px;cursor:pointer}
+.rd-af.fold .rd-say,.rd-af.fold .rd-afb{display:none}
+.rd-af.fold .rd-afh{margin-bottom:0}
+.rd-af.fold .rd-afh::after{content:" · 点开"}
 .rd-say{font-family:var(--ti);font-size:15px;line-height:1.85;padding:10px 14px;border-radius:14px;background:rgba(127,127,127,.1);margin-bottom:8px;white-space:pre-wrap;word-break:break-word}
 .rd-say.me{margin-left:28px}
 .rd-afb{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px}
@@ -101,8 +123,8 @@ $('#page-library .wrap').innerHTML=`
       <button class="pill" id="lbAdd">＋ 新故事</button>
     </div>
     <div class="sub-line">我们的故事，一段一段接下去。</div>
+    <div id="shHost"></div>
     <button class="lb-imp glass" id="lbImpBtn">导入一本书<small>epub / txt</small></button>
-    <div id="lbList"></div>
   </div>
   <div id="lbBook" style="display:none">
     <div class="head">
@@ -112,6 +134,10 @@ $('#page-library .wrap').innerHTML=`
     </div>
     <div id="bkBody"></div>
   </div>`;
+
+$('#tabbar').insertAdjacentHTML('beforebegin',`<section class="page" id="page-shelf"><div class="wrap">
+  <div class="head"><button class="iconbtn glass" data-go="library" aria-label="返回">${BACK}</button><h2>书架</h2><em>books</em><span class="sp"></span><button class="pill ghost" id="shEd">整理</button></div>
+  <div id="shList"></div></div></section>`);
 
 $('#app').insertAdjacentHTML('beforeend',`
 <input type="file" id="lbFile" accept=".epub,.txt,application/epub+zip,text/plain" style="display:none">
@@ -151,8 +177,9 @@ $('#app').insertAdjacentHTML('beforeend',`
   <div class="mbtns"><button class="pill ghost" data-close="lbImp">取消</button><button class="pill" id="lbImpOk">收进去</button></div>
 </div></div>`);
 
-const len=s=>s.parts.reduce((n,p)=>n+p.text.length,0);
+const len=s=>s.parts.reduce((n,p)=>n+String(p.text||'').length,0);
 const fmtN=n=>n>=10000?(n/10000).toFixed(1)+' 万':n;
+const fmtW=n=>n>=10000?(n/10000).toFixed(1)+' 万字':n+' 字';
 const pos=()=>{try{return JSON.parse(localStorage.getItem('365-lib')||'{}')}catch(e){return {}}};
 const setPos=(id,v)=>{const P=pos();if(v==null)delete P[id];else P[id]=v;localStorage.setItem('365-lib',JSON.stringify(P))};
 const getPos=id=>{const v=pos()[id];return v&&typeof v==='object'?v:null};
@@ -161,21 +188,37 @@ const themeBg=()=>mix(S.theme||'#B4848D','#FFFFFF',.78);
 function pctOf(s){const n=s.parts.length,p=getPos(s.id);if(!n||!p)return 0;
   const c=Math.min(p.c,n-1),r=p.r||0;return c===n-1&&r>.95?100:Math.min(100,Math.round((c+r)/n*100))}
 
-let book=null,cur=null,ch=0,editIdx=null,posT,importing=false;
+let book=null,cur=null,ch=0,editIdx=null,posT,importing=false,fromShelf=false,afOpen=false,lastY=0;
 const nb=new Set();
 
-/* ---------- 第一层：书架 ---------- */
+/* ---------- 第一层：最近在读 + 书架 ---------- */
+const all=()=>DATA.library.filter(s=>!off().includes(s.id)).sort((a,b)=>(b.readAt||b.t)-(a.readAt||a.t));
+const row=(s,cont)=>{const p=pctOf(s),a=s.author?esc(s.author)+' · ':'';
+  return `<button class="sl-it glass" data-ih="${s.id}"${cont?' data-c="1"':''}><i class="sl-sp" style="background:${col(s)}"></i><div class="sl-x">
+    <div class="sl-t"><b>${esc(s.title)}</b><em>${p}%</em></div><div class="sl-bar"><i style="width:${p}%"></i></div>
+    <small>${a}${cont?fmtDate(s.readAt)+' 读过 · ':''}${s.parts.length} ${U(s)} · ${fmtW(len(s))}</small></div></button>`};
 function render(){
-  const L=[...DATA.library].sort((a,b)=>(b.readAt||b.t)-(a.readAt||a.t));
   $('#lbImpBtn').innerHTML=importing?'正在读这本书…<small>importing</small>':'导入一本书<small>epub / txt</small>';
-  $('#lbList').innerHTML=L.length?L.map(s=>{const p=pctOf(s);
-    return `<button class="lb-item glass" data-lb="${s.id}"><div class="lb-title">${esc(s.title)}</div>
-      <div class="lb-meta">${s.author?esc(s.author)+' · ':''}${s.parts.length} ${U(s)} · 约 ${fmtN(len(s))} 字${p?` · 读到 ${p}%`:''}</div>
-      <div class="lb-bar"><i style="width:${p}%"></i></div></button>`}).join('')
-    :'<div class="empty">书架还空着<br>点「＋ 新故事」，把你们的剧情放进来</div>'}
+  const F=off(),R=DATA.library.filter(s=>s.readAt&&s.parts.length&&pctOf(s)<100&&!F.includes(s.id)).sort((a,b)=>b.readAt-a.readAt).slice(0,2);
+  $('#shHost').innerHTML=(R.length?`<div class="sl-h"><b>最近在读</b><em>reading</em></div>${R.map(s=>row(s,1)).join('')}`:'')
+    +`<button class="sh-go glass" data-go="shelf"><b>书架</b><em>books</em><span>${all().length} 本 ›</span></button>`;
+  renderShelf()}
+function renderShelf(){const A=all(),F=off();
+  $('#shList').innerHTML=(A.length?A.map(s=>row(s)).join(''):'<div class="empty">书架还空着<br>回图书馆点「＋ 新故事」或者导入一本书</div>')
+    +(F.length?`<button class="ih-more" id="shOff">另有 ${F.length} 本收起来了 · 点这里放回</button>`:'')}
 function showShelf(){book=null;$('#lbShelf').style.display='';$('#lbBook').style.display='none';render()}
 function showBook(s){book=s;$('#lbShelf').style.display='none';$('#lbBook').style.display='';renderDetail();$('#page-library').scrollTop=0}
-$('#lbList').onclick=e=>{const b=e.target.closest('[data-lb]');if(!b)return;const s=DATA.library.find(x=>x.id===b.dataset.lb);if(s)showBook(s)};
+const goOn=s=>{const p=getPos(s.id);openCh(p?Math.min(p.c,s.parts.length-1):0)};
+$('#shHost').onclick=e=>{const b=e.target.closest('[data-ih]');if(!b)return;const s=find(b.dataset.ih);if(!s)return;
+  showBook(s);if(b.dataset.c&&s.parts.length)goOn(s)};
+$('#shList').onclick=e=>{
+  if(e.target.closest('#shOff')){const F=off(),L=DATA.library.filter(s=>F.includes(s.id));
+    const put=ids=>{S.shelfOff=F.filter(x=>!ids.includes(x));saveSettings();render()};
+    return sheet([...(L.length>1?[['全部放回去',()=>put(L.map(s=>s.id))]]:[]),...L.map(s=>[`放回去：${s.title}`,()=>put([s.id])])])}
+  const b=e.target.closest('[data-ih]');if(!b)return;const s=find(b.dataset.ih);if(!s)return;
+  fromShelf=true;go('library');showBook(s)};
+$('#shEd').onclick=()=>{const A=all();if(!A.length)return;
+  sheet(A.map(s=>[`收起来：${s.title}`,()=>{off().push(s.id);saveSettings();render();toast('收起来了，不会删')}]))};
 $('#lbAdd').onclick=()=>{$('#lbTitle').value='';$('#lbText').value='';openModal('lbModal')};
 $('#lbSave').onclick=async()=>{
   const title=$('#lbTitle').value.trim(),text=$('#lbText').value.trim();
@@ -263,15 +306,15 @@ function renderDetail(){const s=book;if(!s)return;
     </div>
     ${n?`<div class="bk-h">目录</div><div class="bk-grid">${s.parts.map((x,i)=>`<button class="bk-c${p&&i<c?' read':''}${p&&i===c?' on':''}${arr(x.notes).length||arr(x.after).length||arr(x.marks).length?' nt':''}" data-ci="${i}">${i+1}</button>`).join('')}</div>`:''}`}
 $('#bkBody').onclick=e=>{if(!book)return;
-  if(e.target.closest('#bkGo')){const p=getPos(book.id);openCh(p?Math.min(p.c,book.parts.length-1):0);return}
-  if(e.target.closest('#bkAdd')){openPart(null);return}
+  if(e.target.closest('#bkGo'))return goOn(book);
+  if(e.target.closest('#bkAdd'))return openPart(null);
   const c=e.target.closest('[data-ci]');if(c)openCh(+c.dataset.ci)};
-$('#bkBack').onclick=showShelf;
+$('#bkBack').onclick=()=>{showShelf();if(fromShelf){fromShelf=false;go('shelf')}};
 $('#bkMore').onclick=()=>{const s=book;if(!s)return;
   sheet([['改名字',async()=>{const v=prompt('新的名字',s.title);if(!v||!v.trim())return;s.title=v.trim();await save();renderDetail()}],
     [s.sx?'批注改用平时的模型':'批注改用秘密的模型',async()=>{s.sx=!s.sx;await save();toast(s.sx?'这本书的批注会用秘密的模型':'这本书的批注会用平时的模型')}],
     ['删除这本书',async()=>{if(!confirm(`删除「${s.title}」？里面所有的内容、批注和划线都会删掉。`))return;
-      DATA.library=DATA.library.filter(x=>x!==s);setPos(s.id,null);await save();showShelf();toast('删掉了')}]])};
+      DATA.library=DATA.library.filter(x=>x!==s);setPos(s.id,null);await save();fromShelf=false;showShelf();toast('删掉了')}]])};
 
 /* ---------- 第三层：读一章 ---------- */
 function applyReader(){
@@ -302,9 +345,9 @@ function renderCh(){const s=cur,n=s.parts.length,p=s.parts[ch],u=U(s),k=p.id,H=e
   const P=lines(p.text),N=arr(p.notes),M=arr(p.marks),last=Math.max(0,P.length-1);
   const nt=i=>{const L=N.filter(x=>Math.min(x.pi,last)===i),w=nb.has(k+':'+i);if(!L.length&&!w)return '';
     return `<div class="rd-nt" data-np="${i}">${L.map(x=>`<div class="${x.who==='me'?'me':'him'}"><small>${who(x)}</small>${esc(x.text)}</div>`).join('')}${w?`<div class="him"><small>${H}</small>在写…</div>`:''}</div>`};
-  const A=arr(p.after),aw=nb.has(k+':after'),all=nb.has(k+':all');
+  const A=arr(p.after),aw=nb.has(k+':after'),all=nb.has(k+':all'),fold=!afOpen&&!aw&&!all;
   $('#rdBody').innerHTML=`<div class="rd-text"><button class="rd-div" id="rdDiv">· ${ch+1} ·</button>${p.title?`<h3 class="rd-ct">${esc(p.title)}</h3>`:''}${P.map((x,i)=>`<p data-p="${i}">${hl(i,x,M)}</p>${nt(i)}`).join('')}</div>
-    <div class="rd-af"><div class="rd-afh">一起读 · ${H}</div>
+    <div class="rd-af${fold?' fold':''}"><div class="rd-afh" id="rdAfh">一起读 · ${H}</div>
       ${A.map(x=>`<div class="rd-say ${x.who==='me'?'me':'him'}"><small>${who(x)}</small>${esc(x.text)}</div>`).join('')}
       ${aw?`<div class="rd-say him"><small>${H}</small>在写…</div>`:''}
       <div class="rd-afb">${all?`<span style="opacity:.6">${H}在批注…</span>`:`<button class="pill ghost" id="rdNoteAll">让${H}批注这一${u}</button>`}${aw?'':A.length?'<button class="pill ghost" id="rdAfRe">回他一句</button>':`<button class="pill" id="rdAf">让${H}写读后感</button>`}</div>
@@ -314,16 +357,20 @@ function renderCh(){const s=cur,n=s.parts.length,p=s.parts[ch],u=U(s),k=p.id,H=e
 function prog(){const b=$('#rdBody'),m=b.scrollHeight-b.clientHeight,r=m>0?b.scrollTop/m:1;$('#rdPg').style.width=(r*100)+'%';return r}
 function openCh(i){
   if(!book||!book.parts[i])return;
-  cur=book;ch=i;applyReader();renderSet();renderCh();
-  $('#rdSet').classList.remove('show');$('#reader').classList.add('show');
+  cur=book;ch=i;afOpen=false;applyReader();renderSet();renderCh();
+  const R=$('#reader');R.classList.remove('zen');
+  $('#rdSet').classList.remove('show');R.classList.add('show');
   const b=$('#rdBody'),p=getPos(cur.id);
-  requestAnimationFrame(()=>{b.scrollTop=p&&p.c===i?(p.r||0)*(b.scrollHeight-b.clientHeight):0;setPos(cur.id,{c:i,r:prog()})});
+  requestAnimationFrame(()=>{b.scrollTop=p&&p.c===i?(p.r||0)*(b.scrollHeight-b.clientHeight):0;lastY=b.scrollTop;setPos(cur.id,{c:i,r:prog()})});
   cur.readAt=Date.now();save()}
-function closeReader(){$('#reader').classList.remove('show');$('#hlBar').classList.remove('show');cur=null;if(book)renderDetail();render()}
+function closeReader(){const R=$('#reader');R.classList.remove('show','zen');$('#hlBar').classList.remove('show');cur=null;if(book)renderDetail();render()}
 function refreshIf(p){
-  if(cur&&cur.parts[ch]===p&&$('#reader').classList.contains('show')){const b=$('#rdBody'),y=b.scrollTop;renderCh();b.scrollTop=y}
+  if(cur&&cur.parts[ch]===p&&$('#reader').classList.contains('show')){const b=$('#rdBody'),y=b.scrollTop;renderCh();b.scrollTop=y;lastY=y}
   else if(book)renderDetail()}
-$('#rdBody').addEventListener('scroll',()=>{if(!cur)return;const id=cur.id,c=ch,r=prog();clearTimeout(posT);posT=setTimeout(()=>setPos(id,{c,r}),300)},{passive:true});
+$('#rdBody').addEventListener('scroll',()=>{if(!cur)return;
+  const b=$('#rdBody'),t=b.scrollTop,d=t-lastY;lastY=t;
+  if(t<40||d<-6)$('#reader').classList.remove('zen');else if(d>6)$('#reader').classList.add('zen');
+  const id=cur.id,c=ch,r=prog();clearTimeout(posT);posT=setTimeout(()=>setPos(id,{c,r}),300)},{passive:true});
 $('#rdBack').onclick=closeReader;
 $('#rdAa').onclick=()=>$('#rdSet').classList.toggle('show');
 $('#rdSet').addEventListener('click',e=>{
@@ -441,6 +488,7 @@ $('#rdBody').addEventListener('click',e=>{
   if(e.target.closest('#rdToc'))return closeReader();
   if(e.target.closest('#rdDiv'))return partMenu();
   if(!cur)return;const p=cur.parts[ch];
+  if(e.target.closest('#rdAfh')){afOpen=!afOpen;return refreshIf(p)}
   if(e.target.closest('#rdNoteAll'))return noteAll(cur,p);
   if(e.target.closest('#rdAf'))return afterWrite(cur,p);
   if(e.target.closest('#rdAfRe')){const v=prompt('想跟他说的');if(!v||!v.trim())return;
@@ -492,7 +540,7 @@ $('#lbImpOk').onclick=async()=>{
   let s;const v=$('#lbImpBook').value;
   if(v==='__new'){const title=$('#lbImpNew').value.trim();if(!title)return toast('给新书起个名字');
     s={id:uid(),title,parts:[],t:Date.now()};DATA.library.push(s)}
-  else s=DATA.library.find(x=>x.id===v);
+  else s=find(v);
   if(!s)return toast('没找到这本书');
   s.sx=true;
   const now=Date.now();
@@ -511,76 +559,8 @@ HOOKS.context.push(()=>{
 HOOKS.ready.push(render);
 HOOKS.page.push(n=>{
   if(n!=='secret')$('#lbImp').classList.remove('show');
+  if(n!=='library'&&n!=='shelf')fromShelf=false;
+  if(n==='shelf')renderShelf();
   if(n==='library'){if(book)renderDetail();else render()}
-  else{if(cur){$('#reader').classList.remove('show');$('#hlBar').classList.remove('show');cur=null}if(book)showShelf()}});
-})();
-/* ===== 图书馆：最近在读 2 本 + 书架（细条） ===== */
-(()=>{
-if(!$('#lbList'))return;
-const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
-const sd=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h};
-const COL=['color-mix(in srgb,var(--accent) 70%,#fff)','var(--accent-t)','color-mix(in srgb,var(--accent) 40%,#fff)','#B9AFB3','#7E7277','#D8D0CC'];
-const col=s=>s.sx?'linear-gradient(#c9a45c,#f0d79a,#c9a45c)':COL[sd(s.id)%COL.length];
-const off=()=>Array.isArray(S.shelfOff)?S.shelfOff:(S.shelfOff=[]);
-const len=s=>(s.parts||[]).reduce((n,p)=>n+String(p.text||'').length,0);
-const fmtN=n=>n>=10000?(n/10000).toFixed(1)+' 万字':n+' 字';
-const pos=id=>{try{const v=JSON.parse(localStorage.getItem('365-lib')||'{}')[id];return v&&typeof v==='object'?v:null}catch(e){return null}};
-function pct(s){const n=s.parts.length,p=pos(s.id);if(!n||!p)return 0;const c=Math.min(p.c,n-1),r=p.r||0;return c===n-1&&r>.95?100:Math.min(100,Math.round((c+r)/n*100))}
-let raf=0,fromShelf=false;
-
-document.head.insertAdjacentHTML('beforeend',`<style>
-#lbList{display:none!important}
-.sl-h{display:flex;align-items:baseline;gap:8px;margin:8px 6px 10px}
-.sl-h b{font-weight:500;font-size:15px;letter-spacing:3px}
-.sl-h em{font-family:var(--en);font-style:italic;color:var(--sub);font-size:14px}
-.sl-it{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 16px 10px 14px;margin-bottom:8px;border-radius:16px}
-.sl-sp{width:3px;align-self:stretch;min-height:34px;border-radius:2px;flex:none}
-.sl-x{flex:1;min-width:0}
-.sl-t{display:flex;align-items:baseline;gap:10px}
-.sl-t b{flex:1;min-width:0;font-weight:400;font-size:15px;letter-spacing:1.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sl-t em{font-family:var(--num);font-style:italic;font-size:13px;color:var(--accent-t);flex:none}
-.sl-bar{height:1px;background:rgba(127,127,127,.18);margin:6px 0 5px;overflow:hidden}
-.sl-bar i{display:block;height:100%;background:var(--accent-t)}
-.sl-x small{display:block;font-size:11px;color:var(--sub);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sh-go{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:15px 18px;margin:8px 0 14px;border-radius:16px}
-.sh-go b{font-weight:500;font-size:15px;letter-spacing:3px}
-.sh-go em{font-family:var(--en);font-style:italic;color:var(--sub);font-size:14px}
-.sh-go span{margin-left:auto;font-size:12.5px;color:var(--sub);letter-spacing:1px}
-.ih-more{display:block;margin:10px auto 16px;font-size:12px;color:var(--sub);letter-spacing:1px}
-</style>`);
-
-$('#lbImpBtn').insertAdjacentHTML('beforebegin','<div id="shHost"></div>');
-$('#tabbar').insertAdjacentHTML('beforebegin',`<section class="page" id="page-shelf"><div class="wrap">
-  <div class="head"><button class="iconbtn glass" data-go="library" aria-label="返回">${BACK}</button><h2>书架</h2><em>books</em><span class="sp"></span><button class="pill ghost" id="shEd">整理</button></div>
-  <div id="shList"></div></div></section>`);
-
-const all=()=>DATA.library.filter(s=>!off().includes(s.id)).sort((a,b)=>(b.readAt||b.t)-(a.readAt||a.t));
-const row=(s,cont)=>{const p=pct(s),a=s.author?esc(s.author)+' · ':'';
-  return `<button class="sl-it glass" data-ih="${s.id}"${cont?' data-c="1"':''}><i class="sl-sp" style="background:${col(s)}"></i><div class="sl-x">
-    <div class="sl-t"><b>${esc(s.title)}</b><em>${p}%</em></div><div class="sl-bar"><i style="width:${p}%"></i></div>
-    <small>${a}${cont?fmtDate(s.readAt)+' 读过 · ':''}${s.parts.length} ${s.src?'章':'段'} · ${fmtN(len(s))}</small></div></button>`};
-function render(){const h=$('#shHost');if(!h)return;
-  const R=DATA.library.filter(s=>s.readAt&&s.parts.length&&pct(s)<100&&!off().includes(s.id)).sort((a,b)=>b.readAt-a.readAt).slice(0,2);
-  h.innerHTML=(R.length?`<div class="sl-h"><b>最近在读</b><em>reading</em></div>${R.map(s=>row(s,1)).join('')}`:'')
-    +`<button class="sh-go glass" data-go="shelf"><b>书架</b><em>books</em><span>${all().length} 本 ›</span></button>`}
-function renderShelf(){const A=all(),F=off();
-  $('#shList').innerHTML=(A.length?A.map(s=>row(s)).join(''):'<div class="empty">书架还空着</div>')
-    +(F.length?`<button class="ih-more" id="shOff">另有 ${F.length} 本收起来了 · 点这里放回</button>`:'')}
-const later=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{render();renderShelf()})};
-
-function openBook(id,cont){const b=document.createElement('button');b.dataset.lb=id;$('#lbList').appendChild(b);b.click();b.remove();
-  if(cont)requestAnimationFrame(()=>$('#bkGo')?.click())}
-$('#shHost').onclick=e=>{const b=e.target.closest('[data-ih]');if(b)openBook(b.dataset.ih,!!b.dataset.c)};
-$('#shList').onclick=e=>{
-  if(e.target.closest('#shOff')){const F=off(),L=DATA.library.filter(s=>F.includes(s.id));
-    const put=ids=>{S.shelfOff=F.filter(x=>!ids.includes(x));saveSettings();later()};
-    return sheet([...(L.length>1?[['全部放回去',()=>put(L.map(s=>s.id))]]:[]),...L.map(s=>[`放回去：${s.title}`,()=>put([s.id])])])}
-  const b=e.target.closest('[data-ih]');if(!b)return;fromShelf=true;go('library');openBook(b.dataset.ih)};
-$('#shEd').onclick=()=>{const A=all();if(!A.length)return;
-  sheet(A.map(s=>[`收起来：${s.title}`,()=>{off().push(s.id);saveSettings();later();toast('收起来了，不会删')}]))};
-$('#bkBack')?.addEventListener('click',()=>{if(fromShelf){fromShelf=false;go('shelf')}});
-
-new MutationObserver(later).observe($('#lbList'),{childList:true});
-HOOKS.ready.push(later);
-HOOKS.page.push(n=>{if(n!=='library'&&n!=='shelf')fromShelf=false;if(n==='library'||n==='shelf')later()});
+  else{if(cur){$('#reader').classList.remove('show','zen');$('#hlBar').classList.remove('show');cur=null}if(book)showShelf()}});
 })();
