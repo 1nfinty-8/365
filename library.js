@@ -514,3 +514,86 @@ HOOKS.page.push(n=>{
   if(n==='library'){if(book)renderDetail();else render()}
   else{if(cur){$('#reader').classList.remove('show');$('#hlBar').classList.remove('show');cur=null}if(book)showShelf()}});
 })();
+/* ===== 图书馆：最近在读 2 本 + 书架（两列书封） ===== */
+(()=>{
+if(!$('#lbList'))return;
+const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
+const sd=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h};
+const COV=[['color-mix(in srgb,var(--accent) 45%,#fff)','#2E1A1F'],['color-mix(in srgb,var(--accent) 22%,#fff)','#2E1A1F'],['var(--accent-t)','#fff'],['#EDE8E6','#2E1A1F'],['#B9AFB3','#fff'],['#7E7277','#fff'],['#F7F3EC','#2E1A1F']];
+const cov=s=>COV[sd(s.id)%COV.length];
+const off=()=>Array.isArray(S.shelfOff)?S.shelfOff:(S.shelfOff=[]);
+const len=s=>(s.parts||[]).reduce((n,p)=>n+String(p.text||'').length,0);
+const fmtN=n=>n>=10000?(n/10000).toFixed(1)+' 万':n;
+const pos=id=>{try{const v=JSON.parse(localStorage.getItem('365-lib')||'{}')[id];return v&&typeof v==='object'?v:null}catch(e){return null}};
+function pct(s){const n=s.parts.length,p=pos(s.id);if(!n||!p)return 0;const c=Math.min(p.c,n-1),r=p.r||0;return c===n-1&&r>.95?100:Math.min(100,Math.round((c+r)/n*100))}
+let raf=0,fromShelf=false;
+
+document.head.insertAdjacentHTML('beforeend',`<style>
+#lbList{display:none!important}
+.ih-h{display:flex;align-items:baseline;justify-content:space-between;margin:6px 6px 12px}
+.ih-h b{font-family:var(--en);font-style:italic;font-weight:400;font-size:32px}
+.ih-h span{font-size:12px;color:var(--sub);letter-spacing:2px}
+.ih-it{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;margin-bottom:10px}
+.ih-sp{width:8px;height:40px;border-radius:2px;flex:none;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08)}
+.ih-x{flex:1;min-width:0}
+.ih-x b{display:block;font-weight:500;font-size:15.5px;letter-spacing:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ih-x small{display:block;font-size:12px;color:var(--sub);margin-top:2px}
+.ih-bar{height:2px;background:rgba(127,127,127,.15);border-radius:2px;margin-top:8px;overflow:hidden}
+.ih-bar i{display:block;height:100%;background:var(--accent)}
+.ih-it em{font-family:var(--num);font-style:italic;font-size:20px;color:var(--accent-t)}
+.sh-go{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:18px 20px;margin:6px 0 14px}
+.sh-go b{font-weight:500;font-size:17px;letter-spacing:3px}
+.sh-go em{font-family:var(--en);font-style:italic;color:var(--sub);font-size:15px}
+.sh-go span{margin-left:auto;font-size:13px;color:var(--sub);letter-spacing:1px}
+.sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px 16px;margin:6px 4px 20px}
+.sh-cv{display:block;text-align:left;min-width:0}
+.sh-bk{position:relative;aspect-ratio:3/4;border-radius:3px 10px 10px 3px;padding:18px 14px 14px 22px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 18px rgba(60,30,40,.12),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .15s}
+.sh-bk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:9px;background:rgba(0,0,0,.1);box-shadow:1px 0 0 rgba(255,255,255,.4)}
+.sh-bk::after{content:"";position:absolute;inset:0;background:linear-gradient(125deg,rgba(255,255,255,.4),transparent 45%);pointer-events:none}
+.sh-cv:active .sh-bk{transform:scale(.96)}
+.sh-bk b{font-family:var(--ti);font-weight:500;font-size:17px;line-height:1.45;letter-spacing:2px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.sh-bk i{font-style:normal;font-size:11px;opacity:.7;margin-top:6px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-bk u{margin-top:auto;text-decoration:none;font-family:var(--en);font-style:italic;font-size:12px;opacity:.6;letter-spacing:1px}
+.sh-bk .gd{position:absolute;left:20px;right:12px;height:1px;background:linear-gradient(90deg,#c9a45c,#f0d79a,#c9a45c)}
+.sh-m{display:flex;align-items:center;gap:8px;margin:9px 2px 0;font-family:var(--num);font-style:italic;font-size:13px;color:var(--sub)}
+.sh-m span{flex:1;height:2px;background:rgba(127,127,127,.15);border-radius:2px;overflow:hidden}
+.sh-m span i{display:block;height:100%;background:var(--accent)}
+html.dk .sh-bk{filter:brightness(.82)}
+.ih-more{display:block;margin:6px auto 16px;font-size:12px;color:var(--sub);letter-spacing:1px}
+</style>`);
+
+$('#lbImpBtn').insertAdjacentHTML('beforebegin','<div id="shHost"></div>');
+$('#tabbar').insertAdjacentHTML('beforebegin',`<section class="page" id="page-shelf"><div class="wrap">
+  <div class="head"><button class="iconbtn glass" data-go="library" aria-label="返回">${BACK}</button><h2>书架</h2><em>books</em><span class="sp"></span><button class="pill ghost" id="shEd">整理</button></div>
+  <div id="shList"></div></div></section>`);
+
+const all=()=>DATA.library.filter(s=>!off().includes(s.id)).sort((a,b)=>(b.readAt||b.t)-(a.readAt||a.t));
+const row=s=>{const p=pct(s);
+  return `<button class="ih-it glass" data-ih="${s.id}" data-c="1"><i class="ih-sp" style="background:${cov(s)[0]}"></i><div class="ih-x"><b>${esc(s.title)}</b><small>${s.author?esc(s.author)+' · ':''}${fmtDate(s.readAt)} 读过</small><div class="ih-bar"><i style="width:${p}%"></i></div></div><em>${p}%</em></button>`};
+const cover=s=>{const[bg,fg]=cov(s),p=pct(s);
+  return `<button class="sh-cv" data-ih="${s.id}"><div class="sh-bk" style="background:${bg};color:${fg}">${s.sx?'<i class="gd" style="top:8px"></i><i class="gd" style="bottom:8px;top:auto"></i>':''}<b>${esc(s.title)}</b>${s.author?`<i>${esc(s.author)}</i>`:''}<u>${s.parts.length} ${s.src?'章':'段'} · ${fmtN(len(s))} 字</u></div><div class="sh-m"><span><i style="width:${p}%"></i></span>${p}%</div></button>`};
+function render(){const h=$('#shHost');if(!h)return;
+  const R=DATA.library.filter(s=>s.readAt&&s.parts.length&&pct(s)<100&&!off().includes(s.id)).sort((a,b)=>b.readAt-a.readAt).slice(0,2);
+  h.innerHTML=(R.length?`<div class="ih-h"><b>In Hand</b><span>最近在读</span></div>${R.map(row).join('')}`:'')
+    +`<button class="sh-go glass" data-go="shelf"><b>书架</b><em>books</em><span>${all().length} 本 ›</span></button>`}
+function renderShelf(){const A=all(),F=off();
+  $('#shList').innerHTML=(A.length?`<div class="sh-grid">${A.map(cover).join('')}</div>`:'<div class="empty">书架还空着</div>')
+    +(F.length?`<button class="ih-more" id="shOff">另有 ${F.length} 本收起来了 · 点这里放回</button>`:'')}
+const later=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{render();renderShelf()})};
+
+function openBook(id,cont){const b=document.createElement('button');b.dataset.lb=id;$('#lbList').appendChild(b);b.click();b.remove();
+  if(cont)requestAnimationFrame(()=>$('#bkGo')?.click())}
+$('#shHost').onclick=e=>{const b=e.target.closest('[data-ih]');if(b)openBook(b.dataset.ih,!!b.dataset.c)};
+$('#shList').onclick=e=>{
+  if(e.target.closest('#shOff')){const F=off(),L=DATA.library.filter(s=>F.includes(s.id));
+    const put=ids=>{S.shelfOff=F.filter(x=>!ids.includes(x));saveSettings();later()};
+    return sheet([...(L.length>1?[['全部放回去',()=>put(L.map(s=>s.id))]]:[]),...L.map(s=>[`放回去：${s.title}`,()=>put([s.id])])])}
+  const b=e.target.closest('[data-ih]');if(!b)return;fromShelf=true;go('library');openBook(b.dataset.ih)};
+$('#shEd').onclick=()=>{const A=all();if(!A.length)return;
+  sheet(A.map(s=>[`收起来：${s.title}`,()=>{off().push(s.id);saveSettings();later();toast('收起来了，不会删')}]))};
+$('#bkBack')?.addEventListener('click',()=>{if(fromShelf){fromShelf=false;go('shelf')}});
+
+new MutationObserver(later).observe($('#lbList'),{childList:true});
+HOOKS.ready.push(later);
+HOOKS.page.push(n=>{if(n!=='library'&&n!=='shelf')fromShelf=false;if(n==='library'||n==='shelf')later()});
+})();
