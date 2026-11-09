@@ -3,6 +3,7 @@
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 const USE={chat:'聊天',memory:'记忆',moments:'朋友圈',diary:'日记',anniv:'纪念日',trips:'他的行程',wish:'心愿单',recap:'聊过的事',cards:'小卡片',library:'图书馆',secret:'秘密',sxs:'秘密的其他剧情',gifts:'礼物',hday:'他的一天',hnote:'他的备忘录',deep:'deeptalk',dmem:'deeptalk 的回忆',night:'今夜',wbook:'世界书'};
 const GONE={wrain:'字雨（已经删了）'};
+Object.assign(USE,{calls:'来电记录',phone:'他的手机',todo:'todo list',memo:'备忘录',review:'月度回顾',mcand:'待确认的记忆',sxlog:'秘密的记录',marks:'日历上的标记',period:'经期记录',coins:'coins（先留着）'});Object.assign(GONE,{screen:'屏幕使用时间（已经删了）'});
 const kb=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(1)+' MB';
 const size=v=>{try{return new Blob([JSON.stringify(v)]).size}catch(e){return 0}};
 
