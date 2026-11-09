@@ -9,7 +9,8 @@
   --ti:Didot,'Bodoni 72','Noto Serif SC','Songti SC','STSong',serif;
   --cn:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;
   --blur:0px;--dim:.35;
-  --st:max(env(safe-area-inset-top),14px);
+  /* 顶部让出灵动岛，再多留 16px 避开系统那层雾 */
+  --st:calc(max(env(safe-area-inset-top),14px) + 16px);
   --sb:max(env(safe-area-inset-bottom),8px);
   --tbb:max(calc(env(safe-area-inset-bottom) - 8px),12px);
   --nav:calc(var(--tbb) + 62px);
@@ -21,15 +22,17 @@
   --sys-sub:rgba(235,235,245,.6);--sys-sep:rgba(84,84,88,.65);--sys-fill:rgba(118,118,128,.24);--sys-red:#FF453A}}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--ink);font:15px/1.6 var(--ti);-webkit-text-size-adjust:100%;touch-action:manipulation}
+html,body{height:100%;min-height:calc(100% + env(safe-area-inset-top));overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--ink);font:15px/1.6 var(--ti);-webkit-text-size-adjust:100%;touch-action:manipulation}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-user-select:none;user-select:none}
 input,textarea,select{font:16px/1.5 var(--cn);color:var(--ink)}
 input.ti{font-family:var(--ti)}
 .bubble,.dy-text,.dy-note,.tc-letter,.tc-his,.an-note{font-family:var(--cn)}
 
-#bg{position:fixed;inset:-40px;background:linear-gradient(160deg,#F5ECED 0%,#E9D6D9 55%,#D8B9BF 100%) center/cover no-repeat;filter:blur(var(--blur))}
-#mask{position:fixed;inset:0;background:linear-gradient(180deg,rgba(248,240,241,var(--dim)),rgba(236,220,223,var(--dim)))}
+/* 背景：上下多铺一截，盖住灵动岛和底部横条 */
+#bg{position:fixed;top:-120px;bottom:-120px;left:-40px;right:-40px;background:linear-gradient(160deg,#F5ECED 0%,#E9D6D9 55%,#D8B9BF 100%) center/cover no-repeat;filter:blur(var(--blur))}
+#mask{position:fixed;top:-120px;bottom:-120px;left:0;right:0;background:linear-gradient(180deg,rgba(248,240,241,var(--dim)),rgba(236,220,223,var(--dim)))}
 #app{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100%);overflow:hidden}
+@media (display-mode:standalone){body:not(.kb) #app{top:0!important;height:100lvh!important}}
 .page{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:calc(var(--st) + 8px) 16px calc(var(--nav) + 18px);display:none}
 body.kb .page{padding-bottom:20px}
 .page.active{display:block}
@@ -128,6 +131,7 @@ body.kb .inputbar{margin-bottom:8px}
 .field textarea{flex:1;border:0;background:transparent;outline:none;resize:none;padding:7px 0;line-height:22px;max-height:118px}
 .send{width:30px;height:30px;margin:3px 0;border-radius:50%;background:var(--mb);color:var(--mbt);display:grid;place-items:center;flex:none;box-shadow:0 0 0 .5px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.08)}
 .send svg.i{width:17px;height:17px;stroke-width:2.2}
+
 /* 朋友圈 */
 .composer{padding:14px;margin-bottom:16px}
 .composer textarea{width:100%;border:0;background:transparent;outline:none;resize:none;min-height:70px}
@@ -311,7 +315,7 @@ body #nb.show{transform:none;opacity:1;visibility:visible;transition:transform .
 #viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:60}
 #viewer.show{display:flex}
 #viewer img{max-width:100%;max-height:100%;object-fit:contain}
-.has-dot>.ndot{display:block}
+
 /* 除了聊天，正文都用高级字体 */
 body .dy-text,body .dy-note,body .tc-letter,body .tc-his,body .an-note,body .mm-text,
 body .td-x,body .nt-p,body .ws-note,body .ws-his,body .cd-say,body .rc-l,body .rc-p,body .dl-prev,
@@ -319,6 +323,7 @@ body textarea,body input:not([type=checkbox]):not([type=range]):not([type=color]
 body .dy-text{font-size:16px;line-height:1.9;letter-spacing:.5px}
 body .dy-note,body .mm-text,body .td-x{line-height:1.75}
 body #chatInput,body #sxInput{font-family:var(--cn)}
+
 /* 日历：生理期色带改成半透明 */
 body .cal-d.pd{color:var(--ink)}
 body .cal-d.pd::before{background:color-mix(in srgb,var(--pd) 28%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
@@ -328,6 +333,3 @@ body .cal-d.pd .cal-m{background:var(--accent-t)}
 body .cal-d.pd .cal-a{color:var(--accent-t)}
 body .cal-lg span:first-child i{background:color-mix(in srgb,var(--pd) 22%,transparent)!important;box-shadow:inset 0 0 0 1px var(--pd)}
 body .cal-q .pill{background:color-mix(in srgb,var(--pd) 20%,rgba(255,255,255,.45));color:var(--ink);border:1px solid rgba(255,255,255,.75);box-shadow:inset 1px 1px 0 rgba(255,255,255,.8)}
-html,body{min-height:calc(100% + env(safe-area-inset-top))}
-#bg,#mask{top:-120px!important;bottom:-120px!important;left:-40px!important;right:-40px!important;height:auto!important}
-@media (display-mode:standalone){body:not(.kb) #app{top:0!important;height:100lvh!important}}
