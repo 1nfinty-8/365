@@ -1,70 +1,41 @@
-/* ===== 365 · infinity.js · 游戏：Infinity（玻璃文件夹版小卡片，沿用原来的卡片数据） ===== */
+/* ===== 365 · infinity.js · 游戏：Infinity（Fable 的玻璃文件夹 + 卡片玩法） ===== */
 (()=>{
 if(!Array.isArray(DATA.cards))DATA.cards=[];
 const save=()=>saveData('cards');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 const ICON='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M12 5l-2-2M12 5l2-2M12 19l-2 2M12 19l2 2"/></svg>';
-const SCRIPT='"Snell Roundhand","Savoye LET","Apple Chancery",cursive';
 const TYPES={word:['情话','words'],task:['任务','task'],truth:['真心话','truth'],dare:['大冒险','dare']};
 const MT={day:['word','task','truth','dare'],night:['task','truth','dare']};
 const HINT={word:'写在卡片上的话',task:'给他的任务',truth:'想问他的真心话',dare:'让他做的大冒险'};
-const sd=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h};
-let mode='day',unlocked=false,pick='any',busy=false,page='',wType='word',cur=null,ansCard=null,open=false;
+let mode='day',unlocked=false,pick='any',busy=false,page='',wType='word',cur=null,ansCard=null;
 const find=id=>DATA.cards.find(c=>c.id===id);
 const list=()=>DATA.cards.filter(c=>c.mode===mode).sort((a,b)=>a.t-b.t);
+const fire=()=>{try{$('#ifFrame').contentWindow.ifSync?.()}catch(e){}};
+
+/* 给 infinity.html 用 */
+window.INF={
+  list:()=>list().slice(-12).map(c=>({id:c.id,type:TYPES[c.type][0],sub:c.done?'已完成':c.by==='me'?'我写的':S.hisName})),
+  night:()=>mode==='night',busy:()=>busy,
+  view:id=>view(find(id)),draw:()=>draw(),write:()=>openWrite(),
+  del:async id=>{const c=find(id);if(!c)return;DATA.cards=DATA.cards.filter(x=>x!==c);await save();if(cur===c)closeView();render()}};
 
 document.head.insertAdjacentHTML('beforeend',`<style>
 #page-cards{padding:0;overflow:hidden;transition:background .3s}
-#page-cards.active{display:flex;flex-direction:column}
 body.ifb #tabbar{display:none}
 #page-cards.night{background:linear-gradient(180deg,rgba(16,18,28,.92),rgba(30,34,48,.95));--ink:#EEF1F6;--sub:rgba(238,241,246,.55);color:var(--ink)}
 #page-cards.night .glass{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);box-shadow:inset 1px 1px 0 rgba(255,255,255,.12),0 6px 20px rgba(0,0,0,.25)}
-#page-cards.night .pill.ghost{background:rgba(255,255,255,.1);color:var(--ink);border-color:rgba(255,255,255,.18)}
-.if-top{flex:none;display:flex;align-items:center;gap:8px;padding:calc(var(--st) + 4px) 12px 0}
-.if-t{flex:1;text-align:center;font-family:${SCRIPT};font-size:30px;line-height:1.3}
-.if-seg{display:flex;gap:2px;background:rgba(255,255,255,.35);border-radius:99px;padding:2px}
+#ifFrame{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
+.if-top{position:absolute;z-index:2;left:0;right:0;top:0;display:flex;align-items:center;gap:8px;padding:calc(var(--st) + 4px) 12px 0;pointer-events:none}
+.if-top>*{pointer-events:auto}
+.if-seg{margin-left:auto;display:flex;gap:2px;background:rgba(255,255,255,.35);border-radius:99px;padding:2px}
 .night .if-seg{background:rgba(255,255,255,.1)}
 .if-seg button{padding:5px 12px;border-radius:99px;font-size:12.5px;color:var(--sub);letter-spacing:2px}
 .if-seg button.on{background:var(--accent);color:var(--acct)}
-.if-stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;perspective:1100px}
-.if-folder{position:relative;width:min(78vw,310px);height:260px;cursor:pointer;margin-top:40px}
-.if-folder.sink{animation:ifSink .6s ease}
-@keyframes ifSink{40%{transform:translateY(10px)}}
-.if-back{position:absolute;left:5%;right:5%;top:30px;bottom:12px;z-index:1;border-radius:20px;background:rgba(255,255,255,.22);-webkit-backdrop-filter:blur(14px) saturate(1.8);backdrop-filter:blur(14px) saturate(1.8);border:1px solid rgba(255,255,255,.65);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 22px 44px rgba(96,106,126,.18)}
-.if-back::before{content:"";position:absolute;top:-17px;right:0;width:44%;height:24px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.65);border-bottom:0;border-radius:12px 15px 0 0}
-.night .if-back,.night .if-back::before{background:rgba(120,135,165,.14);border-color:rgba(255,255,255,.3)}
-.if-str{position:absolute;top:12px;right:15%;width:0;z-index:2;transform-origin:top center;animation:ifSway 6.5s ease-in-out infinite}
-@keyframes ifSway{0%,100%{transform:rotate(-2.4deg)}50%{transform:rotate(2.4deg)}}
-.if-str::before{content:"";position:absolute;left:-.5px;top:0;width:1px;height:var(--line,120px);opacity:.6;background:linear-gradient(transparent,rgba(255,255,255,.9) 25%,transparent)}
-.if-fl{position:absolute;transform:translate(-50%,-50%);filter:drop-shadow(0 0 1px rgba(120,140,175,.55)) drop-shadow(0 0 10px rgba(190,210,245,.8))}
-.if-fl svg{display:block;animation:ifFlut var(--d,4s) ease-in-out infinite alternate}
-.if-main{top:6px;left:2px}
-@keyframes ifFlut{from{transform:rotate(-13deg)}to{transform:rotate(13deg)}}
-.if-cards{position:absolute;inset:0;z-index:3;pointer-events:none}
-.if-folder.open .if-cards{z-index:6}
-.if-c{position:absolute;left:calc(50% - 26px);bottom:14px;width:52px;height:76px;transform-origin:50% 280%;transform:translate(var(--sx),var(--sy)) rotate(var(--s)) scale(.95);transition:transform .5s cubic-bezier(.22,1.25,.36,1);transition-delay:var(--dl,0s)}
-.if-folder.open .if-c{transform:rotate(var(--a)) translateY(-30px);pointer-events:auto}
-.if-c.new{animation:ifDrop .7s cubic-bezier(.2,1.4,.3,1)}
-@keyframes ifDrop{from{margin-bottom:240px;opacity:0}}
-.if-c .pad{width:100%;height:100%;border-radius:9px;background:linear-gradient(170deg,rgba(255,255,255,.96),rgba(234,238,244,.92));border:1px solid #fff;box-shadow:0 5px 14px rgba(0,0,0,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#4a4f57}
-.if-c.me .pad{box-shadow:inset 0 -3px 0 var(--accent),0 5px 14px rgba(0,0,0,.14)}
-.night .if-c .pad{background:linear-gradient(170deg,rgba(60,68,88,.95),rgba(38,44,58,.92));color:#EEF1F6;border-color:rgba(255,255,255,.4)}
-.if-c .pad b{font:500 11px var(--ti);letter-spacing:1px}
-.if-c .pad small{font-size:7.5px;opacity:.6;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.if-glass{position:absolute;left:0;right:0;top:78px;bottom:0;z-index:4;border-radius:20px;overflow:hidden;background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.02));-webkit-backdrop-filter:blur(5px) saturate(2);backdrop-filter:blur(5px) saturate(2);border:1px solid rgba(255,255,255,.6);box-shadow:inset 0 1px 1px rgba(255,255,255,.55),0 18px 38px rgba(96,106,126,.14);transform-origin:bottom center;transition:transform .55s cubic-bezier(.22,1.2,.36,1)}
-.if-folder:active .if-glass{transform:rotateX(8deg)}
-.if-folder.open .if-glass{transform:rotateX(14deg) translateY(2px)}
-.if-gt{position:absolute;left:20px;bottom:6px;font-family:${SCRIPT};font-size:32px;line-height:1.7;padding-right:10px}
-.if-n{position:absolute;right:18px;bottom:16px;font-family:var(--num);font-style:italic;font-size:13px;opacity:.6}
-.if-tip{margin-top:18px;font-size:11px;letter-spacing:3px;color:var(--sub);text-align:center}
-.if-ctl{flex:none;padding:0 16px calc(var(--sb) + 18px)}
-.if-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
-.if-chips button{padding:6px 14px;border-radius:99px;font-size:13px;color:var(--sub);background:rgba(255,255,255,.4);letter-spacing:1px}
+.if-chips{position:absolute;z-index:2;left:0;right:0;top:calc(var(--st) + 56px);display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:0 16px;pointer-events:none}
+.if-chips button{pointer-events:auto;padding:6px 14px;border-radius:99px;font-size:13px;color:var(--sub);background:rgba(255,255,255,.4);letter-spacing:1px}
 .night .if-chips button{background:rgba(255,255,255,.08)}
 .if-chips button.on{background:var(--accent);color:var(--acct)}
-.if-btns{display:flex;gap:10px;justify-content:center}
-.if-btns .pill{padding:10px 22px;font-size:14px}
-.if-all{display:block;margin:12px auto 0;font-size:12px;color:var(--sub);letter-spacing:1px}
+.if-chips button.all{background:none!important;text-decoration:underline;text-underline-offset:3px}
 #ifView{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:calc(var(--st) + 20px) 20px calc(var(--sb) + 20px);background:rgba(20,22,30,.22);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 #ifView.show{display:flex;animation:fd .25s}
 .if-card{width:100%;max-width:420px;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:22px 22px 18px;border-radius:26px;display:flex;flex-direction:column}
@@ -91,16 +62,10 @@ body.ifb #tabbar{display:none}
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
 <section class="page" id="page-cards">
-  <svg width="0" height="0" style="position:absolute"><defs>
-    <g id="ifArm"><path d="M0 0V-44M0-27L10-36M0-27L-10-36M0-14L7-21M0-14L-7-21" stroke="rgba(255,255,255,.45)" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M0 0V-44M0-27L10-36M0-27L-10-36M0-14L7-21M0-14L-7-21" stroke="rgba(255,255,255,.95)" stroke-width="2.4" stroke-linecap="round" fill="none"/></g>
-    <symbol id="ifSf" viewBox="-54 -54 108 108"><use href="#ifArm"/><use href="#ifArm" transform="rotate(60)"/><use href="#ifArm" transform="rotate(120)"/><use href="#ifArm" transform="rotate(180)"/><use href="#ifArm" transform="rotate(240)"/><use href="#ifArm" transform="rotate(300)"/><circle r="4.5" fill="#fff"/></symbol>
-  </defs></svg>
-  <div class="if-top"><button class="iconbtn glass" data-go="game" aria-label="返回">${BACK}</button><div class="if-t">Infinity</div>
+  <iframe id="ifFrame" title="Infinity" allowtransparency="true"></iframe>
+  <div class="if-top"><button class="iconbtn glass" data-go="game" aria-label="返回">${BACK}</button>
     <div class="if-seg" id="ifSeg"><button data-m="day">白天</button><button data-m="night">夜晚</button></div></div>
-  <div class="if-stage"><div class="if-folder" id="ifFolder"></div><div class="if-tip" id="ifTip"></div></div>
-  <div class="if-ctl"><div class="if-chips" id="ifChips"></div>
-    <div class="if-btns"><button class="pill" id="ifDraw">抽一张</button><button class="pill ghost" id="ifWriteBtn">写一张给<span class="hisName">陆择</span></button></div>
-    <button class="if-all" id="ifAll"></button></div>
+  <div class="if-chips" id="ifChips"></div>
   <div id="ifView"></div>
 </section>`);
 $('#app').insertAdjacentHTML('beforeend',`
@@ -154,30 +119,19 @@ async function respond(c){
   catch(e){toast(e.message)}
   delete c._busy;await save();if(cur===c)vRender()}
 
-/* ---------- 文件夹 ---------- */
-function folderHTML(newId){
-  const L=list().slice(-12),n=L.length,sp=Math.min(110,n*10),H=esc(S.hisName);
-  const cards=L.map((c,i)=>{const k=sd(c.id),a=n<2?0:-sp/2+sp*i/(n-1);
-    return `<div class="if-c${c.by==='me'?' me':''}${c.id===newId?' new':''}" data-cv="${c.id}" style="--sx:${k%150-75}px;--sy:${-(26+(k>>3)%90)}px;--s:${(k>>5)%50-25}deg;--a:${a}deg;--dl:${i*22}ms;z-index:${i}"><div class="pad"><b>${TYPES[c.type][0]}</b><small>${c.done?'已完成':c.by==='me'?'我写的':H}</small></div></div>`}).join('');
-  const F=Math.min(n,7),SZ=[30,16,24,14,22,18,26];let fl='';
-  for(let i=0;i<F;i++)fl+=`<span class="if-fl" style="top:${i*26+50}px;left:${(Math.sin(i*1.9)*12).toFixed(1)}px;--d:${(3+i*.6).toFixed(1)}s"><svg width="${SZ[i]}" height="${SZ[i]}"><use href="#ifSf"/></svg></span>`;
-  return `<div class="if-back"></div><div class="if-str" style="--line:${F*26+56}px"><span class="if-fl if-main"><svg width="84" height="84"><use href="#ifSf"/></svg></span>${fl}</div>
-    <div class="if-cards">${cards}</div><div class="if-glass"><div class="if-gt">Infinity</div><div class="if-n">${list().length}</div></div>`}
-function render(newId){
+/* ---------- 顶部：白天夜晚、种类 ---------- */
+function render(){
   $('#page-cards').classList.toggle('night',mode==='night');
   $$('#ifSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   if(!MT[mode].includes(pick))pick='any';
-  const f=$('#ifFolder'),n=list().length;f.innerHTML=folderHTML(newId);f.classList.toggle('open',open&&n>0);
-  $('#ifTip').textContent=busy?`${S.hisName}在写…`:!n?'还没有卡片，抽一张试试':open?'点一张卡片翻开 · 点文件夹合上':'轻触打开文件夹';
-  $('#ifChips').innerHTML=[['any','随便'],...MT[mode].map(t=>[t,TYPES[t][0]])].map(([k,v])=>`<button data-p="${k}" class="${pick===k?'on':''}">${v}</button>`).join('');
-  $('#ifDraw').textContent=busy?`${S.hisName}在写…`:'抽一张';
-  $('#ifAll').textContent=n?`${mode==='day'?'白天':'夜晚'}一共 ${n} 张 · 看全部`:''}
-function sink(){const f=$('#ifFolder');f.classList.remove('sink');void f.offsetWidth;f.classList.add('sink');navigator.vibrate?.(15)}
-$('#ifFolder').onclick=e=>{const c=e.target.closest('[data-cv]');
-  if(c&&open)return view(find(c.dataset.cv));if(!list().length)return;open=!open;render()};
-$('#ifChips').onclick=e=>{const b=e.target.closest('[data-p]');if(b){pick=b.dataset.p;render()}};
-$('#ifAll').onclick=()=>{const L=list().slice().reverse().slice(0,40);if(!L.length)return;
-  sheet(L.map(c=>[`${TYPES[c.type][0]} · ${String(c.text).slice(0,16)}${c.text.length>16?'…':''}`,()=>view(c)]))};
+  const n=list().length;
+  $('#ifChips').innerHTML=[['any','随便'],...MT[mode].map(t=>[t,TYPES[t][0]])].map(([k,v])=>`<button data-p="${k}" class="${pick===k?'on':''}">${v}</button>`).join('')
+    +(n?`<button class="all" data-all>全部 ${n} 张</button>`:'');
+  fire()}
+$('#ifChips').onclick=e=>{
+  if(e.target.closest('[data-all]')){const L=list().slice().reverse().slice(0,40);
+    return sheet(L.map(c=>[`${TYPES[c.type][0]} · ${String(c.text).slice(0,16)}${c.text.length>16?'…':''}`,()=>view(c)]))}
+  const b=e.target.closest('[data-p]');if(b){pick=b.dataset.p;render()}};
 
 /* ---------- 翻开一张 ---------- */
 function action(c){const th=c.thread||[];
@@ -208,24 +162,23 @@ function menu(c){if(!c)return;
 /* ---------- 抽一张 ---------- */
 async function draw(){if(busy)return;
   const T=MT[mode],type=pick==='any'?T[Math.floor(Math.random()*T.length)]:pick,m=mode;
-  busy=true;render();
+  busy=true;fire();
   try{const text=await gen(type,m);
     const c={id:uid(),mode:m,type,by:'him',text,t:Date.now(),thread:[],done:false};
-    DATA.cards.push(c);await save();busy=false;
-    if(page==='cards'&&mode===m){open=false;render(c.id);sink();setTimeout(()=>{if(page==='cards'&&mode===m)view(c)},850)}}
+    DATA.cards.push(c);await save();busy=false;render();navigator.vibrate?.(15);
+    setTimeout(()=>{if(page==='cards'&&mode===m)view(c)},900)}
   catch(e){toast(e.message)}
-  finally{if(busy){busy=false;if(page==='cards')render()}}}
-$('#ifDraw').onclick=draw;
+  finally{if(busy){busy=false;fire()}}}
 
 /* ---------- 写一张给他 ---------- */
 function setW(t){wType=t;$$('#ifWType button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$('#ifWHint').textContent=HINT[t]}
-$('#ifWriteBtn').onclick=()=>{$('#ifWType').innerHTML=MT[mode].map(t=>`<button data-t="${t}">${TYPES[t][0]}</button>`).join('');
-  setW(MT[mode].includes(wType)?wType:MT[mode][0]);$('#ifWText').value='';openModal('ifWrite')};
+function openWrite(){$('#ifWType').innerHTML=MT[mode].map(t=>`<button data-t="${t}">${TYPES[t][0]}</button>`).join('');
+  setW(MT[mode].includes(wType)?wType:MT[mode][0]);$('#ifWText').value='';openModal('ifWrite')}
 $('#ifWType').onclick=e=>{const b=e.target.closest('[data-t]');if(b)setW(b.dataset.t)};
 $('#ifWSave').onclick=async()=>{const v=$('#ifWText').value.trim();if(!v)return toast('写点什么吧');
   const c={id:uid(),mode,type:wType,by:'me',text:v,t:Date.now(),thread:[],done:false};
-  DATA.cards.push(c);await save();closeModal('ifWrite');open=false;render(c.id);sink();
-  setTimeout(()=>{if(page==='cards')view(c)},850);respond(c)};
+  DATA.cards.push(c);await save();closeModal('ifWrite');render();
+  setTimeout(()=>{if(page==='cards')view(c)},900);respond(c)};
 
 /* ---------- 完成、回答、回一句 ---------- */
 function openAns(c){if(!c)return;ansCard=c;const a=action(c);
@@ -242,12 +195,12 @@ async function hash(p){const b=await crypto.subtle.digest('SHA-256',new TextEnco
 $('#ifSeg').onclick=e=>{const b=e.target.closest('[data-m]');if(!b||b.dataset.m===mode)return;
   if(b.dataset.m==='night'&&!unlocked){if(!S.sxPin)return toast('先去 More 里的「秘密」设一个密码');
     $('#ifPinIn').value='';openModal('ifPin');setTimeout(()=>$('#ifPinIn').focus(),150);return}
-  mode=b.dataset.m;open=false;closeView();render()};
+  mode=b.dataset.m;closeView();render()};
 $('#ifPinIn').oninput=async e=>{const i=e.target;i.value=i.value.replace(/\D/g,'').slice(0,4);if(i.value.length<4)return;
-  if(await hash(i.value)===S.sxPin){unlocked=true;i.blur();closeModal('ifPin');mode='night';open=false;render()}
+  if(await hash(i.value)===S.sxPin){unlocked=true;i.blur();closeModal('ifPin');mode='night';render()}
   else{toast('密码不对');i.value=''}};
 function lockNight(){unlocked=false;
-  if(mode==='night'){mode='day';open=false;closeView();['ifAns','ifWrite','ifPin'].forEach(id=>$('#'+id).classList.remove('show'));if(page==='cards')render()}}
+  if(mode==='night'){mode='day';closeView();['ifAns','ifWrite','ifPin'].forEach(id=>$('#'+id).classList.remove('show'));if(page==='cards')render()}}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)lockNight()});
 
 /* ---------- 「游戏」页：小卡片 → Infinity ---------- */
@@ -271,5 +224,6 @@ patchGame();
 HOOKS.ready.push(()=>{if(!Array.isArray(DATA.cards))DATA.cards=[];patchGame()});
 HOOKS.page.push(n=>{page=n;document.body.classList.toggle('ifb',n==='cards');
   if(n==='game')setTimeout(patchGame,0);
-  if(n==='cards'){open=false;render()}else{closeView();lockNight()}});
+  if(n==='cards'){const f=$('#ifFrame');if(!f.src)f.src='infinity.html';render()}
+  else{closeView();lockNight()}});
 })();
