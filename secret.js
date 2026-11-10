@@ -119,16 +119,14 @@ function render(){
   box.innerHTML=h;scroll()}
 $('#sxSeg').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;S.sxMode=b.dataset.m;saveSettings();render()};
 
-/* ---------- 打字时，给键盘让出位置 ---------- */
+/* ---------- 打字时，秘密页只占键盘上面那一块 ---------- */
 const vv=window.visualViewport;
 function fitKb(){
   const pg=$('#page-secret');if(!pg)return;
   const on=vv&&document.activeElement===$('#sxInput')&&pg.classList.contains('active');
-  if(!on){pg.style.bottom='';pg.classList.remove('kbon');return}
-  const over=$('#app').getBoundingClientRect().bottom-(vv.offsetTop+vv.height);
-  pg.style.bottom=over>0?over+'px':'';
-  pg.classList.toggle('kbon',over>0);
-  scroll()}
+  if(!on){['position','left','right','top','bottom','height','zIndex'].forEach(k=>pg.style[k]='');pg.classList.remove('kbon');return}
+  Object.assign(pg.style,{position:'fixed',left:'0',right:'0',top:vv.offsetTop+'px',bottom:'auto',height:vv.height+'px',zIndex:'15'});
+  pg.classList.add('kbon');scroll()}
 if(vv){vv.addEventListener('resize',fitKb);vv.addEventListener('scroll',fitKb)}
 
 /* ---------- 和他说话：用 app.js 里的秘密模型 ---------- */
