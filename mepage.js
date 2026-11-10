@@ -58,15 +58,31 @@ const ORDER=['关于他','秘密','月度回顾','游戏'];
 function sortMore(){const g=$('#moreGrid');if(!g)return;const cards=[...g.children];
   ORDER.forEach(n=>{const c=cards.find(x=>(x.querySelector('.cn')?.textContent||'').trim()===n);if(c)g.appendChild(c)})}
 
-/* ---------- 首页小提示：一次只显示一条，每 5 秒换一条 ---------- */
+/* ---------- 首页小提示：一次只显示一条，每 3 秒换一条 ---------- */
 let ti=0;
 const tips=()=>[...document.querySelectorAll('#hmTips > *, #calTips > *')].filter(x=>x.textContent.trim());
 function showTip(){const A=tips();if(!A.length)return;ti%=A.length;
   A.forEach((x,k)=>{x.classList.toggle('tp-off',k!==ti);x.classList.toggle('tp-on',k===ti)})}
-setInterval(()=>{if(document.hidden||!$('#page-home')?.classList.contains('active'))return;ti++;showTip()},5000);
+setInterval(()=>{if(document.hidden||!$('#page-home')?.classList.contains('active'))return;ti++;showTip()},3000);
 ['hmTips','calTips'].forEach(id=>{const e=document.getElementById(id);if(e)new MutationObserver(showTip).observe(e,{childList:true})});
 
 sortMore();
 HOOKS.ready.push(()=>{move();sortMore();showTip()});
 HOOKS.page.push(n=>{if(n==='me')move();if(n==='more')sortMore();if(n==='home')showTip()});
+})();
+/* ===== 打字时输入框不被键盘挡住 ===== */
+(()=>{
+const vv=window.visualViewport;if(!vv)return;
+let lift=null;
+function fix(){
+  if(lift){lift.style.transform='';lift=null}
+  const el=document.activeElement;
+  if(!el||!/^(TEXTAREA|INPUT)$/.test(el.tagName)||el.closest('.modal'))return;
+  const gap=el.getBoundingClientRect().bottom+12-(vv.height+vv.offsetTop);
+  if(gap<=0)return;
+  const box=el.closest('.inputbar,.field,[class*="input"],[class*="bar"]')||el.parentElement;
+  box.style.transform=`translateY(${-gap}px)`;lift=box}
+vv.addEventListener('resize',fix);vv.addEventListener('scroll',fix);
+document.addEventListener('focusin',()=>setTimeout(fix,300));
+document.addEventListener('focusout',()=>setTimeout(fix,100));
 })();
