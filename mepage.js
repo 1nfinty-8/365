@@ -70,19 +70,3 @@ sortMore();
 HOOKS.ready.push(()=>{move();sortMore();showTip()});
 HOOKS.page.push(n=>{if(n==='me')move();if(n==='more')sortMore();if(n==='home')showTip()});
 })();
-/* ===== 打字时输入框不被键盘挡住 ===== */
-(()=>{
-const vv=window.visualViewport;if(!vv)return;
-let lift=null;
-function fix(){
-  if(lift){lift.style.transform='';lift=null}
-  const el=document.activeElement;
-  if(!el||!/^(TEXTAREA|INPUT)$/.test(el.tagName)||el.closest('.modal'))return;
-  const gap=el.getBoundingClientRect().bottom+12-(vv.height+vv.offsetTop);
-  if(gap<=0)return;
-  const box=el.closest('.inputbar,.field,[class*="input"],[class*="bar"]')||el.parentElement;
-  box.style.transform=`translateY(${-gap}px)`;lift=box}
-vv.addEventListener('resize',fix);vv.addEventListener('scroll',fix);
-document.addEventListener('focusin',()=>setTimeout(fix,300));
-document.addEventListener('focusout',()=>setTimeout(fix,100));
-})();
