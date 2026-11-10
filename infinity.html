@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
 <title>Infinity</title>
 <style>
 :root{
@@ -25,25 +24,21 @@
   --f-en:"Didot","Bodoni 72",serif;
   --f-cn:"Songti SC","STSongti-SC","Noto Serif SC","SimSun",serif;
 }
-@media all{
-  html.dk{
-    --ink:#eef1f6;  --ink-soft:#979eab;
-    --back-tint:rgba(120,135,165,.14);
-    --back-edge:rgba(255,255,255,.3);
-    --flake-glow:rgba(170,195,255,.7);
-    --lg-a:rgba(135,152,185,.05); --lg-b:rgba(80,92,118,.01);
-    --lg-c:rgba(150,165,200,.02);
-    --edge-hi:rgba(255,255,255,.55);
-    --edge-cool:rgba(150,185,255,.45); --edge-warm:rgba(255,185,215,.3);
-    --card-bg:linear-gradient(170deg,rgba(60,68,88,.95),rgba(38,44,58,.92));
-    --glow:rgba(195,212,255,.3);
-    --danger:#e08585;
-    --shadow:0 24px 50px rgba(0,0,0,.5);
-  }
+/* 深色：跟着 365 的「外观」；夜晚牌堆也用深色 */
+html.dk,html.night{
+  --ink:#eef1f6;  --ink-soft:#979eab;
+  --back-tint:rgba(120,135,165,.14);
+  --back-edge:rgba(255,255,255,.3);
+  --flake-glow:rgba(170,195,255,.7);
+  --lg-a:rgba(135,152,185,.05); --lg-b:rgba(80,92,118,.01);
+  --lg-c:rgba(150,165,200,.02);
+  --edge-hi:rgba(255,255,255,.55);
+  --edge-cool:rgba(150,185,255,.45); --edge-warm:rgba(255,185,215,.3);
+  --card-bg:linear-gradient(170deg,rgba(60,68,88,.95),rgba(38,44,58,.92));
+  --glow:rgba(195,212,255,.3);
+  --danger:#e08585;
+  --shadow:0 24px 50px rgba(0,0,0,.5);
 }
-/* 夜晚牌堆：跟深色一样 */
-html.night{--ink:#eef1f6;--ink-soft:#979eab;--back-tint:rgba(120,135,165,.14);--back-edge:rgba(255,255,255,.3);
-  --card-bg:linear-gradient(170deg,rgba(60,68,88,.95),rgba(38,44,58,.92));--edge-hi:rgba(255,255,255,.55);--glow:rgba(195,212,255,.3)}
 
 *{margin:0;padding:0;box-sizing:border-box;
   -webkit-tap-highlight-color:transparent;
@@ -64,16 +59,14 @@ body{
   position:absolute;left:5%;right:5%;top:30px;bottom:12px;z-index:1;
   border-radius:20px;
   background:var(--back-tint);
-  -webkit-backdrop-filter:blur(14px) saturate(180%);
-  backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
   border:1px solid var(--back-edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.5),var(--shadow);
 }
 .folder-back::before{content:"";position:absolute;top:-17px;right:0;
   width:44%;height:24px;background:var(--back-tint);
   border:1px solid var(--back-edge);border-bottom:none;
-  -webkit-backdrop-filter:blur(14px) saturate(180%);
-  backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
   border-radius:12px 15px 0 0;}
 .folder-back::after{content:"";position:absolute;top:-16px;right:calc(44% - 2px);
   width:26px;height:17px;background:var(--back-tint);
@@ -132,22 +125,17 @@ body{
   width:100%;height:100%;border-radius:9px;background:var(--card-bg);
   border:1px solid var(--edge-hi);
   box-shadow:0 5px 14px rgba(0,0,0,.14);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   transform:translateY(calc(var(--lift,0px) * -1));
   transition:transform .1s ease-out;
   position:relative;
 }
 .file-card.settle .pad{transition:transform .4s cubic-bezier(.2,1.6,.3,.9);}
-.pad .ext{font-family:var(--f-cn);font-size:11px;letter-spacing:.04em;}
-.pad .fname{font-family:var(--f-cn);font-size:7.5px;color:var(--ink-soft);
-  max-width:42px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .glass{
   position:absolute;left:0;right:0;top:74px;bottom:0;z-index:4;
   border-radius:20px;overflow:hidden;
   background:linear-gradient(160deg,var(--lg-a),var(--lg-b) 50%,var(--lg-c));
-  -webkit-backdrop-filter:blur(5px) saturate(200%);
-  backdrop-filter:blur(5px) saturate(200%);
+  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
   box-shadow:inset 0 1px 1px rgba(255,255,255,.55),
              0 18px 38px rgba(96,106,126,.14);
   transform-origin:bottom center;
@@ -189,8 +177,7 @@ body{
   width:62px;height:62px;border-radius:50%;z-index:50;
   transform:translateX(-50%) scale(0);
   background:var(--lg-a);
-  -webkit-backdrop-filter:blur(10px) saturate(180%);
-  backdrop-filter:blur(10px) saturate(180%);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   border:1px solid var(--edge-hi);
   display:flex;align-items:center;justify-content:center;
   color:var(--ink-soft);
@@ -210,8 +197,6 @@ body{
 .add-btn+.add-btn{margin-left:8px}
 .tip{margin-top:8px;font-size:10px;letter-spacing:.2em;
   color:var(--ink-soft);font-family:var(--f-cn);}
-.glass{-webkit-backdrop-filter:blur(5px)!important;backdrop-filter:blur(5px)!important}
-.folder-back,.folder-back::before{-webkit-backdrop-filter:blur(14px)!important;backdrop-filter:blur(14px)!important}
 </style>
 </head>
 <body>
@@ -262,6 +247,12 @@ body{
 </div>
 
 <script>
+/* ===== 深浅色跟着 365 的「外观」 ===== */
+const root=document.documentElement;
+const syncDark=()=>{try{root.classList.toggle('dk',window.parent.document.documentElement.classList.contains('dk'))}catch(e){}};
+syncDark();
+const mq={get matches(){return root.classList.contains('dk')||root.classList.contains('night')}};
+
 const folder=document.getElementById('folder'),
       tilt=document.getElementById('tilt'),
       string=document.getElementById('string'),
@@ -269,9 +260,8 @@ const folder=document.getElementById('folder'),
       glass=document.getElementById('glass'),
       trash=document.getElementById('trash');
 
-/* ===== 卡片从 365 里来（真心话、大冒险、任务、情话） ===== */
+/* ===== 卡片从 365 里来 ===== */
 const P=(()=>{try{return window.parent!==window&&window.parent.INF?window.parent.INF:null}catch(e){return null}})();
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h%997};
 let files=P?P.list():[];
 
@@ -298,7 +288,7 @@ function layoutString(){
   });
 }
 
-/* ---------- 卡牌 ---------- */
+/* ---------- 卡牌：全部空白 ---------- */
 function makeCard(f,enter){
   const el=document.createElement('div'),k=num(f.id);
   el.className='file-card'+(enter?' enter':'');el.dataset.id=f.id;
@@ -325,18 +315,14 @@ function removeEl(id){
 }
 function status(){
   if(!P)return;
-  document.documentElement.classList.toggle('night',P.night());
+  root.classList.toggle('night',P.night());
   document.getElementById('tip').textContent=P.busy()?'他在写…':files.length?'轻触开合 · 点牌翻开 · 长按拖进雪窖删除':'还没有卡片，抽一张试试';
 }
-/* 365 里有变化时调用：新卡片带着雪花落进来，删掉的雪花掉下去 */
 window.ifSync=()=>{
   if(!P)return;
   const L=P.list(),ids=new Set(L.map(f=>f.id)),old=new Set(files.map(f=>f.id));
   files.forEach(f=>{if(!ids.has(f.id))removeEl(f.id)});
-  L.forEach(f=>{
-    if(old.has(f.id)){const e=cards.querySelector(`.file-card[data-id="${f.id}"] .fname`);if(e)e.textContent=f.sub}
-    else{makeFlake(f,true);makeCard(f,true)}
-  });
+  L.forEach(f=>{if(!old.has(f.id)){makeFlake(f,true);makeCard(f,true)}});
   files=L;layoutString();layoutArc();status();
 };
 files.forEach(f=>{makeFlake(f,false);makeCard(f,false);});
@@ -450,7 +436,6 @@ function resize(){W=innerWidth;H=innerHeight;
   ctx.setTransform(DPR,0,0,DPR,0,0);}
 resize();addEventListener('resize',resize);
 
-const mq={get matches(){const c=document.documentElement.classList;return c.contains('dk')||c.contains('night')}};
 let sprites=[];
 function buildSprites(){
   const col=mq.matches?'255,255,255':'190,200,215';
@@ -477,8 +462,12 @@ function buildSprites(){
     return c;
   });
 }
-buildSprites();mq.addEventListener?.('change',buildSprites);
+buildSprites();
 const dotCol=()=>mq.matches?'255,255,255':'190,200,215';
+
+/* 365 里切换深浅色或白天夜晚时，跟着变 */
+let lastDark=mq.matches;
+setInterval(()=>{syncDark();if(mq.matches!==lastDark){lastDark=mq.matches;buildSprites()}},1000);
 
 const flakes=[];
 function spawn(){
@@ -513,9 +502,6 @@ for(let i=0;i<110;i++)spawn();
   ctx.globalAlpha=1;
   requestAnimationFrame(step);
 })();
-const syncDark=()=>{try{document.documentElement.classList.toggle('dk',window.parent.document.documentElement.classList.contains('dk'))}catch(e){}};
-syncDark();buildSprites();
-setInterval(()=>{const was=document.documentElement.classList.contains('dk');syncDark();if(was!==document.documentElement.classList.contains('dk'))buildSprites()},1000);
 </script>
 </body>
 </html>
