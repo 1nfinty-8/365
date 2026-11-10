@@ -303,7 +303,7 @@ function makeCard(f,enter){
   el.style.setProperty('--sx',((k*53)%160-80)+'px');
   el.style.setProperty('--sy',-(30+(k*29)%100)+'px');
   el.style.setProperty('--s',((k*41)%56-28)+'deg');
-  el.innerHTML=`<div class="pad"><span class="ext">${esc(f.type)}</span><span class="fname">${esc(f.sub)}</span></div>`;
+  el.innerHTML='<div class="pad"></div>';
   cards.appendChild(el);
 }
 function layoutArc(){
