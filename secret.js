@@ -30,7 +30,7 @@ body.sx #tabbar{display:none}
 .sx-card .b p{margin:0 0 .8em}
 .sx-card .b p:last-child{margin:0}
 .sx-bar{flex:none;display:flex;align-items:flex-end;gap:8px;padding:6px 12px calc(var(--sb) + 6px)}
-body.kb .sx-bar{padding-bottom:8px}
+body.kb .sx-bar,#page-secret.kbon .sx-bar{padding-bottom:8px}
 #sxLock{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 30px 18vh;text-align:center}
 #sxLock .ic{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;color:var(--accent-t)}
 #sxLock .ic svg.i{width:26px;height:26px}
@@ -88,7 +88,7 @@ async function tryPin(v){
     S.sxPin=h;step=null;saveSettings();toast('密码设好了');unlock();return}
   if(h===S.sxPin)unlock();else{toast('密码不对');$('#sxPin').value=''}}
 function unlock(){open=true;$('#sxPin')?.blur();$('#page-secret').classList.remove('locked');render()}
-function lock(){open=false;step=null;$('#page-secret').classList.add('locked');$('#sxMsgs').innerHTML='';$('#sxInput').value='';renderLock()}
+function lock(){open=false;step=null;$('#page-secret').classList.add('locked');$('#sxMsgs').innerHTML='';$('#sxInput').value='';renderLock();fitKb()}
 $('#sxLock').addEventListener('click',async e=>{
   if(!e.target.closest('#sxForgot'))return;
   if(!confirm('忘记密码只能清空秘密里的所有记录，再重新设一个密码。确定吗？'))return;
@@ -119,6 +119,18 @@ function render(){
   box.innerHTML=h;scroll()}
 $('#sxSeg').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;S.sxMode=b.dataset.m;saveSettings();render()};
 
+/* ---------- 打字时，给键盘让出位置 ---------- */
+const vv=window.visualViewport;
+function fitKb(){
+  const pg=$('#page-secret');if(!pg)return;
+  const on=vv&&document.activeElement===$('#sxInput')&&pg.classList.contains('active');
+  if(!on){pg.style.bottom='';pg.classList.remove('kbon');return}
+  const over=$('#app').getBoundingClientRect().bottom-(vv.offsetTop+vv.height);
+  pg.style.bottom=over>0?over+'px':'';
+  pg.classList.toggle('kbon',over>0);
+  scroll()}
+if(vv){vv.addEventListener('resize',fitKb);vv.addEventListener('scroll',fitKb)}
+
 /* ---------- 和他说话：用 app.js 里的秘密模型 ---------- */
 function system(card){
   let s=secretSystem('这里是你们的小窝「365」里的「秘密」，只属于你们两个人，没有别人能看到。');
@@ -145,8 +157,9 @@ async function reply(){
   finally{busy=false;render()}}
 async function reroll(){while(DATA.secret.length&&DATA.secret.at(-1).role==='model')DATA.secret.pop();await save();render();reply()}
 
-$('#sxInput').addEventListener('input',e=>autoGrow(e.target));
-$('#sxInput').addEventListener('focus',()=>setTimeout(scroll,400));
+$('#sxInput').addEventListener('input',e=>{autoGrow(e.target);fitKb()});
+$('#sxInput').addEventListener('focus',()=>{setTimeout(fitKb,60);setTimeout(fitKb,400)});
+$('#sxInput').addEventListener('blur',()=>setTimeout(fitKb,120));
 $('#sxSend').addEventListener('pointerdown',e=>e.preventDefault());
 $('#sxSend').onclick=send;
 $('#sxMsgs').onclick=e=>{
@@ -179,6 +192,6 @@ HOOKS.context.push(()=>{if(!S.sxRemember)return '';
 
 addMore({go:'secret',cn:'秘密',ce:'secret'});
 HOOKS.ready.push(()=>{if(!Array.isArray(DATA.secret))DATA.secret=[];renderLock()});
-HOOKS.page.push(n=>{document.body.classList.toggle('sx',n==='secret');if(n!=='secret'&&open)lock();if(n==='secret'&&!open)renderLock()});
+HOOKS.page.push(n=>{document.body.classList.toggle('sx',n==='secret');if(n!=='secret'&&open)lock();if(n==='secret'&&!open)renderLock();if(n!=='secret')fitKb()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&open)lock()});
 })();
