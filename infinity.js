@@ -3,7 +3,7 @@
 if(!Array.isArray(DATA.cards))DATA.cards=[];
 const save=()=>saveData('cards');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
-const ICON='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M12 5l-2-2M12 5l2-2M12 19l-2 2M12 19l2 2"/></svg>';
+const ICON='信';
 const TYPES={word:['情话','words'],task:['任务','task'],truth:['真心话','truth'],dare:['大冒险','dare']};
 const MT={day:['word','task','truth','dare'],night:['task','truth','dare']};
 const HINT={word:'写在卡片上的话',task:'给他的任务',truth:'想问他的真心话',dare:'让他做的大冒险'};
