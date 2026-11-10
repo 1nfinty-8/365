@@ -25,8 +25,8 @@
   --f-en:"Didot","Bodoni 72",serif;
   --f-cn:"Songti SC","STSongti-SC","Noto Serif SC","SimSun",serif;
 }
-@media (prefers-color-scheme: dark){
-  :root{
+@media all{
+  html.dk{
     --ink:#eef1f6;  --ink-soft:#979eab;
     --back-tint:rgba(120,135,165,.14);
     --back-edge:rgba(255,255,255,.3);
@@ -450,7 +450,7 @@ function resize(){W=innerWidth;H=innerHeight;
   ctx.setTransform(DPR,0,0,DPR,0,0);}
 resize();addEventListener('resize',resize);
 
-const mq=matchMedia('(prefers-color-scheme: dark)');
+const mq={get matches(){const c=document.documentElement.classList;return c.contains('dk')||c.contains('night')}};
 let sprites=[];
 function buildSprites(){
   const col=mq.matches?'255,255,255':'190,200,215';
@@ -513,6 +513,9 @@ for(let i=0;i<110;i++)spawn();
   ctx.globalAlpha=1;
   requestAnimationFrame(step);
 })();
+const syncDark=()=>{try{document.documentElement.classList.toggle('dk',window.parent.document.documentElement.classList.contains('dk'))}catch(e){}};
+syncDark();buildSprites();
+setInterval(()=>{const was=document.documentElement.classList.contains('dk');syncDark();if(was!==document.documentElement.classList.contains('dk'))buildSprites()},1000);
 </script>
 </body>
 </html>
