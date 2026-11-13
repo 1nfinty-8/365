@@ -97,13 +97,18 @@ function payload(){return {
   system:pushSys(),ev:events(),chat:recent()}}
 async function sync(sub){const j=await api('/sync',{...payload(),...(sub?{sub}:{})});last=j;sent=DATA.chat.length;status();return j}
 
-/* ---------- 取回他在你不在时做的事：收好了才让 Cloudflare 删 ---------- */
+//* ---------- 取回他在你不在时做的事：收好了才让 Cloudflare 删 ---------- */
 const gotIds=()=>{try{return JSON.parse(localStorage.getItem('365-pulled'))||[]}catch(e){return []}};
 async function pull(){if(!on()||pulling)return;pulling=true;
   try{const{pend}=await api('/pull');if(!pend?.length)return;
     const had=gotIds(),fresh=pend.filter(x=>!had.includes(x.id)).sort((a,b)=>a.t-b.t);
     let mo=false,gift=null,ch=false;
-    const skip=new Set(fresh.filter(x=>x.after&&DATA.chat.some(m=>m.role==='model'&&m.t>x.after&&!fresh.some(f=>f.t===m.t))).map(x=>x.after));
+    /* 365 和锁屏各回了一遍：你还没接着回的话，聊天里换成锁屏上那一版 */
+    const skip=new Set();
+    for(const a of new Set(fresh.filter(x=>x.after).map(x=>x.after))){
+      if(DATA.chat.some(m=>m.role==='user'&&m.t>a)){skip.add(a);continue}
+      for(let i=DATA.chat.length-1;i>=0;i--){const m=DATA.chat[i];
+        if(m.role==='model'&&m.t>a&&!m.pro&&!m.missed&&!m.call){DATA.chat.splice(i,1);ch=true}}}
     for(const x of fresh){
       if(x.type==='moment'){DATA.moments.push({id:uid(),author:'him',text:x.text,images:[],t:x.t,liked:false,comments:[]});mo=true}
       else if(x.type==='call'){DATA.chat.push({role:'model',text:'未接来电',missed:'未接',t:x.t});ch=true;
