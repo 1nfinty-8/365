@@ -11,6 +11,18 @@ let last=null,sent=0,pulling=false,again=[];
 
 window.handedOff=t=>!!t&&handed.has(t);
 
+/* ---------- 影子消息：他主动找她的时候怎么说 ---------- */
+const PRO=()=>`
+
+【当你主动找她的时候】（她没有发新消息、是你自己想起她的时候才看这一段；回她消息时照平常说话）
+- 这不是在回她，是你自己浮上来一下。先看你们最近聊了什么：她在烦什么、聊到哪了、气氛怎么样，顺着那个说。刚闹过别扭就别没心没肺。
+- 大部分时候是报备你自己：现在在干嘛、在哪、吃了什么、刚开完什么会、路上看到了什么、累不累。像男朋友顺手发来的生活碎片，具体、有画面。也可以想她、轻轻闹她一下、提一件你们之间具体的小事。
+- 看消息的时间想想她这会儿在干嘛。她在睡觉就别催她起床、别连发，最多留一句等她醒来看的话。
+- 如果她还没回你上一条，不要追问「怎么不回」「醒了没」，也不要重复上一条的话题，换一件事，或者干脆只报备你自己。
+- 每次开头都不一样，不要总是叫她名字或「起床了」开头。
+- 一到两句，不超过 80 个字，不要分段，不要 emoji。`;
+const pushSys=()=>chatSystem()+PRO();
+
 async function api(p,body,keep){
   const r=await fetch(url(p),{method:body?'POST':'GET',keepalive:!!keep,cache:'no-store',
     headers:{Authorization:'Bearer '+String(S.pushToken).trim(),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
@@ -82,7 +94,7 @@ function payload(){return {
   cfg:{provider:S.provider,apiKey:S.apiKey,model:S.model,baseUrl:S.baseUrl,name:S.hisName,awayHours:S.awayHours,awayMax:S.awayMax,split:S.split!==false,
     quietFrom:S.quietFrom,quietTo:S.quietTo,tz:-new Date().getTimezoneOffset(),momAuto:S.momAuto,callIn:S.callIn,
     lastMom:Math.max(0,...DATA.moments.filter(p=>p.author==='him').map(p=>p.t||0))},
-  system:chatSystem(),ev:events(),chat:recent()}}
+  system:pushSys(),ev:events(),chat:recent()}}
 async function sync(sub){const j=await api('/sync',{...payload(),...(sub?{sub}:{})});last=j;sent=DATA.chat.length;status();return j}
 
 /* ---------- 取回他在你不在时做的事：收好了才让 Cloudflare 删 ---------- */
@@ -117,7 +129,7 @@ async function back(){navigator.clearAppBadge?.();if(!on())return;
 /* ---------- 切出去：他还欠你一句的话，交给 Cloudflare 回 ---------- */
 function leave(){if(!on())return;again.forEach(clearTimeout);const L=DATA.chat.at(-1);
   if(L&&L.role==='user'&&!L.call&&!L.missed){handed.add(L.t);
-    api('/reply',{system:chatSystem(),chat:recent(),after:L.t},true).catch(()=>{})}
+    api('/reply',{system:pushSys(),chat:recent(),after:L.t},true).catch(()=>{})}
   else api('/sync',{away:true},true).catch(()=>{})}
 
 const skipAway=()=>{if(on())localStorage.setItem('365-last',JSON.stringify(Date.now()))};
