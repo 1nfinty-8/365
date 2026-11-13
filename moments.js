@@ -1,6 +1,6 @@
 /* ===== 365 · moments.js · 朋友圈 ===== */
 (()=>{
-let pending=[],himPosting=false;
+let pending=[],himPosting=false,rpSend=null;
 const save=()=>saveData('moments');
 const find=id=>DATA.moments.find(p=>p.id===id);
 function renderPending(){$('#pendingImgs').innerHTML=pendHTML(pending)}
@@ -46,6 +46,32 @@ async function himPost(){
     await save();render()}
   catch(e){toast(e.message)}finally{himPosting=false}}
 
+/* ---------- 朋友圈自己的回复栏：贴在键盘正上方 ---------- */
+document.head.insertAdjacentHTML('beforeend',`<style>
+#mmRp{position:fixed;left:0;right:0;top:0;z-index:9999;display:none;padding:8px 12px calc(10px + env(safe-area-inset-bottom));pointer-events:none}
+#mmRp.show{display:block}
+#mmRp.kb{padding-bottom:8px}
+.mmrp-in{display:flex;align-items:flex-end;gap:8px;padding:6px 6px 6px 16px;border-radius:24px;pointer-events:auto}
+#mmRpIn{flex:1;min-width:0;border:0;background:transparent;outline:none;resize:none;font:inherit;font-size:16px;line-height:1.5;max-height:30vh;padding:7px 0;color:var(--ink)}
+#mmRpGo{flex:none}
+</style>`);
+document.body.insertAdjacentHTML('beforeend',`<div id="mmRp"><div class="mmrp-in glass"><textarea id="mmRpIn" rows="1" enterkeyhint="send"></textarea><button class="pill" id="mmRpGo">发送</button></div></div>`);
+const vv=window.visualViewport;
+function place(){const b=$('#mmRp');if(!b.classList.contains('show'))return;
+  const full=document.documentElement.clientHeight,H=vv?vv.height:full,top=vv?vv.offsetTop:0;
+  b.classList.toggle('kb',full-H>120);
+  b.style.top=Math.max(0,top+H-b.offsetHeight)+'px'}
+if(vv){vv.addEventListener('resize',place);vv.addEventListener('scroll',place)}
+function openRp(ph,cb){const b=$('#mmRp'),i=$('#mmRpIn');rpSend=cb;i.placeholder=ph;i.value='';i.style.height='';
+  b.classList.add('show');place();i.focus();[60,300,600].forEach(t=>setTimeout(place,t))}
+function closeRp(){$('#mmRp').classList.remove('show');rpSend=null;$('#mmRpIn').blur()}
+async function sendRp(){const v=$('#mmRpIn').value.trim();if(!v||!rpSend)return;const cb=rpSend;closeRp();await cb(v)}
+$('#mmRpGo').addEventListener('pointerdown',e=>e.preventDefault());
+$('#mmRpGo').onclick=sendRp;
+$('#mmRpIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();sendRp()}});
+$('#mmRpIn').addEventListener('input',e=>{if(typeof autoGrow==='function')autoGrow(e.target);place()});
+$('#mmRpIn').addEventListener('blur',()=>setTimeout(()=>{const i=$('#mmRpIn');if(document.activeElement!==i&&!i.value.trim())closeRp();else place()},250));
+
 $('#addPhoto').onclick=async()=>{pending.push(...await pickPhotos(9-pending.length));renderPending()};
 $('#pendingImgs').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){pending.splice(+b.dataset.rm,1);renderPending()}};
 $('#postBtn').onclick=post;
@@ -54,11 +80,12 @@ $('#feed').onclick=async e=>{const t=e.target;
   const d=t.closest('[data-del]');if(d){const p=find(d.dataset.del);if(p&&confirm('删除这条动态？')){DATA.moments=DATA.moments.filter(x=>x!==p);await save();await IMG.del(p.images);render()}return}
   const l=t.closest('[data-like]');if(l){const p=find(l.dataset.like);p.liked=!p.liked;await save();render();return}
   const c=t.closest('[data-cmt]');if(c){const p=find(c.dataset.cmt);if(!p)return;
-    openReply(p.author==='me'?'补充点什么…':`回复${S.hisName}…`,async v=>{(p.comments=p.comments||[]).push({author:'me',text:v,t:Date.now()});await save();render();himReact(p)});return}
+    openRp(p.author==='me'?'补充点什么…':`回复${S.hisName}…`,async v=>{(p.comments=p.comments||[]).push({author:'me',text:v,t:Date.now()});await save();render();himReact(p)});return}
   const cd=t.closest('[data-cdel]');if(cd){const[id,ci]=cd.dataset.cdel.split(':');const p=find(id);
     sheet([['复制',()=>navigator.clipboard?.writeText(p.comments[+ci].text).then(()=>toast('已复制'))],
            ['删除这条评论',async()=>{p.comments.splice(+ci,1);await save();render()}]])}};
 
 HOOKS.ready.push(render);
 HOOKS.refresh.push(render);
+HOOKS.page.push(()=>{if($('#mmRp').classList.contains('show'))closeRp()});
 })();
