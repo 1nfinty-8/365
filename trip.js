@@ -21,6 +21,10 @@ const SILVER=['#E4E7EC','#D3D7DE','#C6CAD2','#BCC1CA','#B0B6C0'];
 const HOME={'上海':{lat:31.23,lon:121.47},'北京':{lat:39.9,lon:116.4}};
 let busy=false,page='',vc=null;
 
+/* ---------- 英文字体：Google Fonts，加一个国内镜像兜底 ---------- */
+['https://fonts.googleapis.com','https://fonts.loli.net'].forEach(h=>document.head.insertAdjacentHTML('beforeend',
+  `<link rel="stylesheet" href="${h}/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Pinyon+Script&display=swap">`));
+
 /* ---------- 点阵地图的陆地轮廓（经度,纬度） ---------- */
 const LAND=[
 [-168,66,-162,70,-140,70,-120,72,-95,72,-80,73,-65,62,-55,52,-66,45,-75,38,-81,30,-80,25,-90,29,-97,26,-97,20,-90,15,-83,9,-78,8,-86,13,-105,20,-112,30,-118,34,-124,40,-124,48,-135,58,-150,60,-165,60],
@@ -38,11 +42,12 @@ const LAND=[
 function pip(x,y,p){let c=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2){const xi=p[i],yi=p[i+1],xj=p[j],yj=p[j+1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c}
 
 document.head.insertAdjacentHTML('beforeend',`<style>
+:root{--fen:"Cormorant Garamond",var(--en);--fsc:"Pinyon Script","Snell Roundhand",cursive}
 #himGrid .hm-trip{grid-column:1/-1;min-height:clamp(110px,15vh,150px)}
 .tp-hero{padding:20px 22px 16px;margin-bottom:14px;text-align:center}
 .tp-lb{font-size:12px;color:var(--sub);letter-spacing:3px}
 .tp-city{font-family:var(--ti);font-size:30px;letter-spacing:4px;margin-top:4px}
-.tp-city em{display:block;font-family:var(--en);font-style:italic;font-size:15px;color:var(--sub);letter-spacing:1px}
+.tp-city em{display:block;font-family:var(--fen);font-style:italic;font-size:17px;color:var(--sub);letter-spacing:1px}
 .tp-line{display:flex;align-items:center;gap:10px;margin:16px 4px 6px;font-size:12px;color:var(--sub);letter-spacing:1px}
 .tp-line i{flex:1;border-top:1.5px dashed var(--accent);margin-bottom:16px}
 .tp-line span{display:flex;flex-direction:column;align-items:center;min-width:40px}
@@ -72,10 +77,16 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .tp-tt i{font-style:normal;font-size:11px;padding:1px 8px;border-radius:99px;background:var(--accent);color:var(--acct)}
 .tp-tm{font-size:12px;color:var(--sub);margin-top:3px;letter-spacing:1px}
 .tp-route{font-family:var(--ti);font-size:15px;margin-top:8px;letter-spacing:1px}
-.tp-fav{font-size:12.5px;color:var(--sub);margin-top:4px}
+.tp-fav{font-size:12.5px;color:var(--sub);margin-top:4px;font-family:var(--fen),var(--ti)}
+
+/* ===== 透明玻璃（和 Infinity 文件夹一样） ===== */
+.tg{background:linear-gradient(160deg,rgba(255,255,255,.18),rgba(255,255,255,.05) 50%,rgba(255,255,255,.12));
+  -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.7);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.85),inset 0 -1px 1px rgba(255,255,255,.25),0 18px 40px rgba(60,40,60,.12)}
+html.dk .tg{background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.02) 50%,rgba(255,255,255,.05));border-color:rgba(255,255,255,.25)}
 
 /* ===== 金属硬币 ===== */
-.mt{position:relative;border-radius:50%;overflow:hidden;
+.mt{position:relative;display:block;border-radius:50%;overflow:hidden;
   box-shadow:0 6px 14px rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.22),inset 0 0 0 1px rgba(255,255,255,.55),inset 0 -2px 4px rgba(0,0,0,.16)}
 .mt::before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
   background:repeating-conic-gradient(rgba(0,0,0,.16) 0 1deg,rgba(255,255,255,.42) 1deg 2deg);
@@ -83,7 +94,7 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .mt::after{content:"";position:absolute;inset:11%;border-radius:50%;pointer-events:none;
   box-shadow:inset 0 1.5px 2px rgba(0,0,0,.2),inset 0 -1px 1px rgba(255,255,255,.75),0 1px 0 rgba(255,255,255,.65),0 -1px 1px rgba(0,0,0,.08)}
 .mt>b{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
-  font-family:var(--num);font-style:italic;font-weight:300;letter-spacing:1px;color:rgba(48,54,64,.28);
+  font-family:var(--fen);font-style:italic;font-weight:400;letter-spacing:1px;color:rgba(48,54,64,.28);
   text-shadow:0 1px 0 rgba(255,255,255,.8),0 -1px 0 rgba(0,0,0,.12)}
 .mt.gold>b{color:rgba(96,64,12,.32);text-shadow:0 1px 0 rgba(255,248,220,.8),0 -1px 0 rgba(90,60,10,.15)}
 .mt-sh{position:absolute;inset:-20%;z-index:2;pointer-events:none;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.55) 50%,transparent 58%);transform:translateX(-80%);animation:mtSh 5s ease-in-out infinite}
@@ -92,85 +103,91 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .tp-coins::-webkit-scrollbar{display:none}
 .tp-coin{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:8px}
 .tp-coin .mt{width:66px;height:66px;transition:transform .15s}
-.tp-coin .mt>b{font-size:24px}
+.tp-coin .mt>b{font-size:26px}
 .tp-coin:active .mt{transform:scale(.93)}
 .tp-coin small{font-size:11.5px;color:var(--sub);letter-spacing:1px;max-width:72px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.tp-flip{width:210px;height:210px;margin:14px auto 10px;position:relative;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,1.3,.4,1);cursor:pointer}
-.tp-flip.f{transform:rotateY(180deg)}
-.tp-face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden}
-.tp-face>b{font-size:86px}
-.tp-face.back{transform:rotateY(180deg)}
-.tp-bk{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px;text-align:center;font-family:var(--ti);font-size:13.5px;line-height:1.7;color:#454a52}
-.tp-face.gold .tp-bk{color:#5a4210}
-.tp-bk small{font-family:var(--num);font-style:italic;font-size:11.5px;opacity:.65}
-.tp-ci{font-family:var(--ti);font-size:17px;letter-spacing:4px;color:var(--sys-txt)}
-.tp-ci em{display:block;font-family:var(--en);font-style:italic;font-size:13px;letter-spacing:1px;color:var(--sys-sub);margin-top:2px}
 
-/* ===== 行程手账：底部玻璃面板 ===== */
-#tpTrip{padding:0;align-items:flex-end;justify-content:center;overflow:hidden;background:rgba(20,14,18,.3);font-family:var(--ti)}
-.tv-sheet{width:100%;max-width:560px;max-height:90%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:color-mix(in srgb,var(--bg) 80%,transparent);-webkit-backdrop-filter:blur(30px) saturate(1.4);backdrop-filter:blur(30px) saturate(1.4);border:1px solid rgba(255,255,255,.55);border-bottom:0;box-shadow:0 -12px 40px rgba(40,20,30,.18),inset 0 1px 0 rgba(255,255,255,.7);color:var(--ink);animation:tvUp .5s cubic-bezier(.2,.9,.25,1)}
+/* ===== 硬币弹窗 ===== */
+#tpCoin{background:rgba(20,14,18,.1);padding:calc(var(--st) + 10px) 18px 18px;align-items:center;justify-content:center}
+.tp-cbox{width:100%;max-width:360px;padding:32px 24px 20px;border-radius:30px;text-align:center;color:var(--ink);font-family:var(--ti);animation:tpPop .35s ease}
+@keyframes tpPop{from{transform:scale(.94);opacity:0}}
+.tp-big{width:170px;height:170px;margin:0 auto 22px;animation:tpIn 1s cubic-bezier(.2,.9,.3,1)}
+@keyframes tpIn{from{transform:perspective(800px) rotateY(-180deg) scale(.6);opacity:0}}
+.tp-big>b{font-size:70px}
+.tp-ci{font-size:20px;letter-spacing:5px}
+.tp-ci em{display:block;font-family:var(--fen);font-style:italic;font-size:16px;letter-spacing:1px;color:var(--sub);margin-top:4px}
+.tp-why{margin:18px 4px 0;padding-top:16px;border-top:.5px solid rgba(127,127,127,.3);font-size:14.5px;line-height:1.9;letter-spacing:.5px}
+.tp-why small{display:block;font-family:var(--fen);font-style:italic;font-size:14px;color:var(--sub);margin-top:8px;letter-spacing:1px}
+.tp-cb{display:flex;gap:10px;justify-content:center;margin-top:20px}
+.tp-cb .pill.ghost{background:rgba(255,255,255,.3)}
+
+/* ===== 行程面板 ===== */
+#tpTrip{padding:0;align-items:flex-end;justify-content:center;overflow:hidden;background:rgba(20,14,18,.1);font-family:var(--ti)}
+.tv-sheet{width:100%;max-width:560px;max-height:90%;display:flex;flex-direction:column;border-radius:30px 30px 0 0;border-bottom:0!important;color:var(--ink);animation:tvUp .5s cubic-bezier(.2,.9,.25,1)}
 .tv-sheet.out{animation:tvDown .26s ease-in forwards}
 @keyframes tvUp{from{transform:translateY(100%)}}
 @keyframes tvDown{to{transform:translateY(100%)}}
 .tv-grab{flex:none;width:38px;height:5px;border-radius:3px;background:rgba(127,127,127,.35);margin:10px auto 2px}
 .tv-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px 20px 8px}
-.tv-hd{display:flex;justify-content:space-between;align-items:center;font-family:var(--en);font-style:italic;font-size:12px;letter-spacing:4px;color:var(--sub)}
-.tv-st{font-style:normal;font-family:var(--ti);letter-spacing:1px;font-size:11px;padding:3px 10px;border-radius:99px;background:var(--accent);color:var(--acct)}
-.tv-title{font-weight:500;font-size:24px;letter-spacing:5px;margin:10px 0 4px}
+.tv-hd{display:flex;justify-content:space-between;align-items:center}
+.tv-hd>span:first-child{font-family:var(--fsc);font-size:26px;line-height:1.3}
+.tv-st{font-family:var(--ti);letter-spacing:1px;font-size:11px;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.4);border:.5px solid rgba(255,255,255,.7)}
+.tv-title{font-weight:500;font-size:24px;letter-spacing:5px;margin:8px 0 4px}
 .tv-why{font-size:13px;color:var(--sub);line-height:1.7;letter-spacing:.5px}
-.tv-route{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:16px 0 10px;font-family:var(--num);font-style:italic;font-weight:300;font-size:20px;letter-spacing:2px}
+.tv-route{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:16px 0 10px;font-family:var(--fen);font-weight:500;font-size:22px;letter-spacing:4px}
 .tv-route i{font-style:normal;font-size:12px;color:var(--accent-t);opacity:.8}
-.tv-route .fu{opacity:.35;letter-spacing:4px}
+.tv-route .fu{opacity:.35}
 .tv-stat{display:flex;gap:18px;padding:10px 0 4px;border-top:.5px solid rgba(127,127,127,.25);font-size:12px;color:var(--sub);letter-spacing:1px}
-.tv-stat b{font-family:var(--num);font-style:italic;font-weight:300;font-size:22px;color:var(--accent-t);margin-right:4px;letter-spacing:0}
+.tv-stat b{font-family:var(--fen);font-style:italic;font-weight:400;font-size:24px;color:var(--ink);margin-right:4px;letter-spacing:0}
 .tv-stop{margin-top:22px;animation:tvIn .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--i) * 110ms + 180ms)}
 @keyframes tvIn{from{opacity:0;transform:translateY(26px) scale(.98)}}
 /* 登机牌 */
-.bp-w{filter:drop-shadow(0 8px 18px rgba(60,30,40,.1))}
-.bp{display:flex;border-radius:18px;background:rgba(255,255,255,.72);
+.bp-w{filter:drop-shadow(0 8px 18px rgba(60,30,40,.08))}
+.bp{display:flex;border-radius:18px;background:rgba(255,255,255,.4);
   -webkit-mask:radial-gradient(circle at calc(100% - 84px) 0,transparent 10px,#000 10.5px) top/100% 51% no-repeat,radial-gradient(circle at calc(100% - 84px) 100%,transparent 10px,#000 10.5px) bottom/100% 51% no-repeat;
   mask:radial-gradient(circle at calc(100% - 84px) 0,transparent 10px,#000 10.5px) top/100% 51% no-repeat,radial-gradient(circle at calc(100% - 84px) 100%,transparent 10px,#000 10.5px) bottom/100% 51% no-repeat}
-html.dk .bp{background:rgba(255,255,255,.09)}
+html.dk .bp{background:rgba(255,255,255,.08)}
 .bp-m{flex:1;min-width:0;padding:16px 14px 14px 18px}
-.bp-t{display:flex;justify-content:space-between;font-family:var(--en);font-style:italic;font-size:10.5px;letter-spacing:3px;color:var(--sub)}
+.bp-t{display:flex;justify-content:space-between;font-family:var(--fen);font-size:11px;letter-spacing:3px;color:var(--sub)}
 .bp-c{font-size:22px;letter-spacing:4px;margin:8px 0 12px;font-weight:500}
-.bp-c em{display:block;font-family:var(--en);font-style:italic;font-size:13px;letter-spacing:1px;color:var(--sub);font-weight:400;margin-top:1px}
-.bp-meta{display:flex;gap:14px}
-.bp-meta small{display:block;font-family:var(--en);font-style:italic;font-size:9.5px;letter-spacing:2px;color:var(--sub)}
-.bp-meta b{font-weight:500;font-size:12.5px;letter-spacing:.5px;white-space:nowrap}
-.bp-s{position:relative;flex:none;width:84px;border-left:1.5px dashed rgba(127,127,127,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:12px 6px}
-.bp-s small{font-family:var(--en);font-style:italic;font-size:9.5px;letter-spacing:2px;color:var(--sub)}
-.bp-s b{font-family:var(--num);font-style:italic;font-weight:300;font-size:26px;letter-spacing:1px;color:var(--accent-t)}
-.bp-bar{display:block;width:52px;height:22px;margin-top:6px;opacity:.5;background:repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 3px,var(--ink) 3px 5px,transparent 5px 6px,var(--ink) 6px 7px,transparent 7px 10px)}
+.bp-c em{display:block;font-family:var(--fen);font-style:italic;font-size:16px;letter-spacing:.5px;color:var(--sub);font-weight:400;margin-top:1px}
+.bp-meta{display:flex;gap:16px}
+.bp-meta small{display:block;font-family:var(--fen);font-size:10px;letter-spacing:2px;color:var(--sub)}
+.bp-meta b{font-family:var(--fen),var(--ti);font-weight:500;font-size:14px;letter-spacing:.5px;white-space:nowrap}
+.bp-s{flex:none;width:84px;border-left:1.5px dashed rgba(127,127,127,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:12px 6px}
+.bp-s small{font-family:var(--fen);font-size:10px;letter-spacing:2px;color:var(--sub)}
+.bp-s b{font-family:var(--fen);font-style:italic;font-weight:500;font-size:30px;letter-spacing:1px}
+.bp-bar{display:block;width:52px;height:22px;margin-top:6px;opacity:.45;background:repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 3px,var(--ink) 3px 5px,transparent 5px 6px,var(--ink) 6px 7px,transparent 7px 10px)}
 /* 他喜欢的地方 */
-.tv-sp{list-style:none;margin:16px 0 0 8px;padding:0 0 0 18px;border-left:1.5px dashed color-mix(in srgb,var(--accent) 55%,transparent)}
+.tv-sp{list-style:none;margin:16px 0 0 8px;padding:0 0 0 18px;border-left:1px dashed rgba(127,127,127,.4)}
 .tv-sp li{position:relative;padding:0 0 14px}
 .tv-sp li:last-child{padding-bottom:2px}
-.tv-sp li::before{content:"";position:absolute;left:-24px;top:7px;width:9px;height:9px;border-radius:50%;background:var(--accent-t);box-shadow:0 0 0 3px color-mix(in srgb,var(--bg) 85%,transparent)}
-.tv-sp b{display:block;font-family:var(--en),var(--ti);font-style:italic;font-weight:400;font-size:16px;letter-spacing:.5px}
+.tv-sp li::before{content:"";position:absolute;left:-23px;top:9px;width:7px;height:7px;border-radius:50%;background:var(--ink);opacity:.55}
+.tv-sp b{display:block;font-family:var(--fen),var(--ti);font-style:italic;font-weight:500;font-size:19px;letter-spacing:.3px}
 .tv-sp span{display:block;font-size:13px;color:var(--sub);line-height:1.7;margin-top:2px}
 .tv-wait{font-size:13px;color:var(--sub);margin:14px 4px 0;letter-spacing:1px}
 /* 明信片 */
-.pc{position:relative;margin:18px 4px 4px;padding:20px 18px 16px;border-radius:6px;background-color:#F8F3EA;color:#4A3B36;transform:rotate(-1.2deg);box-shadow:0 10px 24px rgba(60,40,30,.14),inset 0 1px 0 rgba(255,255,255,.8);background-image:repeating-linear-gradient(transparent 0 31px,rgba(120,90,70,.13) 31px 32px);background-position:0 46px}
-.pc-st{position:absolute;top:12px;right:14px;width:46px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:color-mix(in srgb,var(--accent) 70%,#fff);border:3px solid #fff;outline:2px dotted #F8F3EA;outline-offset:-3px;box-shadow:0 1px 3px rgba(0,0,0,.15);color:#fff}
-.pc-st b{font-family:var(--num);font-style:italic;font-weight:400;font-size:15px}
-.pc-st small{font-family:var(--en);font-style:italic;font-size:9px;opacity:.85}
-.pc-pm{position:absolute;top:22px;right:44px;width:58px;height:58px;border-radius:50%;border:1.2px solid rgba(74,59,54,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-14deg);color:rgba(74,59,54,.55);pointer-events:none}
-.pc-pm::before{content:"";position:absolute;right:52px;top:18px;width:44px;height:18px;background:repeating-linear-gradient(transparent 0 4px,rgba(74,59,54,.3) 4px 5px)}
-.pc-pm span{font-family:var(--num);font-style:italic;font-size:10px}
-.pc-pm b{font-weight:500;font-size:10px;letter-spacing:1px;max-width:48px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.pc-to{font-family:var(--en);font-style:italic;font-size:13px;opacity:.6;letter-spacing:1px;height:26px}
-.pc-tx{font-family:"Kaiti SC","STKaiti","KaiTi",var(--ti);font-size:15.5px;line-height:32px;letter-spacing:1px;white-space:pre-wrap;word-break:break-word}
-.pc-tx::before{content:"";float:right;width:74px;height:30px}
-.pc-fr{text-align:right;font-family:var(--en),var(--ti);font-style:italic;font-size:14px;margin-top:4px;opacity:.75}
+.tv-pc{position:relative;margin:20px 2px 4px;padding:22px 20px 18px;border-radius:4px;background:#fff;color:#2E2A2C;box-shadow:0 12px 30px rgba(40,30,40,.12),0 1px 3px rgba(0,0,0,.06)}
+.tv-pc::after{content:"";position:absolute;inset:7px;border:.5px solid rgba(0,0,0,.08);pointer-events:none}
+.tv-pc-hd{font-family:var(--fen);font-size:11px;letter-spacing:5px;color:#9A9396;margin-right:76px}
+.tv-pc-st{position:absolute;top:14px;right:16px;width:56px;height:72px;padding:4px;transform:rotate(3deg);
+  background:radial-gradient(circle at 4px 4px,transparent 2.4px,#fff 2.9px) -4px -4px/8px 8px;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.3))}
+.tv-pc-st i{display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:100%;padding:5px 2px;font-style:normal;color:#fff;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 50%,#fff),var(--accent-t))}
+.tv-pc-st small{font-family:var(--fen);font-size:8px;letter-spacing:1.5px;font-weight:500}
+.tv-pc-st b{font-family:var(--fen);font-style:italic;font-weight:500;font-size:21px;line-height:1}
+.tv-pc-to{font-family:var(--fsc);font-size:26px;margin:16px 0 6px}
+.tv-pc-tx{font-family:var(--ti);font-size:15px;line-height:1.95;letter-spacing:.5px;white-space:pre-wrap;word-break:break-word}
+.tv-pc-fr{text-align:right;margin-top:12px;font-size:14px;letter-spacing:2px}
+.tv-pc-fr em{font-family:var(--fsc);font-style:normal;font-size:24px;margin-right:8px;letter-spacing:0}
 /* 行程里的小硬币 */
-.tv-coin{display:flex;align-items:center;gap:10px;width:100%;margin-top:16px;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.45);font-size:13px;letter-spacing:1px;color:var(--ink);text-align:left}
-html.dk .tv-coin{background:rgba(255,255,255,.07)}
-.tv-coin .mt{width:26px;height:26px;flex:none;animation:tvSpin 3.2s ease-in-out infinite}
+.tv-coin{display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.25);border:.5px solid rgba(255,255,255,.6);font-size:13px;letter-spacing:1px;color:var(--ink);text-align:left}
+html.dk .tv-coin{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15)}
+.tv-coin .mt{width:28px;height:28px;flex:none;animation:tvSpin 3.2s ease-in-out infinite}
 @keyframes tvSpin{0%,60%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
 .tv-coin span{margin-left:auto;color:var(--sub)}
 .tv-ft{flex:none;padding:10px 20px calc(var(--sb) + 10px);display:flex;justify-content:center}
-.tv-ft .pill{padding:11px 44px;font-size:14px;letter-spacing:4px}
+.tv-ft .pill{padding:11px 44px;font-size:14px;letter-spacing:4px;background:rgba(255,255,255,.45);color:var(--ink);border:.5px solid rgba(255,255,255,.8)}
 </style>`);
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -179,13 +196,8 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
   <div id="tpBody"></div>
 </div></section>`);
 $('#app').insertAdjacentHTML('beforeend',`
-<div class="modal" id="tpTrip"><div class="tv-sheet" id="tpSheet"></div></div>
-<div class="modal" id="tpCoin"><div class="mbox" style="text-align:center">
-  <div class="tp-flip" id="tpFlip"><div class="tp-face mt" id="tpF1"></div><div class="tp-face mt back" id="tpF2"></div></div>
-  <div class="tp-ci" id="tpCI"></div>
-  <p class="hint" style="color:var(--sys-sub)">点硬币翻面</p>
-  <div class="mbtns" style="justify-content:center"><button class="pill ghost" id="tpGold"></button><button class="pill" data-close="tpCoin">好</button></div>
-</div></div>`);
+<div class="modal" id="tpTrip"><div class="tv-sheet tg" id="tpSheet"></div></div>
+<div class="modal" id="tpCoin"><div class="tp-cbox tg" id="tpCBox"></div></div>`);
 
 /* 「关于他」里加一张卡 */
 function card(){if($('#himGrid [data-go="trip"]'))return;const g=$('#himGrid');if(!g)return;const d=g.querySelector('.hm-day');
@@ -291,17 +303,19 @@ function renderNow(){const el=$('#tpNow');if(!el)return;const w=where(),d=km(w,h
   el.textContent=(w.home?'在家 · ':'在')+w.city+(d!=null&&d>=30?` · 离你 ${fk(d)} km`:'')}
 function renderAll(){renderNow();render()}
 
-/* ---------- 打开一趟行程：登机牌 + 明信片（只显示已经到过的城市） ---------- */
-function stopHTML(t,s,i){const c=DATA.coins.find(x=>x.sid===s.id),n=s.to-s.from+1,H=esc(S.hisName);
+/* ---------- 打开一趟行程：登机牌 + 明信片（只显示到过的城市） ---------- */
+function stopHTML(t,s,i){const c=DATA.coins.find(x=>x.sid===s.id),n=s.to-s.from+1,H=esc(S.hisName),d0=dot(add(t.start,s.from));
   return `<section class="tv-stop" style="--i:${i}">
     <div class="bp-w"><div class="bp"><div class="bp-m">
-      <div class="bp-t"><span>BOARDING PASS</span><span>No.${String(i+1).padStart(2,'0')}</span></div>
+      <div class="bp-t"><span>BOARDING PASS</span><span>No. ${String(i+1).padStart(2,'0')}</span></div>
       <div class="bp-c">${esc(s.city)}${s.en?`<em>${esc(s.en)}</em>`:''}</div>
-      <div class="bp-meta"><div><small>DATE</small><b>${dot(add(t.start,s.from))}${n>1?' – '+dot(add(t.start,s.to)):''}</b></div><div><small>STAY</small><b>${n} 天</b></div><div><small>SEAT</small><b>你旁边</b></div></div>
+      <div class="bp-meta"><div><small>DATE</small><b>${d0}${n>1?' – '+dot(add(t.start,s.to)):''}</b></div><div><small>STAY</small><b>${n} 天</b></div><div><small>SEAT</small><b>你旁边</b></div></div>
     </div><div class="bp-s"><small>TO</small><b>${esc(code(s))}</b><i class="bp-bar"></i></div></div></div>
     ${s.spots
       ?`<ul class="tv-sp">${s.spots.map(x=>`<li><b>${esc(x.name)}</b>${x.note?`<span>${esc(x.note)}</span>`:''}</li>`).join('')}</ul>`
-        +(s.card?`<div class="pc"><div class="pc-st"><b>${esc(code(s))}</b><small>365</small></div><div class="pc-pm"><span>${dot(add(t.start,s.from))}</span><b>${esc(s.city)}</b></div><div class="pc-to">To 你</div><div class="pc-tx">${esc(s.card)}</div><div class="pc-fr">—— ${H}</div></div>`:'')
+        +(s.card?`<div class="pc"><div class="pc-st"><i><small>365</small><b>${esc(code(s))}</b><small>AIR MAIL</small></i></div>
+          <div class="pc-hd">POST CARD · ${d0}</div><div class="pc-to">Dear you,</div>
+          <div class="pc-tx">${esc(s.card)}</div><div class="pc-fr"><em>Love,</em>${H}</div></div>`:'')
       :`<p class="tv-wait">${H}还在逛…</p>`}
     ${c?`<button class="tv-coin" data-tc="${c.id}"><i class="mt${c.gold?' gold':''}" style="background:${coinBg(c)}"></i>在这里留了第 ${c.no} 枚硬币<span>›</span></button>`:''}
   </section>`}
@@ -310,7 +324,7 @@ function openTrip(id){const t=DATA.trips.find(x=>x.id===id);if(!t)return;
   const route=V.map(s=>`<span>${esc(code(s))}</span>`).join('<i>✈︎</i>')+(more?'<i>✈︎</i><span class="fu">···</span>':'');
   const sh=$('#tpSheet');sh.classList.remove('out');
   sh.innerHTML=`<div class="tv-grab"></div><div class="tv-body">
-    <div class="tv-hd"><span>TRAVEL LOG</span><span class="tv-st">${a?`进行中 · 第 ${dayOf(t)+1} 天`:'已归来'}</span></div>
+    <div class="tv-hd"><span>Travel Log</span><span class="tv-st">${a?`进行中 · 第 ${dayOf(t)+1} 天`:'已归来'}</span></div>
     <h3 class="tv-title">${esc(t.title)}</h3>
     ${t.why?`<p class="tv-why">${esc(t.why)}</p>`:''}
     <div class="tv-route">${route}</div>
@@ -324,20 +338,20 @@ $('#tpTrip').addEventListener('click',e=>{
   if(e.target.id==='tpTrip'||e.target.closest('#tpClose'))return closeTrip();
   const c=e.target.closest('[data-tc]');if(c)closeTrip(()=>openCoin(c.dataset.tc))});
 
-/* ---------- 打开一枚硬币：正面只有数字 ---------- */
-function openCoin(id){const c=DATA.coins.find(x=>x.id===id);if(!c)return;vc=c;const d=km(c,her()),bg=coinBg(c);
-  $('#tpFlip').classList.remove('f');
-  ['#tpF1','#tpF2'].forEach(s=>{const e=$(s);e.style.background=bg;e.classList.toggle('gold',!!c.gold)});
-  $('#tpF1').innerHTML=`<b>${num(c)}</b><i class="mt-sh"></i>`;
-  $('#tpF2').innerHTML=`<div class="tp-bk"><div>${esc(c.why)}</div><small>${c.gold?'我们一起去过 · '+md(c.goldDate):md(c.date)+' · 他在这里想到你'}</small></div>`;
-  $('#tpCI').innerHTML=`${esc(c.city)}<em>${c.en?esc(c.en)+' · ':''}${d==null?'':d<30?'就在你身边':'离你 '+fk(d)+' km'}</em>`;
-  $('#tpGold').textContent=c.gold?'标回没去过':'我们一起去过了 ✦';
+/* ---------- 打开一枚硬币：只有数字，下面写为什么 ---------- */
+function openCoin(id){const c=DATA.coins.find(x=>x.id===id);if(!c)return;vc=c;const d=km(c,her());
+  const far=d==null?'':d<30?'就在你身边':'离你 '+fk(d)+' km';
+  $('#tpCBox').innerHTML=`<span class="tp-big mt${c.gold?' gold':''}" style="background:${coinBg(c)}"><b>${num(c)}</b><i class="mt-sh"></i></span>
+    <div class="tp-ci">${esc(c.city)}<em>${c.en?esc(c.en):''}${c.en&&far?' · ':''}${far}</em></div>
+    <div class="tp-why">${esc(c.why)}<small>${c.gold?'Together · '+dot(c.goldDate):'Kept on '+dot(c.date)}</small></div>
+    <div class="tp-cb"><button class="pill ghost" id="tpGold">${c.gold?'标回没去过':'我们一起去过了 ✦'}</button><button class="pill" data-cx>好</button></div>`;
   openModal('tpCoin')}
-$('#tpFlip').onclick=()=>$('#tpFlip').classList.toggle('f');
-$('#tpGold').onclick=async()=>{const c=vc;if(!c)return;
+$('#tpCoin').addEventListener('click',async e=>{
+  if(e.target.id==='tpCoin'||e.target.closest('[data-cx]'))return closeModal('tpCoin');
+  if(!e.target.closest('#tpGold'))return;const c=vc;if(!c)return;
   if(!c.gold&&!confirm(`你们一起去过${c.city}了？硬币会变成金色。`))return;
   c.gold=!c.gold;c.goldDate=c.gold?T():null;await saveData('coins');
-  if(c.gold)toast(`${c.city}变成金色了 ✦`);openCoin(c.id);render()};
+  if(c.gold)toast(`${c.city}变成金色了 ✦`);openCoin(c.id);render()});
 $('#tpBody').addEventListener('click',e=>{const c=e.target.closest('[data-coin]');if(c)return openCoin(c.dataset.coin);
   const t=e.target.closest('[data-trip]');if(t)openTrip(t.dataset.trip)});
 $('#tpMenu').onclick=()=>{const a=active(),acts=[[`他住在：${S.homeCity}（改）`,()=>{const v=prompt('他住在哪个城市？',S.homeCity);if(!v||!v.trim())return;
@@ -347,7 +361,7 @@ $('#tpMenu').onclick=()=>{const a=active(),acts=[[`他住在：${S.homeCity}（�
     if(!d)DATA.trips=DATA.trips.filter(x=>x!==a);
     else{a.days=d;a.stops=a.stops.filter(s=>s.from<d);a.stops.forEach(s=>s.to=Math.min(s.to,d-1))}
     S.tripNext=add(T(),R(10,25));saveSettings();await saveData('trips');renderAll()}]);
-    if(DATA.coins.length)acts.push(['删除一枚硬币',()=>sheet([...DATA.coins].sort((a,b)=>a.no-b.no).map(c=>[`删除 No.${c.no} ${c.city}`,async()=>{if(!confirm(`删除 No.${c.no} ${c.city} 这枚硬币？`))return;DATA.coins=DATA.coins.filter(x=>x!==c);DATA.coins.sort((a,b)=>a.no-b.no).forEach((x,i)=>x.no=i+1);await saveData('coins');renderAll()}]))]);
+  if(DATA.coins.length)acts.push(['删除一枚硬币',()=>sheet([...DATA.coins].sort((a,b)=>a.no-b.no).map(c=>[`删除 No.${c.no} ${c.city}`,async()=>{if(!confirm(`删除 No.${c.no} ${c.city} 这枚硬币？`))return;DATA.coins=DATA.coins.filter(x=>x!==c);DATA.coins.sort((a,b)=>a.no-b.no).forEach((x,i)=>x.no=i+1);await saveData('coins');renderAll()}]))]);
   if(DATA.trips.length)acts.push(['删除一趟行程',()=>sheet([...DATA.trips].sort((a,b)=>b.start.localeCompare(a.start)).map(t=>[`删除「${t.title}」`,async()=>{if(!confirm(`删除「${t.title}」？这趟留下的硬币也会一起删掉。`))return;const ids=arr(t.stops).map(s=>s.id);DATA.trips=DATA.trips.filter(x=>x!==t);DATA.coins=DATA.coins.filter(c=>!ids.includes(c.sid));DATA.coins.sort((a,b)=>a.no-b.no).forEach((x,i)=>x.no=i+1);if(!active()){S.tripNext=add(T(),R(10,25));saveSettings()}await saveData('trips');await saveData('coins');renderAll()}]))]);
   sheet(acts)};
 
