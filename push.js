@@ -121,7 +121,7 @@ async function pull(){if(!on()||pulling)return;pulling=true;
     api('/ack',{ids:pend.map(x=>x.id)}).catch(()=>{})}
   catch(e){}
   finally{pulling=false}}
-async function back(){navigator.clearAppBadge?.();if(!on())return;
+async function back(){navigator.clearAppBadge?.();caches.delete('365-badge').catch(()=>{});
   again.forEach(clearTimeout);
   await pull();try{await sync()}catch(e){status()}
   again=[setTimeout(pull,20000),setTimeout(pull,70000)]}
