@@ -23,15 +23,15 @@ async function cacheFirst(req){
   const res=await fetch(req);if(res.ok)c.put(req,res.clone());return res;
 }
 
-/* ---------- 推送：每条单独弹，编号不会撞，图标上加数字 ---------- */
+/* ---------- 推送：一句一个通知，图标上的数字按条数累加 ---------- */
+async function badgeAdd(n){
+  const c=await caches.open('365-badge');
+  const r=await c.match('n');const v=(r?+(await r.text())||0:0)+n;
+  await c.put('n',new Response(String(v)));
+  if(self.navigator.setAppBadge)await self.navigator.setAppBadge(v)}
 self.addEventListener('push',e=>{
   let d={};try{d=e.data.json()}catch(x){d={title:'365',body:e.data?e.data.text():''}}
-  e.waitUntil(self.registration.showNotification(d.title||'365',{body:d.body||'',icon:'apple-touch-icon.png',tag:'365-'+Date.now()+'-'+Math.random(),data:{url:'./'}})
-    .then(()=>self.registration.getNotifications())
-    .then(n=>self.navigator.setAppBadge&&self.navigator.setAppBadge(n.length))
-    .catch(()=>{}))});
-self.addEventListener('notificationclick',e=>{
-  e.notification.close();
-  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(L=>{
-    for(const c of L)if('focus' in c)return c.focus();
-    return clients.openWindow('./')}))});
+  const L=String(d.body||'').split(/\n+/).map(s=>s.trim()).filter(Boolean),msgs=L.length?L:[''];
+  e.waitUntil((async()=>{
+    for(let i=0;i<msgs.length;i++)await self.registration.showNotification(d.title||'365',{body:msgs[i],icon:'apple-touch-icon.png',tag:'365-'+Date.now()+'-'+i+'-'+Math.random(),data:{url:'./'}});
+    await badgeAdd(+d.count||msgs.length)})().catch(()=>{}))});
