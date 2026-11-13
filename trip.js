@@ -16,7 +16,7 @@ const dot=s=>{const d=parseDate(s);return `${String(d.getMonth()+1).padStart(2,'
 const code=s=>{const w=String(s.en||'').replace(/[^A-Za-z ]/g,' ').trim().split(/\s+/).filter(Boolean);
   if(!w.length)return String(s.city).slice(0,2);
   return (w.length>1?w.map(x=>x[0]).join('').slice(0,3):w[0].slice(0,3)).toUpperCase()};
-const num=c=>String(c.no).padStart(2,'0');
+const num=c=>String(c.no);
 const SILVER=['#E4E7EC','#D3D7DE','#C6CAD2','#BCC1CA','#B0B6C0'];
 const HOME={'上海':{lat:31.23,lon:121.47},'北京':{lat:39.9,lon:116.4}};
 let busy=false,page='',vc=null;
@@ -103,7 +103,7 @@ html.dk .tg{background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255
 .tp-coins::-webkit-scrollbar{display:none}
 .tp-coin{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:8px}
 .tp-coin .mt{width:66px;height:66px;transition:transform .15s}
-.tp-coin .mt>b{font-size:26px}
+.tp-coin .mt>b{font-size:46px;font-style:normal;font-weight:500;font-variant-numeric:lining-nums;line-height:1;padding-bottom:2px}
 .tp-coin:active .mt{transform:scale(.93)}
 .tp-coin small{font-size:11.5px;color:var(--sub);letter-spacing:1px;max-width:72px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 
@@ -113,7 +113,7 @@ html.dk .tg{background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255
 @keyframes tpPop{from{transform:scale(.94);opacity:0}}
 .tp-big{width:170px;height:170px;margin:0 auto 22px;animation:tpIn 1s cubic-bezier(.2,.9,.3,1)}
 @keyframes tpIn{from{transform:perspective(800px) rotateY(-180deg) scale(.6);opacity:0}}
-.tp-big>b{font-size:70px}
+.tp-big>b{font-size:124px;font-style:normal;font-weight:500;font-variant-numeric:lining-nums;line-height:1;padding-bottom:6px}
 .tp-ci{font-size:20px;letter-spacing:5px}
 .tp-ci em{display:block;font-family:var(--fen);font-style:italic;font-size:16px;letter-spacing:1px;color:var(--sub);margin-top:4px}
 .tp-why{margin:18px 4px 0;padding-top:16px;border-top:.5px solid rgba(127,127,127,.3);font-size:14.5px;line-height:1.9;letter-spacing:.5px}
