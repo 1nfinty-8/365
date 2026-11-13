@@ -131,7 +131,7 @@ if(vv){vv.addEventListener('resize',fitKb);vv.addEventListener('scroll',fitKb)}
 
 /* ---------- 和他说话：用 app.js 里的秘密模型 ---------- */
 function system(card){
-  let s=secretSystem('这里是你们的小窝「365」里的「秘密」，只属于你们两个人，没有别人能看到。');
+  window.__sxBuild=true;let s;try{s=secretSystem('这里是你们的小窝「365」里的「秘密」，只属于你们两个人，没有别人能看到。')}finally{window.__sxBuild=false}
   if(card)s+='\n【格式】这次写成一整段完整的长回复，可以分成几个自然段，段落之间换行。不要拆成很多短消息，不要加名字前缀。';
   else if(S.split)s+='\n【格式】像用手机发消息一样，一次可以发几条，每条单独一行。';
   return s}
