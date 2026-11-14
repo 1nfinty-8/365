@@ -211,8 +211,6 @@ function status(){
 window.ifSync=()=>{syncFlakes(P?P.count():0);status()};
 window.ifSync();booted=true;
 
-/* ---------- 翻面：文件夹自己左右翻，毛玻璃不会丢 ---------- */
-let flipping=false;
 /* ---------- 翻面：合上时在文件夹上左右滑，跟着手指立体地转 ---------- */
 let flipping=false,fd=null,ang=0,face=0;
 function pose(a){const r=a*Math.PI/180,c=Math.cos(r),s=Math.abs(Math.sin(r));
