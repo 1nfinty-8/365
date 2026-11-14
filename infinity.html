@@ -62,17 +62,16 @@ body{position:fixed;inset:0;touch-action:none;color:var(--ink);font-family:var(-
 .flake i{position:absolute;left:var(--ox,14px);top:var(--oy,-5px);width:3.5px;height:3.5px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 11px 1px -1px rgba(255,255,255,.8);}
 .flake.enter{animation:dropIn .7s cubic-bezier(.2,1.4,.3,1);}
 @keyframes dropIn{from{opacity:0;margin-top:-30px}to{opacity:1;margin-top:0}}
-.flake.falling{opacity:0;transform:translate(-50%,80px) rotate(220deg)!important;}
 
-/* ===== 78 张牌 ===== */
+/* ===== 封着的记忆牌 ===== */
 .cards{position:absolute;inset:0;z-index:3;pointer-events:none;}
 .folder.open .cards{z-index:6;}
-.file-card{position:absolute;left:calc(50% - 20px);bottom:14px;width:40px;height:62px;transform-origin:50% 300%;
+.file-card{position:absolute;left:calc(50% - 21px);bottom:14px;width:42px;height:64px;transform-origin:50% 300%;
   transform:translate(var(--sx),var(--sy)) rotate(var(--s)) scale(.95);
   transition:transform .5s cubic-bezier(.22,1.25,.36,1),opacity .4s;transition-delay:var(--dl,0s);pointer-events:auto;}
-.file-card.enter{animation:cardIn .7s cubic-bezier(.2,1.4,.3,1) both;animation-delay:var(--dl,0s)}
+.file-card.enter{animation:cardIn .7s cubic-bezier(.2,1.4,.3,1) both}
 @keyframes cardIn{from{opacity:0;margin-bottom:220px}}
-.folder.open .file-card{transform:rotate(var(--a)) translateY(-44px);}
+.folder.open .file-card{transform:rotate(var(--a)) translateY(-40px);}
 .file-card.picked{z-index:99!important;opacity:0;transform:rotate(0deg) translateY(-320px) scale(1.7)!important;
   transition:transform .55s cubic-bezier(.5,0,.3,1),opacity .55s ease-in!important;transition-delay:0s!important}
 .pad{width:100%;height:100%;border-radius:7px;background:var(--card-bg);border:1px solid var(--edge-hi);
@@ -102,7 +101,6 @@ body{position:fixed;inset:0;touch-action:none;color:var(--ink);font-family:var(-
 .toolbar{position:absolute;left:50%;transform:translateX(-50%);bottom:-80px;text-align:center;white-space:nowrap;}
 .add-btn{display:inline-block;padding:7px 20px;border-radius:999px;background:var(--lg-a);border:1px solid var(--edge-hi);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);font-family:var(--f-cn);font-size:12px;letter-spacing:.3em;cursor:pointer;}
-.add-btn+.add-btn{margin-left:8px}
 .tip{margin-top:8px;font-size:10px;letter-spacing:.2em;color:var(--ink-soft);font-family:var(--f-cn);}
 </style>
 </head>
@@ -136,11 +134,11 @@ body{position:fixed;inset:0;touch-action:none;color:var(--ink);font-family:var(-
       <div class="glass" id="glass">
         <div class="glow"></div>
         <div class="glass-title">Infinity</div>
-        <div class="cnt" id="cnt">78</div>
+        <div class="cnt" id="cnt">0</div>
       </div>
     </div>
     <div class="toolbar">
-      <span class="add-btn" id="listBtn" hidden>这一轮 · 0</span><span class="add-btn" id="resetBtn" hidden>洗牌</span>
+      <span class="add-btn" id="listBtn" hidden>收好的 · 0</span>
       <div class="tip" id="tip">轻触打开文件夹</div>
     </div>
   </div>
@@ -155,16 +153,16 @@ const isDark=()=>root.classList.contains('dk');
 
 const folder=document.getElementById('folder'),tilt=document.getElementById('tilt'),string=document.getElementById('string'),
       cards=document.getElementById('cards'),glass=document.getElementById('glass'),
-      tip=document.getElementById('tip'),cnt=document.getElementById('cnt'),
-      listBtn=document.getElementById('listBtn'),resetBtn=document.getElementById('resetBtn');
+      tip=document.getElementById('tip'),cnt=document.getElementById('cnt'),listBtn=document.getElementById('listBtn');
 const P=(()=>{try{return window.parent!==window&&window.parent.INF?window.parent.INF:null}catch(e){return null}})();
 const num=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h%997};
-let picking=false,booted=false;
+const POOL=30;
+let picking=false,booted=false,seq=0;
 
-/* ---------- 牌 ---------- */
+/* ---------- 封着的牌：抽走一张，补上一张 ---------- */
 const live=()=>[...cards.querySelectorAll('.file-card:not(.picked)')];
-function makeCard(i,enter){
-  const el=document.createElement('div'),k=num('c'+i);
+function makeCard(enter){
+  const el=document.createElement('div'),k=num('c'+(seq++));
   el.className='file-card'+(enter?' enter':'');
   el.style.setProperty('--sx',((k*53)%170-85)+'px');
   el.style.setProperty('--sy',-(26+(k*29)%110)+'px');
@@ -172,15 +170,16 @@ function makeCard(i,enter){
   el.innerHTML='<div class="pad"></div>';
   cards.appendChild(el)}
 function layoutArc(){
-  const L=live(),n=L.length,sp=Math.min(120,n*2.2);
+  const L=live(),n=L.length,sp=Math.min(110,n*3.6);
   L.forEach((el,i)=>{
     el.style.setProperty('--a',(n<2?0:-sp/2+sp*i/(n-1))+'deg');
-    el.style.setProperty('--dl',(i*6)+'ms');
+    el.style.setProperty('--dl',(i*10)+'ms');
     el.style.zIndex=i})}
+for(let i=0;i<POOL;i++)makeCard(false);layoutArc();
 
-/* ---------- 雪花串：抽一张，挂一片 ---------- */
+/* ---------- 雪花串：讲一段，挂一片 ---------- */
 const SIZES=[40,20,34,18,28,22,36,18];
-const liveF=()=>[...string.querySelectorAll('.flake:not(.falling)')];
+const liveF=()=>[...string.querySelectorAll('.flake')];
 function makeFlake(enter){
   const i=liveF().length,el=document.createElement('span');
   el.className='flake glassy'+(enter?' enter':'');
@@ -196,30 +195,24 @@ function layoutString(){
 function syncFlakes(d){
   d=Math.min(d,8);const F=liveF();
   for(let i=F.length;i<d;i++)makeFlake(booted);
-  F.slice(d).forEach(fl=>{fl.classList.add('falling');setTimeout(()=>{fl.remove();layoutString()},650)});
+  F.slice(d).forEach(fl=>fl.remove());
   layoutString()}
 
 /* ---------- 状态 ---------- */
 function status(){
-  const n=live().length,d=P?P.drawn():0;
+  const n=P?P.count():0,b=P?P.busy():false;
   cnt.textContent=n;
-  tip.textContent=!n?'牌抽完了，洗牌再来':folder.classList.contains('open')?'划过牌浪 · 点一张抽出来':'轻触打开文件夹';
-  listBtn.hidden=!d;listBtn.textContent='这一轮 · '+d;resetBtn.hidden=!d}
-window.ifSync=()=>{
-  if(!P)return;
-  const n=P.left(),L=live();
-  if(n>L.length){cards.innerHTML='';for(let i=0;i<n;i++)makeCard(i,booted)}
-  else if(n<L.length)L.slice(n).forEach(e=>e.remove());
-  layoutArc();syncFlakes(P.drawn());status()};
-if(P)window.ifSync();else{for(let i=0;i<78;i++)makeCard(i,false);layoutArc();status()}
-booted=true;
+  tip.textContent=b?'他在想…':folder.classList.contains('open')?'划过牌浪 · 点一张，听他讲':'轻触打开文件夹';
+  listBtn.hidden=!n;listBtn.textContent='收好的 · '+n}
+window.ifSync=()=>{syncFlakes(P?P.count():0);status()};
+window.ifSync();booted=true;
 
 /* ---------- 抽一张 ---------- */
 function pickEl(el){
-  if(picking||!P||el.classList.contains('picked'))return;
+  if(picking||!P||P.busy()||el.classList.contains('picked'))return;
   picking=true;riffleReset();
   el.classList.add('picked');navigator.vibrate?.(15);
-  setTimeout(()=>{el.remove();layoutArc();picking=false;status()},560);
+  setTimeout(()=>{el.remove();makeCard(true);layoutArc();picking=false;status()},560);
   P.pick()}
 
 /* ================= 常规交互 ================= */
@@ -230,18 +223,17 @@ folder.addEventListener('pointerup',e=>{
   if(c&&folder.classList.contains('open')){pickEl(c);return}
   folder.classList.toggle('open');riffleReset();status()});
 listBtn.addEventListener('click',()=>P?.list());
-resetBtn.addEventListener('click',()=>P?.reset());
 
 function riffle(px){
   if(!folder.classList.contains('open')||picking)return;
   const L=live(),xs=L.map(el=>{const r=el.getBoundingClientRect();return r.left+r.width/2});
   L.forEach((el,i)=>{
-    const d=Math.abs(px-xs[i]),lift=Math.exp(-(d*d)/(2*22*22))*40;
+    const d=Math.abs(px-xs[i]),lift=Math.exp(-(d*d)/(2*26*26))*42;
     el.classList.toggle('settle',lift<2);
     el.style.setProperty('--lift',lift.toFixed(1)+'px')})}
 function riffleReset(){[...cards.children].forEach(el=>{el.classList.add('settle');el.style.setProperty('--lift','0px')})}
 function brush(px,py){
-  const F=[...string.querySelectorAll('.flake')],R=F.map(el=>el.getBoundingClientRect());
+  const F=liveF(),R=F.map(el=>el.getBoundingClientRect());
   F.forEach((el,i)=>{const r=R[i];
     const dx=r.left+r.width/2-px,dy=r.top+r.height/2-py,d=Math.hypot(dx,dy);
     el.style.transform=(d<52&&d>.1)?`translate(calc(-50% + ${dx/d*(52-d)*.9}px),calc(-50% + ${dy/d*(52-d)*.9}px))`:'translate(-50%,-50%)'})}
