@@ -106,7 +106,7 @@ $('#app').insertAdjacentHTML('beforeend',`
   <div class="mbtns"><button class="pill ghost" data-close="ifAns">取消</button><button class="pill" id="ifASave">问他</button></div>
 </div></div>`);
 
-/* ================= 水面：底下是缓缓的海，上面是雨点涟漪 ================= */
+/* ================= 水面：肥肥的水，肥肥的涟漪 ================= */
 const WV={q:7,W:0,H:0,w:0,h:0,a:null,b:null,src:null,lg:null,img:null,g:null,dpr:1,raf:0,amb:0,rain:0,rings:[],cx:0,cy:0};
 const VIEW=()=>$('#ifView');
 const dark=()=>document.documentElement.classList.contains('dk');
@@ -116,47 +116,52 @@ function wvSize(){const v=VIEW(),W=v.clientWidth||innerWidth,H=v.clientHeight||i
   Object.assign(WV,{W,H,w,h,dpr:d,a:new Float32Array(w*h),b:new Float32Array(w*h)});
   const lo=WV.src||(WV.src=document.createElement('canvas'));lo.width=w;lo.height=h;WV.lg=lo.getContext('2d');WV.img=WV.lg.createImageData(w,h);
   const cv=$('#mfWater');cv.width=W*d;cv.height=H*d;WV.g=cv.getContext('2d')}
-/* 海：起伏 */
+/* 海：慢慢的、饱满的起伏 */
 function drop(px,py,r,s){if(!WV.a)return;const q=WV.q,x0=px/q+1,y0=py/q+1,R=Math.max(1.5,r/q);
   const x1=Math.max(1,Math.floor(x0-R)),x2=Math.min(WV.w-2,Math.ceil(x0+R)),y1=Math.max(1,Math.floor(y0-R)),y2=Math.min(WV.h-2,Math.ceil(y0+R));
   for(let y=y1;y<=y2;y++)for(let x=x1;x<=x2;x++){const d=Math.hypot(x-x0,y-y0);if(d<R)WV.a[y*WV.w+x]+=s*(Math.cos(d/R*Math.PI)+1)/2}}
 function wvStep(){const{w,h,a,b}=WV;
-  for(let y=1;y<h-1;y++){let i=y*w+1;for(let x=1;x<w-1;x++,i++)b[i]=((a[i-1]+a[i+1]+a[i-w]+a[i+w])*.5-b[i])*.986}
+  for(let y=1;y<h-1;y++){let i=y*w+1;for(let x=1;x<w-1;x++,i++)b[i]=((a[i-1]+a[i+1]+a[i-w]+a[i+w])*.5-b[i])*.989}
   WV.a=b;WV.b=a}
-/* 雨：一圈一圈 */
-function ring(x,y,o){WV.rings.push({x,y,t:performance.now()+(o.delay||0),life:o.life||1600,max:o.max||60,w:o.w||1.1,a:o.a??.6})}
-function ripple(x,y,n,o={}){for(let k=0;k<n;k++)ring(x,y,{...o,delay:(o.delay||0)+k*(o.gap||170),max:(o.max||60)*(1-k*.14),a:(o.a??.6)*(1-k*.16)})}
+/* 涟漪：有厚度的一圈水 */
+function ring(x,y,o){WV.rings.push({x,y,t:performance.now()+(o.delay||0),life:o.life||1800,max:o.max||70,w:o.w||5,a:o.a??.7})}
+function ripple(x,y,n,o={}){for(let k=0;k<n;k++)ring(x,y,{...o,delay:(o.delay||0)+k*(o.gap||190),max:(o.max||70)*(1-k*.13),w:(o.w||5)*(1-k*.12),a:(o.a??.7)*(1-k*.14)})}
 function wvDraw(now){const{w,h,a,img,lg,g,W,H,dpr}=WV,d=img.data,dk=dark();
   for(let y=1;y<h-1;y++){let i=y*w+1;for(let x=1;x<w-1;x++,i++){
     const l=(a[i-1]-a[i+1])*.7+(a[i-w]-a[i+w]),o=i*4;
-    if(l>0){d[o]=d[o+1]=d[o+2]=255;d[o+3]=Math.min(dk?80:140,l*9)}
-    else{d[o]=70;d[o+1]=92;d[o+2]=130;d[o+3]=Math.min(dk?90:55,-l*4.5)}}}
+    if(l>0){d[o]=d[o+1]=d[o+2]=255;d[o+3]=Math.min(dk?95:175,l*12)}
+    else{d[o]=72;d[o+1]=94;d[o+2]=132;d[o+3]=Math.min(dk?100:72,-l*6)}}}
   lg.putImageData(img,0,0);
-  g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);g.imageSmoothingEnabled=true;
+  g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
   g.drawImage(WV.src,1,1,w-2,h-2,0,0,(w-2)*WV.q,(h-2)*WV.q);
   WV.rings=WV.rings.filter(r=>now<r.t+r.life);
-  const sh=dk?'170,190,230':'70,90,125';
+  const sh=dk?'150,175,225':'66,88,128',ry=.88;
   for(const r of WV.rings){const p=(now-r.t)/r.life;if(p<0)continue;
-    const R=3+r.max*(1-Math.pow(1-p,2.2)),al=r.a*Math.pow(1-p,1.5);
-    g.lineWidth=r.w;
-    g.strokeStyle=`rgba(${sh},${al*.32})`;g.beginPath();g.ellipse(r.x,r.y+1.3,R,R*.9,0,0,7);g.stroke();
-    g.strokeStyle=`rgba(255,255,255,${al})`;g.beginPath();g.ellipse(r.x,r.y,R,R*.9,0,0,7);g.stroke()}}
+    const R=4+r.max*(1-Math.pow(1-p,2.4)),al=r.a*Math.pow(1-p,1.35),T=r.w*(1-p*.55)+.6;
+    g.lineWidth=T*1.6;g.strokeStyle=`rgba(${sh},${al*.17})`;
+    g.beginPath();g.ellipse(r.x,r.y+T*.55,R+T*.2,(R+T*.2)*ry,0,0,7);g.stroke();
+    g.lineWidth=T;g.strokeStyle=`rgba(255,255,255,${al*.4})`;
+    g.beginPath();g.ellipse(r.x,r.y,R,R*ry,0,0,7);g.stroke();
+    g.lineWidth=Math.max(1,T*.34);g.strokeStyle=`rgba(255,255,255,${Math.min(1,al*.85)})`;
+    g.beginPath();g.ellipse(r.x,r.y-T*.28,R-T*.18,(R-T*.18)*ry,0,0,7);g.stroke();
+    g.strokeStyle=`rgba(255,255,255,${Math.min(1,al*1.2)})`;
+    g.beginPath();g.ellipse(r.x,r.y-T*.28,R-T*.18,(R-T*.18)*ry,0,Math.PI*1.12,Math.PI*1.88);g.stroke()}}
 function wvLoop(now){if(!VIEW().classList.contains('show')){WV.raf=0;return}
-  if(now>WV.rain){WV.rain=now+160+Math.random()*520;const x=Math.random()*WV.W,y=Math.random()*WV.H;
-    ripple(x,y,Math.random()<.35?2:1,{max:20+Math.random()*44,life:1200+Math.random()*800,a:.5,w:1});drop(x,y,10,1)}
+  if(now>WV.rain){WV.rain=now+110+Math.random()*320;const x=Math.random()*WV.W,y=Math.random()*WV.H,big=Math.random()<.25;
+    ripple(x,y,big?3:(Math.random()<.5?2:1),{max:(big?60:28)+Math.random()*50,life:1500+Math.random()*900,a:.65,w:big?6:3+Math.random()*2.5});drop(x,y,14,2)}
   if(now>WV.amb){
-    if(vc&&vc._wait&&vc._sunk){WV.amb=now+1800;ripple(WV.cx,WV.cy,2,{max:150,life:2800,a:.55,gap:280});drop(WV.cx,WV.cy,40,4)}
-    else{WV.amb=now+3500+Math.random()*2500;drop(Math.random()*WV.W,Math.random()*WV.H,130,2.4)}}
+    if(vc&&vc._wait&&vc._sunk){WV.amb=now+1600;ripple(WV.cx,WV.cy,3,{max:170,life:3000,a:.7,gap:300,w:9});drop(WV.cx,WV.cy,50,6)}
+    else{WV.amb=now+3000+Math.random()*2200;drop(Math.random()*WV.W,Math.random()*WV.H,150,3.2)}}
   wvStep();wvDraw(now);WV.raf=requestAnimationFrame(wvLoop)}
 function wvStart(){wvSize();WV.cx=WV.W/2;WV.cy=WV.H*.45;if(!WV.raf)WV.raf=requestAnimationFrame(wvLoop)}
 addEventListener('resize',()=>{if(VIEW().classList.contains('show'))wvSize()});
 /* 手指点水、拨水 */
 let pd=null;
 const rel=(x,y)=>{const vr=VIEW().getBoundingClientRect();return [x-vr.left,y-vr.top]};
-function tap(cx,cy){const[x,y]=rel(cx,cy);ripple(x,y,3,{max:110,life:2100,a:.85,gap:150,w:1.3});drop(x,y,26,9)}
+function tap(cx,cy){const[x,y]=rel(cx,cy);ripple(x,y,3,{max:120,life:2300,a:.9,gap:170,w:9});drop(x,y,30,11)}
 VIEW().addEventListener('touchstart',e=>{const t=e.touches[0];pd={x:t.clientX,y:t.clientY};tap(t.clientX,t.clientY)},{passive:true});
 VIEW().addEventListener('touchmove',e=>{if(!pd)return;const t=e.touches[0];if(Math.hypot(t.clientX-pd.x,t.clientY-pd.y)<18)return;
-  pd={x:t.clientX,y:t.clientY};const[x,y]=rel(t.clientX,t.clientY);ring(x,y,{max:38,life:1100,a:.55});drop(x,y,18,3.5)},{passive:true});
+  pd={x:t.clientX,y:t.clientY};const[x,y]=rel(t.clientX,t.clientY);ring(x,y,{max:44,life:1300,a:.65,w:5});drop(x,y,20,4)},{passive:true});
 VIEW().addEventListener('touchend',()=>pd=null,{passive:true});
 VIEW().addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')tap(e.clientX,e.clientY)});
 
@@ -164,8 +169,8 @@ VIEW().addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')tap(e.clien
 function splash(f){const p=$('#mfPool'),s=$('#mfStone');if(!p||vc!==f)return;
   const r=p.getBoundingClientRect(),[x,y]=rel(r.left+r.width/2,r.top+r.height/2);
   WV.cx=x;WV.cy=y;f._sunk=true;s?.classList.add('sunk');navigator.vibrate?.(18);
-  ripple(x,y,5,{max:250,life:3200,a:.95,gap:170,w:1.6});drop(x,y,60,30)}
-function surface(){ripple(WV.cx,WV.cy,4,{max:220,life:3000,a:.8,gap:200,w:1.4});drop(WV.cx,WV.cy,50,16)}
+  ripple(x,y,5,{max:260,life:3400,a:1,gap:190,w:14});drop(x,y,70,34)}
+function surface(){ripple(WV.cx,WV.cy,4,{max:230,life:3200,a:.85,gap:220,w:11});drop(WV.cx,WV.cy,56,18)}
 
 /* ---------- 他想起一段 ---------- */
 const SCENE='这是你们的小窝「365」里「关于他」的「他的记忆」：一个玻璃文件夹，里面封着你自己的过去。';
