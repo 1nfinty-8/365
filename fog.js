@@ -82,7 +82,6 @@ html.dk .fg-card{background:linear-gradient(165deg,rgba(120,132,158,.6),rgba(70,
 html.dk .fg-ft button{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
 </style>`);
 
-$('#ifMenu').insertAdjacentHTML('beforebegin',`<button class="iconbtn glass" id="fgFlip" aria-label="翻面">${FLIP}</button>`);
 $('#page-cards').insertAdjacentHTML('beforeend',`<div id="fgView"><div id="fgLayer"></div><canvas id="fgFog"></canvas><canvas id="fgRain"></canvas>
   <div class="fg-hint" id="fgHint">用手指左右擦开</div><button class="iconbtn glass fg-x" data-fx aria-label="收好">${BACK}</button></div>`);
 $('#app').insertAdjacentHTML('beforeend',`
