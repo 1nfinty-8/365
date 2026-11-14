@@ -168,17 +168,6 @@ function drawRain(){const g=G.rc,k=G.rk,s=G.bead,n=performance.now();if(!g)retur
   for(const b of G.beads){const d=b.r*2.5*Math.min(1,(n-b.t)/400);g.drawImage(s,b.x-d/2,b.y-d/2,d,d*1.05)}
   for(const r of G.runs){const d=r.r*2.5;g.drawImage(s,r.x-d/2,r.y-d*.65,d,d*1.3)}}
 
-/* 正文滑动时，雾和水珠跟着字一起走：擦开的地方跟着字，新滑上来的是雾 */
-function onScroll(){const t=LY().scrollTop,dy=t-G.top;G.top=t;if(!dy||!G.ctx)return;
-  const g=G.ctx,w=CV.width,h=CV.height,d=Math.round(dy*G.k);
-  if(Math.abs(d)>=h)refog(1);
-  else{const tg=G.tmp.getContext('2d');tg.clearRect(0,0,w,h);tg.drawImage(CV,0,0);
-    g.clearRect(0,0,w,h);g.drawImage(G.tmp,0,-d);
-    if(d>0)g.drawImage(G.tex,0,h-d,w,d,0,h-d,w,d);else if(d<0)g.drawImage(G.tex,0,0,w,-d,0,0,w,-d)}
-  G.beads.forEach(b=>b.y-=dy);G.runs.forEach(r=>r.y-=dy);
-  G.beads=G.beads.filter(b=>b.y>-10&&b.y<G.H+10)}
-LY().addEventListener('scroll',onScroll,{passive:true});
-
 function fogLoop(ts){if(!V().classList.contains('show')){G.raf=0;return}
   if(!document.hidden){const dt=Math.min(100,ts-(G.last||ts));
     G.acc+=dt;if(G.acc>160){G.acc=0;refog(FG.regrow);for(const b of G.beads)erase(b.x,b.y,b.r*1.05,1)}
@@ -191,14 +180,15 @@ function fogStart(){fogSize();refog(1);G.beads=[];G.runs=[];G.top=LY().scrollTop
   if(!G.raf){G.last=0;G.raf=requestAnimationFrame(fogLoop)}}
 addEventListener('resize',()=>{if(V().classList.contains('show')){G.W=0;fogSize();refog(1)}});
 
-/* 手指擦雾：左右擦是擦，一旦开始上下翻页就不擦 */
-let fp=null,scr=false;
+/* 手指：一开始往左右动就是擦雾（这一下不翻页），一开始往上下动就是翻页（这一下不擦） */
+let fp=null,mode='';
 const rel=(x,y)=>{const r=V().getBoundingClientRect();return [x-r.left,y-r.top]};
-V().addEventListener('touchstart',e=>{const t=e.touches[0];fp=rel(t.clientX,t.clientY);scr=false;hint(false)},{passive:true});
-V().addEventListener('touchmove',e=>{if(!fp||scr)return;const t=e.touches[0],p=rel(t.clientX,t.clientY);
-  if(Math.hypot(p[0]-fp[0],p[1]-fp[1])<3)return;wipe(fp[0],fp[1],p[0],p[1]);fp=p},{passive:true});
-V().addEventListener('touchend',()=>{fp=null;scr=false},{passive:true});
-LY().addEventListener('scroll',()=>{if(fp)scr=true},{passive:true});
+LY().addEventListener('touchstart',e=>{const t=e.touches[0];fp=rel(t.clientX,t.clientY);mode='';hint(false)},{passive:true});
+LY().addEventListener('touchmove',e=>{if(!fp)return;const t=e.touches[0],p=rel(t.clientX,t.clientY),dx=p[0]-fp[0],dy=p[1]-fp[1];
+  if(!mode){if(Math.hypot(dx,dy)<6)return;mode=Math.abs(dx)>Math.abs(dy)*.8?'wipe':'scroll'}
+  if(mode!=='wipe')return;
+  e.preventDefault();wipe(fp[0],fp[1],p[0],p[1]);fp=p},{passive:false});
+LY().addEventListener('touchend',()=>{fp=null;mode=''},{passive:true});
 let md=null;
 V().addEventListener('mousedown',e=>{md=rel(e.clientX,e.clientY)});
 V().addEventListener('mousemove',e=>{if(!md)return;const p=rel(e.clientX,e.clientY);wipe(md[0],md[1],p[0],p[1]);md=p});
