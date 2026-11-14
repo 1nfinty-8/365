@@ -96,14 +96,9 @@ const V=()=>$('#fgView'),CV=$('#fgFog'),RC=$('#fgRain'),LY=()=>$('#fgLayer');
 V().style.setProperty('--fog',FG.fog);
 const dark=()=>document.documentElement.classList.contains('dk');
 
-/* ---------- 翻面：文件夹自己立体翻，毛玻璃不会丢 ---------- */
+/* ---------- 翻面：在文件夹上左右滑 ---------- */
 function setSide(s){side=s;$('#page-cards').classList.toggle('back',!!s);fire()}
-let flipping=false;
-$('#fgFlip').onclick=()=>{if(flipping)return;flipping=true;navigator.vibrate?.(10);
-  let w=null;try{w=$('#ifFrame').contentWindow}catch(e){}
-  if(w&&w.ifFlip){w.ifFlip(()=>setSide(1-side));setTimeout(()=>flipping=false,820)}
-  else{setSide(1-side);flipping=false}};
-
+INF.flip=()=>setSide(1-side);
 /* ================= 下雨天起雾的玻璃 ================= */
 const G={W:0,H:0,k:.5,rk:1,ctx:null,rc:null,tex:null,tmp:null,bead:null,raf:0,acc:0,last:0,nb:0,nr:0,top:0,beads:[],runs:[]};
 function makeTex(){const w=CV.width,h=CV.height,c=document.createElement('canvas');c.width=w;c.height=h;
