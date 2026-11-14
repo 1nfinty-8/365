@@ -167,8 +167,8 @@ function stepRuns(){for(let i=G.runs.length-1;i>=0;i--){const r=G.runs[i];
   if(r.y>G.H+20)G.runs.splice(i,1)}}
 function drawRain(){const g=G.rc,k=G.rk,s=G.bead,n=performance.now();if(!g)return;
   g.setTransform(k,0,0,k,0,0);g.clearRect(0,0,G.W,G.H);
-  for(const b of G.beads){const d=b.r*2.4*Math.min(1,(n-b.t)/400);g.drawImage(s,b.x-d/2,b.y-d/2,d,d)}
-  for(const r of G.runs){const d=r.r*2.4;g.drawImage(s,r.x-d/2,r.y-d*.62,d,d*1.25)}}
+  for(const b of G.beads){const d=b.r*2.5*Math.min(1,(n-b.t)/400);g.drawImage(s,b.x-d/2,b.y-d/2,d,d*1.05)}
+  for(const r of G.runs){const d=r.r*2.5;g.drawImage(s,r.x-d/2,r.y-d*.65,d,d*1.3)}}
 
 /* 正文滑动时，雾和水珠跟着字一起走 */
 function onScroll(){const t=LY().scrollTop,dy=t-G.top;G.top=t;if(!dy||!G.ctx)return;
