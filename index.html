@@ -16,6 +16,19 @@
 <title>365</title>
 </head>
 <body>
+<div id="splash"><svg class="sp-inf" viewBox="0 0 120 60"><path pathLength="1" d="M60 30C45 8 15 8 15 30S45 52 60 30 75 8 105 30 75 52 60 30Z"/></svg><div class="sp-n">365</div></div>
+<script>if(localStorage.getItem('365-dk')==='1')document.getElementById('splash').classList.add('dk')</script>
+<style>
+#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:linear-gradient(180deg,#F7F2F4,#ECE5EA);color:#3A2E33;transition:opacity .8s ease,transform .8s ease,filter .8s ease}
+#splash.dk{background:linear-gradient(180deg,#1F1A1D,#121014);color:#EDE6EA}
+#splash.out{opacity:0;transform:scale(1.04);filter:blur(8px);pointer-events:none}
+.sp-inf{width:84px;height:42px;margin-bottom:10px}
+.sp-inf path{fill:none;stroke:currentColor;stroke-width:1.1;stroke-linecap:round;opacity:.55;stroke-dasharray:1;stroke-dashoffset:1;animation:spDraw 1.4s .1s ease-in-out forwards}
+.sp-n{font-family:"Didot","Bodoni 72",serif;font-style:italic;font-size:46px;letter-spacing:2px;opacity:0;animation:spUp 1s .35s ease forwards}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@keyframes spUp{from{opacity:0;transform:translateY(8px)}to{opacity:.8;transform:none}}
+</style>
 <div id="bg"></div><div id="mask"></div>
 
 <div id="app">
@@ -281,11 +294,12 @@
 <script src="theme.js"></script>
 <script src="fog.js"></script>
 <script src="wall.js"></script>
-
-
-
-
-
-
+<script>
+(()=>{const s=document.getElementById('splash');if(!s)return;const t0=Date.now();let done=false;
+  const hide=()=>{if(done)return;done=true;
+    setTimeout(()=>{s.classList.add('out');setTimeout(()=>s.remove(),800)},Math.max(0,1200-(Date.now()-t0)))};
+  try{HOOKS.ready.push(hide)}catch(e){}
+  setTimeout(hide,6000)})();
+</script>
 </body>
 </html>
