@@ -1,83 +1,79 @@
-/* ===== 365 · infinity.js · 游戏：Infinity · 塔罗（玻璃文件夹 + 78 张牌） ===== */
+/* ===== 365 · infinity.js · 游戏：Infinity · 他的记忆碎片 ===== */
 (()=>{
-if(!Array.isArray(DATA.tarot))DATA.tarot=[];
-const save=()=>saveData('tarot');
+if(!Array.isArray(DATA.frag))DATA.frag=[];
+Object.assign(DEFAULT,{fragEra:''});
+const save=()=>saveData('frag');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
-const ICON='信';
-let page='',vc=null,ansCard=null,drawing=false;
+const ICON='忆';
+const ERAS=['小时候','少年时','大学','工作以后','遇见你以后'];
+const J=t=>JSON.parse((String(t).match(/\{[\s\S]*\}/)||['{}'])[0]);
+let page='',vc=null,ansC=null,busy=false;
 const BUSY=new Set();
-
-/* ---------- 78 张牌 ---------- */
-const MAJ=[['愚者','The Fool'],['魔术师','The Magician'],['女祭司','The High Priestess'],['皇后','The Empress'],['皇帝','The Emperor'],
-  ['教皇','The Hierophant'],['恋人','The Lovers'],['战车','The Chariot'],['力量','Strength'],['隐士','The Hermit'],['命运之轮','Wheel of Fortune'],
-  ['正义','Justice'],['倒吊人','The Hanged Man'],['死神','Death'],['节制','Temperance'],['恶魔','The Devil'],['高塔','The Tower'],
-  ['星星','The Star'],['月亮','The Moon'],['太阳','The Sun'],['审判','Judgement'],['世界','The World']];
-const RN=['0','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI'];
-const SU=[['权杖','Wands','w'],['圣杯','Cups','c'],['宝剑','Swords','s'],['星币','Pentacles','p']];
-const RK=[['王牌','Ace','ACE'],['二','Two','II'],['三','Three','III'],['四','Four','IV'],['五','Five','V'],['六','Six','VI'],['七','Seven','VII'],
-  ['八','Eight','VIII'],['九','Nine','IX'],['十','Ten','X'],['侍从','Page','PAGE'],['骑士','Knight','KNIGHT'],['王后','Queen','QUEEN'],['国王','King','KING']];
-const TAROT=[...MAJ.map((m,i)=>({cn:m[0],en:m[1],num:RN[i],g:'m'})),
-  ...SU.flatMap(s=>RK.map(r=>({cn:s[0]+r[0],en:r[1]+' of '+s[1],num:r[2],g:s[2]})))];
-const SV=p=>`<svg viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-const GLYPH={
-  m:SV('<circle cx="30" cy="30" r="6"/><path d="M30 6v14M30 40v14M6 30h14M40 30h14M14.4 14.4l8.5 8.5M37.1 37.1l8.5 8.5M45.6 14.4l-8.5 8.5M22.9 37.1l-8.5 8.5"/>'),
-  w:SV('<path d="M30 6v46"/><path d="M30 16c5-4 9-3 10 1M30 26c-5-4-9-3-10 1M30 36c5-4 9-3 10 1"/><circle cx="30" cy="54" r="1.8"/>'),
-  c:SV('<path d="M17 10h26c0 13-5 22-13 22S17 23 17 10z"/><path d="M30 32v13M22 50h16M25 45h10"/>'),
-  s:SV('<path d="M30 5l3 6v30h-6V11z"/><path d="M19 41h22M30 41v9"/><circle cx="30" cy="53" r="2"/>'),
-  p:SV('<circle cx="30" cy="30" r="19"/><path d="M30 16L38.2 41.3L16.7 25.7H43.3L21.8 41.3Z"/>')};
-
-const cur=()=>{const r=DATA.tarot.at(-1);return r&&!r.done?r:null};
-const left=()=>{const u=new Set((cur()?.cards||[]).map(c=>c.k)),L=[];for(let i=0;i<78;i++)if(!u.has(i))L.push(i);return L};
-const nm=c=>TAROT[c.k].cn+(c.rev?'（逆位）':'（正位）');
-const readingOf=c=>DATA.tarot.find(r=>r.cards.includes(c));
 const fire=()=>{try{$('#ifFrame').contentWindow.ifSync?.()}catch(e){}};
 
 /* 给 infinity.html 用 */
-window.INF={left:()=>left().length,drawn:()=>cur()?.cards.length||0,pick:()=>pick(),list:()=>showList(),reset:()=>reset()};
+window.INF={count:()=>DATA.frag.length,busy:()=>busy,pick:()=>pick(),list:()=>showList()};
 
 ['https://fonts.googleapis.com','https://fonts.loli.net'].forEach(h=>document.head.insertAdjacentHTML('beforeend',
-  `<link rel="stylesheet" href="${h}/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap">`));
+  `<link rel="stylesheet" href="${h}/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Pinyon+Script&display=swap">`));
 document.head.insertAdjacentHTML('beforeend',`<style>
-#page-cards{padding:0;overflow:hidden;--trf:"Cormorant Garamond",var(--en)}
+#page-cards{padding:0;overflow:hidden;--fen:"Cormorant Garamond",var(--en);--fsc:"Pinyon Script","Snell Roundhand",cursive}
 body.ifb #tabbar{display:none}
 #ifFrame{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
 .if-top{position:absolute;z-index:2;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:calc(var(--st) + 4px) 12px 0;pointer-events:none}
 .if-top>*{pointer-events:auto}
-#ifView{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:calc(var(--st) + 16px) 18px calc(var(--sb) + 16px);background:rgba(20,22,30,.16);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+#ifView{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:calc(var(--st) + 16px) 16px calc(var(--sb) + 14px);background:rgba(20,22,30,.16);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 #ifView.show{display:flex}
-.tr-box{width:100%;max-width:400px;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:26px 22px 18px;border-radius:28px;text-align:center;color:var(--ink);
-  background:linear-gradient(160deg,rgba(255,255,255,.24),rgba(255,255,255,.07) 50%,rgba(255,255,255,.15));-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);
-  border:1px solid rgba(255,255,255,.7);box-shadow:inset 0 1px 1px rgba(255,255,255,.85),0 18px 40px rgba(60,40,60,.14);animation:trUp .45s cubic-bezier(.2,.9,.25,1)}
-html.dk .tr-box{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03) 50%,rgba(255,255,255,.06));border-color:rgba(255,255,255,.22)}
-@keyframes trUp{from{transform:translateY(40px) scale(.96);opacity:0}}
-.tr-flip{width:156px;height:256px;margin:0 auto 18px;perspective:900px}
-.tr-in{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.3,1.25,.4,1)}
-.tr-flip.on .tr-in{transform:rotateY(180deg)}
-.tr-b,.tr-f{position:absolute;inset:0;border-radius:12px;-webkit-backface-visibility:hidden;backface-visibility:hidden;box-shadow:0 14px 30px rgba(40,30,50,.18),0 1px 3px rgba(0,0,0,.1)}
-.tr-b{background:linear-gradient(170deg,#fff,#EAEEF4);border:1px solid #fff}
-.tr-b::before{content:"";position:absolute;inset:8px;border:.5px solid rgba(140,150,170,.5);border-radius:8px}
-.tr-b::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border:.5px solid rgba(140,150,170,.55);transform:rotate(45deg)}
-.tr-f{transform:rotateY(180deg);background:#FBF8F2;color:#7A6440;border:1px solid #fff}
-.tr-f::before{content:"";position:absolute;inset:7px;border:.8px solid rgba(169,142,91,.7);border-radius:8px}
-.tr-f::after{content:"";position:absolute;inset:11px;border:.5px solid rgba(169,142,91,.4);border-radius:6px}
-.tr-fc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:24px 12px 22px}
-.tr-f.rev .tr-fc{transform:rotate(180deg)}
-.tr-n{font-family:var(--trf);font-weight:500;font-size:15px;letter-spacing:4px}
-.tr-g{width:72px;height:72px;color:#A98E5B}
-.tr-g svg{width:100%;height:100%;display:block}
-.tr-cn{font-family:var(--ti);font-size:15px;letter-spacing:4px;color:#4A3B2E}
-.tr-en{font-family:var(--trf);font-style:italic;font-size:12.5px;margin-top:2px;opacity:.85}
-.tr-pos{font-size:12px;letter-spacing:3px;color:var(--sub)}
-.tr-pos b{font-weight:400;color:var(--accent-t)}
-.tr-name{font-size:20px;letter-spacing:5px;margin-top:4px}
-.tr-name em{display:block;font-family:var(--trf);font-style:italic;font-size:17px;letter-spacing:.5px;color:var(--sub);margin-top:2px}
-.tr-th{text-align:left;margin-top:18px;display:flex;flex-direction:column;gap:8px}
-.tr-say{font-family:var(--cn);font-size:14.5px;line-height:1.75;padding:10px 14px;border-radius:16px;white-space:pre-wrap;word-break:break-word;background:rgba(255,255,255,.5)}
-.tr-say small{display:block;font-size:11px;opacity:.6;margin-bottom:3px;letter-spacing:1px}
-.tr-say.me{background:color-mix(in srgb,var(--mb) 85%,transparent);color:var(--mbt);margin-left:28px}
-html.dk .tr-say.him{background:rgba(255,255,255,.08)}
-.tr-ft{display:flex;gap:10px;justify-content:center;margin-top:18px}
-.tr-ft .pill.ghost{background:rgba(255,255,255,.35)}
+.mf-box{width:100%;max-width:400px;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 4px 8px;animation:mfUp .45s cubic-bezier(.2,.9,.25,1)}
+@keyframes mfUp{from{transform:translateY(40px);opacity:0}}
+
+/* 封着的牌：他在想 */
+.mf-seal{position:relative;width:160px;height:248px;margin:0 auto 20px;border-radius:14px;background:linear-gradient(170deg,#fff,#EAEEF4);border:1px solid #fff;
+  box-shadow:0 18px 36px rgba(40,30,50,.18);animation:mfBreath 1.8s ease-in-out infinite}
+.mf-seal::before{content:"";position:absolute;inset:9px;border:.5px solid rgba(140,150,170,.5);border-radius:9px}
+.mf-seal::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border:.5px solid rgba(140,150,170,.55);transform:rotate(45deg)}
+@keyframes mfBreath{50%{transform:translateY(-6px) rotate(-1.5deg)}}
+.mf-wait{text-align:center;font-size:13px;letter-spacing:5px;color:var(--ink)}
+.mf-wait em{display:block;font-family:var(--fsc);font-style:normal;font-size:24px;letter-spacing:0;margin-bottom:2px;opacity:.75}
+
+/* 记忆档案卡 */
+.mf{filter:drop-shadow(0 16px 30px rgba(40,30,50,.16));animation:mfOpen 1s cubic-bezier(.2,.9,.25,1)}
+.mf.still{animation:none}
+@keyframes mfOpen{from{transform:perspective(1000px) rotateY(85deg) scale(.92);opacity:0}}
+.mf-a,.mf-b{background:#FBF9F5;color:#2F2A2C}
+.mf-a{position:relative;overflow:hidden;border-radius:20px 20px 0 0;padding:20px 22px 20px;
+  -webkit-mask:radial-gradient(circle at 0 100%,transparent 11px,#000 11.5px) left/51% 100% no-repeat,radial-gradient(circle at 100% 100%,transparent 11px,#000 11.5px) right/51% 100% no-repeat;
+  mask:radial-gradient(circle at 0 100%,transparent 11px,#000 11.5px) left/51% 100% no-repeat,radial-gradient(circle at 100% 100%,transparent 11px,#000 11.5px) right/51% 100% no-repeat}
+.mf-b{position:relative;border-radius:0 0 20px 20px;padding:22px 22px 18px;
+  -webkit-mask:radial-gradient(circle at 0 0,transparent 11px,#000 11.5px) left/51% 100% no-repeat,radial-gradient(circle at 100% 0,transparent 11px,#000 11.5px) right/51% 100% no-repeat;
+  mask:radial-gradient(circle at 0 0,transparent 11px,#000 11.5px) left/51% 100% no-repeat,radial-gradient(circle at 100% 0,transparent 11px,#000 11.5px) right/51% 100% no-repeat}
+.mf-b::before{content:"";position:absolute;left:18px;right:18px;top:0;border-top:1.5px dashed rgba(120,110,115,.28)}
+.mf-age{position:absolute;right:-4px;bottom:-30px;font-family:var(--fen);font-style:italic;font-weight:400;font-size:150px;line-height:1;color:rgba(47,42,44,.06);pointer-events:none}
+.mf-hd{position:relative;display:flex;justify-content:space-between;font-family:var(--fen);font-size:11px;letter-spacing:4px;color:#9A9396}
+.mf-era{position:relative;display:inline-block;margin-top:16px;padding:3px 10px;border:1px solid var(--accent-t);color:var(--accent-t);border-radius:4px;font-size:11px;letter-spacing:3px;transform:rotate(-3deg)}
+.mf-tt{position:relative;font-family:var(--ti);font-weight:500;font-size:23px;letter-spacing:4px;line-height:1.45;margin:12px 0 16px}
+.mf-meta{position:relative;display:flex;gap:20px}
+.mf-meta small{display:block;font-family:var(--fen);font-size:10px;letter-spacing:2px;color:#9A9396}
+.mf-meta b{font-family:var(--fen),var(--ti);font-weight:500;font-size:15px;white-space:nowrap}
+.mf-tx{font-family:var(--ti);font-size:15.5px;line-height:2;letter-spacing:.5px;text-align:justify;white-space:pre-wrap;word-break:break-word}
+.mf-tx::first-letter{float:left;font-size:2.6em;line-height:1;margin:6px 8px 0 0;color:var(--accent-t)}
+.mf-keep{display:flex;align-items:baseline;gap:12px;margin-top:18px;padding-top:12px;border-top:.5px solid rgba(0,0,0,.08);font-size:13.5px;letter-spacing:1px}
+.mf-keep small{flex:none;font-family:var(--fen);font-size:10px;letter-spacing:3px;color:#9A9396}
+.mf-sig{text-align:right;margin-top:14px;font-size:14px;letter-spacing:2px}
+.mf-sig em{font-family:var(--fsc);font-style:normal;font-size:22px;margin-right:8px;letter-spacing:0;color:#6B6266}
+html.dk .mf-a,html.dk .mf-b{background:#2B2D34;color:#ECEAEC}
+html.dk .mf-age{color:rgba(255,255,255,.05)}
+html.dk .mf-sig em{color:#B9B3B6}
+html.dk .mf-keep{border-color:rgba(255,255,255,.1)}
+.mf-in{text-align:center;font-size:11.5px;letter-spacing:3px;color:var(--ink);opacity:.6;margin:14px 0 0}
+.mf-th{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.mf-say{font-family:var(--cn);font-size:14.5px;line-height:1.75;padding:10px 14px;border-radius:16px;white-space:pre-wrap;word-break:break-word;color:var(--ink);
+  background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:.5px solid rgba(255,255,255,.7)}
+.mf-say small{display:block;font-size:11px;opacity:.6;margin-bottom:3px;letter-spacing:1px}
+.mf-say.me{background:color-mix(in srgb,var(--mb) 85%,transparent);color:var(--mbt);margin-left:28px}
+html.dk .mf-say.him{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
+.mf-ft{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.mf-ft .pill.ghost{background:rgba(255,255,255,.4)}
 </style>`);
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -91,75 +87,81 @@ $('#app').insertAdjacentHTML('beforeend',`
 <div class="modal" id="ifAns"><div class="mbox">
   <h3>问问<span class="hisName">陆择</span></h3>
   <div id="ifACard" style="text-align:center;font-family:var(--ti);font-size:15px;letter-spacing:2px;margin:4px 0 2px;color:var(--sys-sub)"></div>
-  <label class="f"><span>想问他的</span><textarea class="short" id="ifAText"></textarea></label>
+  <label class="f"><span>想问他的</span><textarea class="short" id="ifAText" placeholder="后来呢？"></textarea></label>
   <div class="mbtns"><button class="pill ghost" data-close="ifAns">取消</button><button class="pill" id="ifASave">问他</button></div>
 </div></div>`);
 
-/* ---------- 他来解牌 ---------- */
-const SCENE='这是你们的小窝「365」里的「Infinity」：一个玻璃文件夹，里面装着一副 78 张的塔罗牌。她在一张一张地抽，你坐在她旁边陪她看牌。';
-async function interp(c){
-  if(BUSY.has(c))return;BUSY.add(c);if(vc===c)vRender();
-  try{const T=TAROT[c.k],r=readingOf(c),i=r?r.cards.indexOf(c)+1:1;
-    const prev=r?r.cards.slice(0,i-1).map(x=>'「'+nm(x)+'」').join('、'):'';
-    const recent=recentChat(10);
-    const t=await callAI(sceneSystem(SCENE),[{role:'user',text:`她刚从文件夹里抽出${i>1?'这一轮的第 '+i+' 张':'一张'}牌：「${T.cn}」（${T.en}），${c.rev?'逆位':'正位'}。${prev?`这一轮她前面已经抽到：${prev}，可以把几张牌连起来看。`:''}${recent?`\n你们最近的聊天：\n${recent}`:''}
-请以${S.hisName}的身份给她解这张牌：先用一两句话说清楚这张牌${c.rev?'逆位':'正位'}大概是什么意思，再结合她最近的事、你们之间，说说你怎么看。可以温柔，也可以照你的性格逗她、管她。口语化，像坐在她旁边说话，三到六句。不要分点，不要 markdown，不要 emoji，不要加名字前缀。`}]);
-    c.text=clean(t)}
-  catch(e){toast(e.message)}
-  BUSY.delete(c);await save();if(vc===c)vRender()}
-async function respond(c){
-  if(BUSY.has(c))return;BUSY.add(c);if(vc===c)vRender();
-  try{const T=TAROT[c.k],th=(c.thread||[]).map(x=>`${x.who==='me'?'她':'你'}：${x.text}`).join('\n');
-    const t=await callAI(sceneSystem(SCENE),[{role:'user',text:`你们在看她抽到的塔罗牌「${T.cn}」（${T.en}，${c.rev?'逆位':'正位'}）。你刚才是这样解的：「${c.text}」\n后面的对话：\n${th}\n请以${S.hisName}的身份接着回她最新说的话，口语化，一到四句，不要加名字前缀，不要 emoji。`}]);
-    (c.thread=c.thread||[]).push({who:'him',text:clean(t),t:Date.now()})}
-  catch(e){toast(e.message)}
-  BUSY.delete(c);await save();if(vc===c)vRender()}
-
-/* ---------- 抽一张：抽出来的不放回去 ---------- */
+/* ---------- 他想起一段 ---------- */
+const SCENE='这是你们的小窝「365」里的「Infinity」：一个玻璃文件夹，里面装着你的记忆碎片。她抽出一张，你就讲一段你自己的过去给她听。';
 async function pick(){
-  if(drawing)return;const L=left();if(!L.length)return toast('牌抽完了，洗牌再来');
-  drawing=true;
-  try{let r=cur();
-    if(!r){r={id:uid(),t:Date.now(),cards:[],done:false};DATA.tarot.push(r);if(DATA.tarot.length>60)DATA.tarot.splice(0,DATA.tarot.length-60)}
-    const c={k:L[Math.floor(Math.random()*L.length)],rev:Math.random()<.5,t:Date.now(),text:'',thread:[]};
-    r.cards.push(c);await save();fire();
-    setTimeout(()=>{if(page==='cards')view(c,true)},600);
-    interp(c)}
-  finally{drawing=false}}
-async function reset(){const r=cur();if(!r||!r.cards.length)return;
-  if(!confirm('把牌都收回文件夹，重新洗牌？抽过的牌会留在「以前抽过的」里。'))return;
-  r.done=true;await save();closeView();fire();toast('洗好了')}
+  if(busy)return;busy=true;fire();
+  const f={id:uid(),t:Date.now(),thread:[],_wait:true};
+  setTimeout(()=>{if(f._wait&&page==='cards'){vc=f;vRender();$('#ifView').classList.add('show')}},500);
+  try{
+    const era=S.fragEra||'';
+    const old=DATA.frag.slice(-40).map(x=>`- ${x.era||''}·${x.title}：${x.sum||''}`).join('\n');
+    const j=J(await callAI(sceneSystem(SCENE),[{role:'user',text:`请以${S.hisName}的身份，从你自己的人生里想起一段记忆，讲给她听。${era?`这次讲你${era}的事。`:'可以是小时候、少年时、上大学、工作以后，或者遇见她以后，随你想起什么。'}
+要求：真实、具体、有画面，要有一个地方、一个人、一样东西、一个细节。要和你的人设、你的过去对得上。${old?'\n你之前已经讲过这些，不要重复，也不要和它们矛盾：\n'+old:''}
+story 用第一人称，像坐在她旁边轻声讲，120 到 260 字，最后可以带一句和她有关的话，也可以不带。不要 emoji，不要 markdown。
+只输出 JSON：{"era":"从 小时候/少年时/大学/工作以后/遇见你以后 里选一个","year":"哪一年，四位数字","age":当时几岁的数字,"place":"地方，两到六个字","title":"这段记忆的名字，四到十个字","story":"","keep":"这段记忆里留下的一样东西或一个细节，不超过十二个字","sum":"一句话概括，三十字以内"}`}]));
+    if(!j.story||!j.title)throw new SyntaxError('empty');
+    Object.assign(f,{era:String(j.era||era||'往事'),year:String(j.year||'').slice(0,4),age:(+j.age>0&&+j.age<120)?Math.round(+j.age):'',
+      place:String(j.place||'').slice(0,10),title:String(j.title).slice(0,16),story:clean(String(j.story)),keep:String(j.keep||'').slice(0,16),sum:String(j.sum||'').slice(0,40)});
+    delete f._wait;DATA.frag.push(f);await save();
+    if(page==='cards'){vc=f;vRender(true);$('#ifView').classList.add('show')}
+    else toast(`${S.hisName}想起了一段事`)}
+  catch(e){if(vc===f)closeView();toast(e instanceof SyntaxError?'他一时没想起来，再抽一张试试':e.message)}
+  finally{delete f._wait;busy=false;fire()}}
+
+/* ---------- 问他 ---------- */
+async function respond(f){
+  if(BUSY.has(f))return;BUSY.add(f);if(vc===f)vRender(false,true);
+  try{const th=(f.thread||[]).map(x=>`${x.who==='me'?'她':'你'}：${x.text}`).join('\n');
+    const t=await callAI(sceneSystem(SCENE),[{role:'user',text:`你刚给她讲了你${f.era}的一段事「${f.title}」（${f.year?f.year+'年，':''}${f.age?f.age+'岁，':''}${f.place||''}）：\n「${f.story}」\n\n后面的对话：\n${th}\n\n请以${S.hisName}的身份接着回她最新问的，细节要和你讲过的对得上，可以多讲一点当时的事。口语化，一到五句，不要加名字前缀，不要 emoji。`}]);
+    (f.thread=f.thread||[]).push({who:'him',text:clean(t),t:Date.now()})}
+  catch(e){toast(e.message)}
+  BUSY.delete(f);await save();if(vc===f)vRender(false,true)}
 
 /* ---------- 翻开一张 ---------- */
-function faceHTML(c){const T=TAROT[c.k];
-  return `<div class="tr-f${c.rev?' rev':''}"><div class="tr-fc"><div class="tr-n">${T.num}</div><div class="tr-g">${GLYPH[T.g]}</div><div><div class="tr-cn">${T.cn}</div><div class="tr-en">${T.en}</div></div></div></div>`}
-function view(c,anim){if(!c)return;vc=c;vRender(anim);$('#ifView').classList.add('show')}
+function view(f){if(!f)return;vc=f;vRender(true);$('#ifView').classList.add('show')}
 function closeView(){$('#ifView').classList.remove('show');vc=null}
-function vRender(anim){const c=vc;if(!c)return;
-  const T=TAROT[c.k],r=readingOf(c),i=r?r.cards.indexOf(c)+1:1,H=esc(S.hisName),busy=BUSY.has(c);
-  const th=(c.text?`<div class="tr-say him"><small>${H}</small>${esc(c.text)}</div>`:'')
-    +(c.thread||[]).map(x=>`<div class="tr-say ${x.who==='me'?'me':'him'}"><small>${x.who==='me'?'我':H}</small>${esc(x.text)}</div>`).join('')
-    +(busy?`<div class="tr-say him"><small>${H}</small>正在看这张牌…</div>`:'');
-  $('#ifView').innerHTML=`<div class="tr-box">
-    <div class="tr-flip${anim?'':' on'}" id="trFlip"><div class="tr-in"><div class="tr-b"></div>${faceHTML(c)}</div></div>
-    <div class="tr-pos">第 ${i} 张 · <b>${c.rev?'逆位':'正位'}</b></div>
-    <div class="tr-name">${T.cn}<em>${T.en}</em></div>
-    ${th?`<div class="tr-th">${th}</div>`:''}
-    <div class="tr-ft">${busy?'':(c.text?'<button class="pill ghost" data-va>问他</button>':'<button class="pill ghost" data-vr>让他说说</button>')}<button class="pill" data-vx>收好</button></div></div>`;
-  if(anim)setTimeout(()=>$('#trFlip')?.classList.add('on'),120)}
-$('#ifView').onclick=e=>{
+function vRender(anim,bottom){const f=vc;if(!f)return;const H=esc(S.hisName);
+  if(f._wait){$('#ifView').innerHTML=`<div class="mf-box"><div class="mf-seal"></div><p class="mf-wait"><em>a memory…</em>${H}在想</p></div>`;return}
+  const no=DATA.frag.indexOf(f)+1,b=BUSY.has(f);
+  const th=(f.thread||[]).map(x=>`<div class="mf-say ${x.who==='me'?'me':'him'}"><small>${x.who==='me'?'我':H}</small>${esc(x.text)}</div>`).join('')
+    +(b?`<div class="mf-say him"><small>${H}</small>在想怎么跟你说…</div>`:'');
+  $('#ifView').innerHTML=`<div class="mf-box" id="mfBox"><article class="mf${anim?'':' still'}">
+    <div class="mf-a">${f.age?`<div class="mf-age">${f.age}</div>`:''}
+      <div class="mf-hd"><span>MEMORY</span><span>No. ${String(no).padStart(2,'0')}</span></div>
+      <span class="mf-era">${esc(f.era||'往事')}</span>
+      <h3 class="mf-tt">${esc(f.title)}</h3>
+      <div class="mf-meta">${f.year?`<div><small>YEAR</small><b>${esc(f.year)}</b></div>`:''}${f.age?`<div><small>AGE</small><b>${f.age} 岁</b></div>`:''}${f.place?`<div><small>PLACE</small><b>${esc(f.place)}</b></div>`:''}</div>
+    </div>
+    <div class="mf-b"><div class="mf-tx">${esc(f.story)}</div>
+      ${f.keep?`<div class="mf-keep"><small>KEPT</small><span>${esc(f.keep)}</span></div>`:''}
+      <div class="mf-sig"><em>remembered by</em>${H}</div></div>
+  </article>
+  <p class="mf-in">已收进${H}的记忆</p>
+  ${th?`<div class="mf-th">${th}</div>`:''}
+  <div class="mf-ft">${b?'':'<button class="pill ghost" data-va>问他</button>'}<button class="pill ghost" data-vm>···</button><button class="pill" data-vx>收好</button></div></div>`;
+  if(bottom)requestAnimationFrame(()=>{const x=$('#mfBox');if(x)x.scrollTop=x.scrollHeight})}
+$('#ifView').onclick=e=>{const f=vc;
   if(e.target.id==='ifView'||e.target.closest('[data-vx]'))return closeView();
-  if(e.target.closest('[data-vr]'))return interp(vc);
-  if(e.target.closest('[data-va]')){ansCard=vc;$('#ifACard').textContent=nm(vc);$('#ifAText').value='';openModal('ifAns')}};
-$('#ifASave').onclick=async()=>{const c=ansCard,v=$('#ifAText').value.trim();if(!c)return;if(!v)return toast('写点什么吧');
-  (c.thread=c.thread||[]).push({who:'me',text:v,t:Date.now()});await save();closeModal('ifAns');if(vc===c)vRender();respond(c)};
+  if(!f||f._wait)return;
+  if(e.target.closest('[data-va]')){ansC=f;$('#ifACard').textContent=f.title;$('#ifAText').value='';openModal('ifAns');return}
+  if(e.target.closest('[data-vm]'))sheet([
+    ['复制这段',()=>navigator.clipboard?.writeText(`${f.title}\n${f.story}`).then(()=>toast('已复制'))],
+    ['删除这段记忆',async()=>{if(!confirm('删除这段记忆？他也会忘掉这件事。'))return;DATA.frag=DATA.frag.filter(x=>x!==f);await save();closeView();fire()}]])};
+$('#ifASave').onclick=async()=>{const f=ansC,v=$('#ifAText').value.trim();if(!f)return;if(!v)return toast('写点什么吧');
+  (f.thread=f.thread||[]).push({who:'me',text:v,t:Date.now()});await save();closeModal('ifAns');if(vc===f)vRender(false,true);respond(f)};
 
-/* ---------- 这一轮 / 以前抽过的 ---------- */
-function showList(){const r=cur();if(!r||!r.cards.length)return toast('这一轮还没抽');
-  sheet(r.cards.map((c,i)=>[`第 ${i+1} 张 · ${nm(c)}`,()=>view(c)]))}
-function history(){const L=DATA.tarot.filter(r=>r.cards.length).slice().reverse().slice(0,20);if(!L.length)return toast('还没抽过牌');
-  sheet(L.map(r=>[`${fmtDate(r.t)} · ${r.cards.map(c=>TAROT[c.k].cn).join('、')}`.slice(0,36),()=>sheet(r.cards.map((c,i)=>[`第 ${i+1} 张 · ${nm(c)}`,()=>view(c)]))]))}
-$('#ifMenu').onclick=()=>sheet([['这一轮抽到的',showList],['以前抽过的',history],['重新洗牌',reset]]);
+/* ---------- 收好的记忆 / 想听哪一段 ---------- */
+function showList(){const L=DATA.frag.slice().reverse().slice(0,50);if(!L.length)return toast('还没抽过');
+  sheet(L.map(f=>[`No.${DATA.frag.indexOf(f)+1} · ${f.era||''} · ${f.title}`,()=>view(f)]))}
+$('#ifMenu').onclick=()=>sheet([
+  ['收好的记忆',showList],
+  [`想听哪一段：${S.fragEra||'随便'}`,()=>sheet([['随便',()=>{S.fragEra='';saveSettings();toast('随他想起什么')}],
+    ...ERAS.map(x=>[x,()=>{S.fragEra=x;saveSettings();toast(`下一张讲${x}的事`)}])])]]);
 
 /* ---------- 「游戏」页：显示成 Infinity ---------- */
 function patchGame(){
@@ -169,19 +171,17 @@ function patchGame(){
     el=$('#page-game [data-go="cards"]');if(!el)return}
   el.dataset.go='cards';
   const b=el.querySelector('b');if(b&&b.textContent!=='Infinity')b.textContent='Infinity';
-  const ic=el.querySelector('.gm-ic');if(ic&&!ic.dataset.if){ic.dataset.if=1;ic.innerHTML=ICON}
-  const d=isoDate(today()),n=DATA.tarot.flatMap(r=>r.cards).filter(c=>isoDate(new Date(c.t))===d).length;
-  const sm=el.querySelector('small');if(sm)sm.textContent=n?`塔罗 · 今天抽了 ${n} 张`:'塔罗 · 78 张'}
+  const ic=el.querySelector('.gm-ic');if(ic&&ic.dataset.if!==ICON){ic.dataset.if=ICON;ic.innerHTML=ICON}
+  const sm=el.querySelector('small');if(sm)sm.textContent=DATA.frag.length?`他的记忆碎片 · ${DATA.frag.length} 段`:'他的记忆碎片'}
 $$('#moreGrid [data-go="infinity"]').forEach(x=>x.remove());
 
-/* ---------- 让他平时也知道今天的牌 ---------- */
-HOOKS.context.push(()=>{const d=isoDate(today());
-  const L=DATA.tarot.flatMap(r=>r.cards).filter(c=>isoDate(new Date(c.t))===d);
-  if(!L.length)return '';
-  return '【Infinity 塔罗】她今天抽到：'+L.map(nm).join('、')+'。可以自然地聊到，不用每句都提。'});
+/* ---------- 收进他的记忆：讲过的事，他一直记得 ---------- */
+HOOKS.persona.push(()=>{const L=DATA.frag.filter(f=>f.title);if(!L.length)return '';
+  return '【你讲给她听过的往事】这些是你亲口告诉过她的、你自己的过去。要一直记得，细节不能说错，可以在聊天里自然地提起：\n'
+    +L.slice(-30).map(f=>`- ${f.era||''}${f.age?'，'+f.age+'岁':''}${f.place?'，'+f.place:''}：${f.title}——${f.sum||String(f.story).slice(0,40)}`).join('\n')});
 
 patchGame();
-HOOKS.ready.push(()=>{if(!Array.isArray(DATA.tarot))DATA.tarot=[];patchGame();const f=$('#ifFrame');if(f&&!f.src)f.src='infinity.html'});
+HOOKS.ready.push(()=>{if(!Array.isArray(DATA.frag))DATA.frag=[];patchGame();const f=$('#ifFrame');if(f&&!f.src)f.src='infinity.html'});
 HOOKS.page.push(n=>{page=n;document.body.classList.toggle('ifb',n==='cards');
   if(n==='game')setTimeout(patchGame,0);
   if(n==='cards'){const f=$('#ifFrame');if(!f.src)f.src='infinity.html';else fire()}
