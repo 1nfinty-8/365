@@ -151,7 +151,7 @@ function wipe(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),st=Math.max(1,Math.ce
 
 /* 雨：小水珠慢慢冒出来，偶尔一颗变重滑下去，在雾上冲出一道水痕 */
 function addBead(){const b={x:Math.random()*G.W,y:Math.random()*G.H,r:1.4+Math.pow(Math.random(),2)*3.6,t:performance.now()};
-  G.beads.push(b);erase(b.x,b.y,b.r*1.4,.55);if(G.beads.length>FG.beads)G.beads.shift()}
+  G.beads.push(b);erase(b.x,b.y,b.r*1.1,1);if(G.beads.length>FG.beads)G.beads.shift()}
 function addRun(){let x,y,r;const big=G.beads.filter(b=>b.r>3.2);
   if(big.length&&Math.random()<.6){const b=rnd(big);G.beads.splice(G.beads.indexOf(b),1);x=b.x;y=b.y;r=b.r+1.2}
   else{x=Math.random()*G.W;y=Math.random()*G.H*.55;r=rr([3.6,5.6])}
