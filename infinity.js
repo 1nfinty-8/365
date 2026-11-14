@@ -1,4 +1,4 @@
-/* ===== 365 · infinity.js · 关于他：他的记忆（透明的肥水面） ===== */
+/* ===== 365 · infinity.js · 关于他：他的记忆（透明的湖面） ===== */
 (()=>{
 if(!Array.isArray(DATA.frag))DATA.frag=[];
 Object.assign(DEFAULT,{fragEra:''});
@@ -13,29 +13,35 @@ const paras=t=>String(t).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<
 
 /* ===== 想调效果改这里 ===== */
 const FX={
-  fat:24,          // 涟漪一圈有多宽（像素）：越大越肥（16～36）
-  rings:1.8,       // 一个雨点荡出几圈：越大圈越多（1.2～2.6）
-  punch:1,         // 涟漪起伏的力度：越大明暗越强（.6～1.6）
-  light:.85,       // 亮光和影子的浓淡
-  sea:8,           // 底下一直在晃的水波：0 = 只剩雨圈，其余地方完全透明
-  rain:[200,560],  // 雨点间隔（毫秒），越小越密
-  res:1.5          // 清晰度上限（×屏幕点）：1.5 清楚，1 最省电；连续掉帧会自动降
+  fat:24,             // 涟漪一圈有多宽（像素）：越大越肥（16～36）
+  rings:1.8,          // 一个雨点荡出几圈：越大圈越多（1.2～2.6）
+  punch:1,            // 涟漪起伏的力度（.6～1.6）
+  speed:.5,           // 涟漪荡开的快慢：越小越慢（.3～1）
+  wave:1,             // 湖面一直在的波浪：越大越明显（0～1.6），0 = 只剩雨圈
+  drift:1,            // 波浪推过来的快慢：越小越慢（.4～1.5）
+  light:.85,          // 亮面（白光）的浓淡
+  shade:.42,          // 暗面的浓淡：嫌深往 .3 调，嫌浅往 .55 调
+  tint:[.60,.67,.82], // 暗面的颜色（红、绿、蓝，0～1）：三个数一起加大就更浅
+  rain:[320,820],     // 雨点间隔（毫秒），越小越密
+  res:1.5             // 清晰度上限（×屏幕点）：1.5 清楚，1 最省电；连续掉帧会自动降
 };
 
 /* ===== 想调文风改这里 ===== */
 const START=['一样东西（用旧的、弄丢的、别人给的）','别人说过的一句话','一种气味或者声音','一顿饭','一段路、一趟车','某一天的天气',
   '一个人的手、背影或者习惯动作','一件小到不值得讲的事','一次等人或者被人等','一间屋子、一个角落','一笔钱','一场病或者一次受伤','一次撒谎','一个后来再没见过的人'];
-const TONE=['平平淡淡地讲','带一点好笑','有点涩','冷一点、远一点','有点不好意思','讲得很慢'];
-const VOICE=`- 这是一篇给人读的散文，不是答题。读起来接近汪曾祺、阿城、李娟、双雪涛那一路：平实、克制、细节准、不端着。不是模仿谁，口气要是你自己的——你是什么出身、什么脾气，就说什么样的话。
+const TONE=['平平淡淡地讲','冷一点、远一点','讲得很慢','有点涩','像在说别人的事','带一点不动声色的讽刺'];
+const VOICE=`- 这是一篇给人读的散文，不是答题。调子参照三个人：白先勇写旧事的那种平静和体面，加缪《局外人》那种只陈述、不解释的冷，石黑一雄那种把情绪压在礼数底下的克制。不是模仿谁，口气是你自己的：话少，有教养，和人隔着一点距离。
+- 冷：讲自己的事也像在讲别人的事。不解释动机，不替自己辩白，不讨读的人喜欢。越要紧、越难堪的地方，越是一笔带过。
+- 贵气不靠名牌和价钱，靠习以为常：从小见惯的东西不形容、不惊讶、不炫耀，顺手提一句就过去。也靠分寸：怎么称呼人，怎么回话，什么话不说。别人说话可以粗，你的叙述不粗——用词干净，偏书面，不耍贫嘴，不用网络话。
 - 从事情中间写起：一个动作、一样东西、一句话。不要用「那年我十岁」「记得小时候」开头，不要先交代背景。
-- 只写看得见、摸得着的：东西的牌子、价钱、颜色，天气，气味，谁手上拿着什么，屋里有什么声音。情绪不要说出来，不写「难过」「温暖」「孤独」「释然」，让东西和动作去说。
-- 人要像真人：说话带各自的口气，可以答非所问，可以只说半句。对话不必多，一两句够用。
-- 句子有长有短，像人在慢慢讲。可以岔出去说一个不相干的细节，再绕回来。能省的省掉，留白。
-- 比喻一篇最多一个，而且得是你这个人会想到的。不要「仿佛」「宛如」「如同」连着打比方。
+- 只写看得见、摸得着的：东西的质地、颜色、新旧，光线，天气，气味，谁手上拿着什么，屋里有什么声音。情绪不要说出来，不写「难过」「温暖」「孤独」「释然」，让东西和动作去说。
+- 人要像真人：说话带各自的口气，可以答非所问，可以只说半句。对话不必多，一两句够用。你自己在文中说的话更少，常常不接话。
+- 句子偏短，偶尔一个长句。能省的省掉，留白。
+- 比喻一篇最多一个，也可以一个都没有。
 - 不要排比，不要对仗，不要「不是……而是……」，不要成语连用，不要每段末尾来一句漂亮话。
 - 不要「时光」「岁月」「命运」「温柔」「治愈」「烟火气」「斑驳」这类词。
 - 不要总结，不要升华，不要「那一刻我才明白」「多年以后」「从那以后我学会了」。停在一个画面、一个动作或别人的一句话上，停得早一点，话不要说完。
-- 记不清的地方可以直说记不清了，记忆本来就不齐。`;
+- 记不清的地方可以直说记不清了。`;
 
 let page='',vc=null,ansC=null,busy=false,typing=null;
 const BUSY=new Set();
@@ -134,33 +140,33 @@ $('#app').insertAdjacentHTML('beforeend',`
 const VIEW=()=>$('#ifView'),CV=$('#mfWater');
 const dark=()=>document.documentElement.classList.contains('dk');
 
-/* ================= 水面：雨落在水上（显卡画，只算坡度，一个像素算一遍） ================= */
+/* ================= 水面：一片湖，雨落在上面（显卡画，只算坡度，一个像素算一遍） ================= */
 const WV={W:0,H:0,raf:0,rain:0,pulse:0,cx:0,cy:0,sunk:false,ok:undefined,q:1,last:0,acc:0,n:0};
+const MAXD=24,DKC=[0,.02,.07];
 const DR=[],T0=performance.now(),now=()=>(performance.now()-T0)/1000;
-/* 一个雨点：位置、力度（坡度 0～1.6）、一圈的宽度、扩散速度、寿命（秒）、延迟 */
-function addDrop(x,y,amp,lam,spd,life,delay=0){DR.push([x,y,now()+delay,amp,lam,spd,life]);if(DR.length>16)DR.shift()}
+/* 一个雨点：位置、力度（坡度 0～1.6）、一圈的宽度、扩散速度、寿命（秒）、延迟；快慢统一由 FX.speed 管 */
+function addDrop(x,y,amp,lam,spd,life,delay=0){
+  DR.push([x,y,now()+delay/FX.speed,amp,lam,spd*FX.speed,life/Math.sqrt(FX.speed)]);if(DR.length>MAXD)DR.shift()}
 const VS='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
 const FS=`precision highp float;
-uniform vec2 uR;uniform float uK,uT,uL,uA,uDk;uniform vec4 uD[16];uniform vec4 uP[16];uniform int uN;
-const vec2 K1=vec2(.010,.006),K2=vec2(-.005,.012),K3=vec2(.016,-.004),K4=vec2(.031,.022),K5=vec2(-.027,.041),K6=vec2(.052,-.018);
+uniform vec2 uR;uniform float uK,uT,uL,uS,uA;uniform vec3 uC;uniform vec4 uD[24];uniform vec4 uP[24];uniform int uN;
+const vec2 K1=vec2(.008,.052),K2=vec2(-.019,.071),K3=vec2(.027,.093),K4=vec2(-.046,.118),K5=vec2(.012,.031);
 void main(){
   vec2 p=vec2(gl_FragCoord.x,uR.y*uK-gl_FragCoord.y)/uK;
-  vec2 w=p+10.*vec2(sin(p.y*.019+uT*.6),sin(p.x*.016-uT*.5));
-  vec2 g=uA*(cos(dot(w,K1)+uT*.5)*K1+cos(dot(w,K2)-uT*.4)*K2+.6*cos(dot(w,K3)+uT*.7)*K3
-    +.35*cos(dot(w,K4)-uT*1.1)*K4+.25*cos(dot(w,K5)+uT*.9)*K5+.16*cos(dot(w,K6)-uT*1.3)*K6);
-  for(int i=0;i<16;i++){if(i>=uN)break;
+  vec2 w=p+14.*vec2(sin(p.y*.017+uT*.35),sin(p.x*.013-uT*.3));
+  vec2 g=uA*(3.*cos(dot(w,K1)-uT*.75)*K1+1.6*cos(dot(w,K2)-uT*.95)*K2+.9*cos(dot(w,K3)-uT*1.25)*K3
+    +.45*cos(dot(w,K4)-uT*1.6)*K4+3.9*cos(dot(w,K5)-uT*.5)*K5);
+  for(int i=0;i<24;i++){if(i>=uN)break;
     vec4 d=uD[i],q=uP[i];vec2 v=p-d.xy;float r2=dot(v,v);
     if(r2>q.z)continue;
     float r=sqrt(r2);if(r<q.w)continue;
     float x=r-d.z,s=x>0.?q.y*2.2:q.y,e=x*s,ph=q.x*x;
     g+=v*(d.w*exp(-e*e)*(cos(ph)-2.*e*s/q.x*sin(ph))*min(r*.25,1.)/max(r,.5));}
-  float lit=dot(g,vec2(.55,.83)),m=dot(g,g);
+  float lit=dot(g,vec2(.55,.83)),m=dot(g,g),iso=m/(m+.6);
   float core=smoothstep(.22,.6,lit);
-  float hi=min((smoothstep(.03,.4,lit)*.42+core*core*.8+m/(m+.6)*.3)*uL*(1.-.45*uDk),1.);
-  float sh=smoothstep(.03,.5,-lit)*.5*uL;
-  float al=min(hi+sh,1.);
-  vec3 sc=mix(vec3(.2,.28,.44),vec3(0.,.02,.07),uDk);
-  gl_FragColor=vec4(min(vec3(hi)+sc*sh,vec3(al)),al);}`;
+  float hi=min((smoothstep(.03,.4,lit)*.42+core*core*.8+iso*.3)*uL,1.);
+  float sh=min(smoothstep(0.,.32,-lit)*.75+iso*.45,1.)*uS*(1.-hi);
+  gl_FragColor=vec4(uC*sh+hi,sh+hi);}`;
 function glInit(){if(WV.ok!==undefined)return WV.ok;
   const gl=CV.getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false});
   if(!gl)return WV.ok=false;
@@ -169,7 +175,7 @@ function glInit(){if(WV.ok!==undefined)return WV.ok;
     if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error('link');gl.useProgram(pr);
     const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
     const lp=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(lp);gl.vertexAttribPointer(lp,2,gl.FLOAT,false,0,0);
-    WV.u={};['uR','uK','uT','uL','uA','uDk','uN','uD','uP'].forEach(k=>WV.u[k]=gl.getUniformLocation(pr,k));
+    WV.u={};['uR','uK','uT','uL','uS','uA','uC','uN','uD','uP'].forEach(k=>WV.u[k]=gl.getUniformLocation(pr,k));
     /* 先空画一个像素，把编译的那一下卡顿提前花掉 */
     gl.viewport(0,0,1,1);gl.uniform2f(WV.u.uR,1,1);gl.uniform1f(WV.u.uK,1);gl.uniform1i(WV.u.uN,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     WV.gl=gl;WV.ok=true}
@@ -180,16 +186,17 @@ CV.addEventListener('webglcontextrestored',()=>{if(VIEW().classList.contains('sh
 function wvSize(force){const v=VIEW(),W=v.clientWidth||innerWidth,H=v.clientHeight||innerHeight;if(!force&&W===WV.W&&H===WV.H)return;
   WV.W=W;WV.H=H;const k=Math.min(devicePixelRatio||1,FX.res)*WV.q;
   CV.width=Math.round(W*k);CV.height=Math.round(H*k);CV.style.width=W+'px';CV.style.height=H+'px'}
-const UA=new Float32Array(64),UB=new Float32Array(64);
-function wvDraw(){const gl=WV.gl,u=WV.u,t=now();let n=0;
+const UA=new Float32Array(MAXD*4),UB=new Float32Array(MAXD*4);
+function wvDraw(){const gl=WV.gl,u=WV.u,t=now(),dk=dark();let n=0;
   for(let i=DR.length-1;i>=0;i--)if(t>DR[i][2]+DR[i][6])DR.splice(i,1);
   for(const d of DR){const a=t-d[2];if(a<0)continue;
-    const f=1-a/d[6],lam=d[4]*(1+a*.2),w=lam*FX.rings,R=d[5]*a,j=(n++)*4;
-    UA[j]=d[0];UA[j+1]=d[1];UA[j+2]=R;UA[j+3]=d[3]*FX.punch*f*Math.sqrt(f)*Math.min(a/.1,1)/Math.sqrt(1+R*.012);
+    const f=1-a/d[6],lam=d[4]*(1+a*.12),w=lam*FX.rings,R=d[5]*a,j=(n++)*4;
+    UA[j]=d[0];UA[j+1]=d[1];UA[j+2]=R;UA[j+3]=d[3]*FX.punch*f*Math.sqrt(f)*Math.min(a/.3,1)/Math.sqrt(1+R*.012);
     UB[j]=6.2832/lam;UB[j+1]=1/w;UB[j+2]=(R+w)*(R+w);UB[j+3]=Math.max(0,R-2.2*w)}
   gl.viewport(0,0,CV.width,CV.height);
-  gl.uniform2f(u.uR,WV.W,WV.H);gl.uniform1f(u.uK,CV.width/WV.W);gl.uniform1f(u.uT,t%(200*Math.PI));
-  gl.uniform1f(u.uL,FX.light);gl.uniform1f(u.uA,FX.sea);gl.uniform1f(u.uDk,dark()?1:0);
+  gl.uniform2f(u.uR,WV.W,WV.H);gl.uniform1f(u.uK,CV.width/WV.W);gl.uniform1f(u.uT,(t*FX.drift)%(400*Math.PI));
+  gl.uniform1f(u.uL,FX.light*(dk?.55:1));gl.uniform1f(u.uS,FX.shade*(dk?1.3:1));gl.uniform1f(u.uA,FX.wave);
+  gl.uniform3fv(u.uC,dk?DKC:FX.tint);
   gl.uniform4fv(u.uD,UA);gl.uniform4fv(u.uP,UB);gl.uniform1i(u.uN,n);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4)}
 function rainDrop(){const big=Math.random()<.15,x=Math.random()*WV.W,y=Math.random()*WV.H,l=FX.fat*(big?1.35:.75+Math.random()*.45);
@@ -202,28 +209,28 @@ function wvLoop(ts){if(!VIEW().classList.contains('show')||!WV.ok){WV.raf=0;retu
     if(dt>0&&dt<120&&++WV.n>0){WV.acc+=dt;
       if(WV.n>=45){if(WV.acc/WV.n>24&&WV.q>.5){WV.q-=.25;wvSize(true)}WV.acc=WV.n=0}}
     if(ts>WV.rain){WV.rain=ts+FX.rain[0]+Math.random()*(FX.rain[1]-FX.rain[0]);rainDrop()}
-    if(vc&&vc._wait&&WV.sunk&&ts>WV.pulse){WV.pulse=ts+1800;addDrop(WV.cx,WV.cy,.9,FX.fat*1.5,66,3.2)}
+    if(vc&&vc._wait&&WV.sunk&&ts>WV.pulse){WV.pulse=ts+2600;addDrop(WV.cx,WV.cy,.9,FX.fat*1.5,66,3.2)}
     wvDraw()}
   WV.last=ts;
   WV.raf=requestAnimationFrame(wvLoop)}
 function wvStart(){if(!glInit())return;wvSize();WV.cx=WV.W/2;WV.cy=WV.H*.45;
   if(!WV.raf){DR.length=0;WV.n=-30;WV.acc=0;WV.raf=requestAnimationFrame(wvLoop)}}
 addEventListener('resize',()=>{if(VIEW().classList.contains('show'))wvSize()});
-/* 手指点水、拨水 */
+/* 手指点水；滑过去，水跟着手动起来 */
 let pd=null,pdT=0;
 const rel=(x,y)=>{const vr=VIEW().getBoundingClientRect();return [x-vr.left,y-vr.top]};
 function tap(cx,cy){const[x,y]=rel(cx,cy);addDrop(x,y,1.2,FX.fat*1.2,72,3)}
 VIEW().addEventListener('touchstart',e=>{const t=e.touches[0];pd={x:t.clientX,y:t.clientY};tap(t.clientX,t.clientY)},{passive:true});
 VIEW().addEventListener('touchmove',e=>{if(!pd)return;const t=e.touches[0],n=performance.now();
-  if(n-pdT<60||Math.hypot(t.clientX-pd.x,t.clientY-pd.y)<16)return;pdT=n;
-  pd={x:t.clientX,y:t.clientY};const[x,y]=rel(t.clientX,t.clientY);addDrop(x,y,.6,FX.fat*.8,50,1.8)},{passive:true});
+  if(n-pdT<70||Math.hypot(t.clientX-pd.x,t.clientY-pd.y)<14)return;pdT=n;
+  pd={x:t.clientX,y:t.clientY};const[x,y]=rel(t.clientX,t.clientY);addDrop(x,y,.8,FX.fat*.85,58,2.2)},{passive:true});
 VIEW().addEventListener('touchend',()=>pd=null,{passive:true});
 VIEW().addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')tap(e.clientX,e.clientY)});
 
 /* 牌落水、记忆浮上来 */
 function splash(f){const p=$('#mfPool'),s=$('#mfStone');if(!p||vc!==f)return;
   const r=p.getBoundingClientRect(),[x,y]=rel(r.left+r.width/2,r.top+r.height/2);
-  WV.cx=x;WV.cy=y;WV.sunk=true;WV.pulse=performance.now()+1800;s?.classList.add('sunk');navigator.vibrate?.(18);
+  WV.cx=x;WV.cy=y;WV.sunk=true;WV.pulse=performance.now()+2600;s?.classList.add('sunk');navigator.vibrate?.(18);
   addDrop(x,y,1.6,FX.fat*1.9,95,4);addDrop(x,y,1,FX.fat*1.3,70,3.2,.3)}
 function surface(){addDrop(WV.cx,WV.cy,1.3,FX.fat*1.7,90,3.6)}
 
