@@ -192,7 +192,7 @@ const UA=new Float32Array(MAXD*4),UB=new Float32Array(MAXD*4);
 function wvDraw(){const gl=WV.gl,u=WV.u,t=now(),dk=dark();let n=0;
   for(let i=DR.length-1;i>=0;i--)if(t>DR[i][2]+DR[i][6])DR.splice(i,1);
   for(const d of DR){const a=t-d[2];if(a<0)continue;
-    const f=1-a/d[6],lam=d[4]*(1+a*.12),w=lam*FX.rings,R=d[5]*a,j=(n++)*4;
+    const f=1-a/d[6],lam=d[4]*(1+a*.12),w=lam*(d[7]||FX.rings),R=d[5]*a,j=(n++)*4;
     UA[j]=d[0];UA[j+1]=d[1];UA[j+2]=R;UA[j+3]=d[3]*FX.punch*f*Math.sqrt(f)*Math.min(a/.3,1)/Math.sqrt(1+R*.012);
     UB[j]=6.2832/lam;UB[j+1]=1/w;UB[j+2]=(R+w)*(R+w);UB[j+3]=Math.max(0,R-2.2*w)}
   gl.viewport(0,0,CV.width,CV.height);
@@ -224,17 +224,15 @@ const rel=(x,y)=>{const vr=VIEW().getBoundingClientRect();return [x-vr.left,y-vr
 function tap(cx,cy){const[x,y]=rel(cx,cy);addDrop(x,y,1.2,FX.fat*1.2,72,3)}
 VIEW().addEventListener('touchstart',e=>{const t=e.touches[0];pd={x:t.clientX,y:t.clientY};tap(t.clientX,t.clientY)},{passive:true});
 VIEW().addEventListener('touchmove',e=>{if(!pd)return;const t=e.touches[0],n=performance.now();
-  /* 间隔很短、距离门槛很小：沿着手指走过的路连续落小水滴，叠成一条水路，不是一个个圆环 */
-  if(n-pdT<26)return;
+  if(n-pdT<40)return;
   const dx=t.clientX-pd.x,dy=t.clientY-pd.y,dist=Math.hypot(dx,dy);
-  if(dist<4)return;
+  if(dist<6)return;
   pdT=n;
-  /* 在两点之间补几个点，手指划得快也不会断成一段一段 */
-  const steps=Math.min(6,Math.max(1,Math.round(dist/10)));
+  /* 沿着手指走过的路落几滴很轻、很宽、散得慢的水，连成一条柔和的水路 */
+  const steps=Math.min(3,Math.max(1,Math.round(dist/18)));
   for(let i=1;i<=steps;i++){
-    const x=pd.x+dx*i/steps,y=pd.y+dy*i/steps,[rx,ry]=rel(x,y);
-    /* 力度小、圈窄、寿命短：像水被拨开，不是石头砸出来的大圈 */
-    addDrop(rx,ry,.42,FX.fat*.55,52,1.1);
+    const[rx,ry]=rel(pd.x+dx*i/steps,pd.y+dy*i/steps);
+    addDrop(rx,ry,FX.trailAmp,FX.fat*FX.trail,20,.9,0,.55);
   }
   pd={x:t.clientX,y:t.clientY};
 },{passive:true});
