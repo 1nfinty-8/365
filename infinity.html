@@ -83,7 +83,7 @@ body{position:fixed;inset:0;touch-action:none;color:var(--ink);font-family:var(-
 .pad::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 60% at 30% 0%,rgba(255,255,255,.7),transparent 60%);pointer-events:none}
 html.dk .pad{background:linear-gradient(165deg,rgba(120,132,158,.5),rgba(70,80,102,.4) 55%,rgba(100,112,138,.45));border-color:rgba(255,255,255,.3)}
 .file-card.settle .pad{transition:transform .4s cubic-bezier(.2,1.6,.3,.9);}
-
+.folder.open .file-card.deco{opacity:0;pointer-events:none;transform:translate(var(--sx),calc(var(--sy) + 30px)) rotate(var(--s)) scale(.9)}
 .glass{position:absolute;left:0;right:0;top:74px;bottom:0;z-index:4;border-radius:20px;overflow:hidden;
   background:linear-gradient(160deg,var(--lg-a),var(--lg-b) 50%,var(--lg-c));
   -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
