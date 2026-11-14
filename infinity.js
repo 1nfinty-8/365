@@ -6,19 +6,36 @@ const save=()=>saveData('frag');
 const BACK='<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 const ERAS=['小时候','少年时','大学','工作以后','遇见你以后'];
 const POOL=['小时候','小时候','少年时','少年时','大学','大学','工作以后','遇见你以后'];
-const LEN=[[.3,'短一点：一个片段，80 到 160 字，一两段就够。'],[.45,'中等：300 到 500 字，分三到五段。'],[.25,'长一点：600 到 1000 字，五段以上，像一篇完整的短篇散文，有前因后果。']];
+const LEN=[[.3,'短一点：一个片段，80 到 160 字，一两段就够，只写一个场面。'],[.45,'中等：300 到 500 字，分三到五段。'],[.25,'长一点：600 到 1000 字，五段以上，像一篇完整的短篇散文，可以有两三个场面，中间隔着时间。']];
 const pickLen=()=>{let r=Math.random();for(const[p,s]of LEN){if((r-=p)<0)return s}return LEN[1][1]};
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const paras=t=>String(t).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<p>${esc(s)}</p>`).join('');
 
 /* ===== 想调效果改这里 ===== */
 const FX={
-  fat:13,          // 涟漪一圈有多宽：越大越肥（7～16）
-  light:.75,       // 亮光和影子的浓淡
-  sea:8,           // 底下慢慢起伏的水波
-  rain:[140,420],  // 雨点间隔（毫秒），越小越密
-  res:.75,         // 画水的清晰度：1 最清楚，.5 最省电
-  veil:.1          // 水面上薄薄的一层白：0 = 完全透明
+  fat:24,          // 涟漪一圈有多宽（像素）：越大越肥（16～36）
+  rings:1.8,       // 一个雨点荡出几圈：越大圈越多（1.2～2.6）
+  punch:1,         // 涟漪起伏的力度：越大明暗越强（.6～1.6）
+  light:.85,       // 亮光和影子的浓淡
+  sea:8,           // 底下一直在晃的水波：0 = 只剩雨圈，其余地方完全透明
+  rain:[200,560],  // 雨点间隔（毫秒），越小越密
+  res:1.5          // 清晰度上限（×屏幕点）：1.5 清楚，1 最省电；连续掉帧会自动降
 };
+
+/* ===== 想调文风改这里 ===== */
+const START=['一样东西（用旧的、弄丢的、别人给的）','别人说过的一句话','一种气味或者声音','一顿饭','一段路、一趟车','某一天的天气',
+  '一个人的手、背影或者习惯动作','一件小到不值得讲的事','一次等人或者被人等','一间屋子、一个角落','一笔钱','一场病或者一次受伤','一次撒谎','一个后来再没见过的人'];
+const TONE=['平平淡淡地讲','带一点好笑','有点涩','冷一点、远一点','有点不好意思','讲得很慢'];
+const VOICE=`- 这是一篇给人读的散文，不是答题。读起来接近汪曾祺、阿城、李娟、双雪涛那一路：平实、克制、细节准、不端着。不是模仿谁，口气要是你自己的——你是什么出身、什么脾气，就说什么样的话。
+- 从事情中间写起：一个动作、一样东西、一句话。不要用「那年我十岁」「记得小时候」开头，不要先交代背景。
+- 只写看得见、摸得着的：东西的牌子、价钱、颜色，天气，气味，谁手上拿着什么，屋里有什么声音。情绪不要说出来，不写「难过」「温暖」「孤独」「释然」，让东西和动作去说。
+- 人要像真人：说话带各自的口气，可以答非所问，可以只说半句。对话不必多，一两句够用。
+- 句子有长有短，像人在慢慢讲。可以岔出去说一个不相干的细节，再绕回来。能省的省掉，留白。
+- 比喻一篇最多一个，而且得是你这个人会想到的。不要「仿佛」「宛如」「如同」连着打比方。
+- 不要排比，不要对仗，不要「不是……而是……」，不要成语连用，不要每段末尾来一句漂亮话。
+- 不要「时光」「岁月」「命运」「温柔」「治愈」「烟火气」「斑驳」这类词。
+- 不要总结，不要升华，不要「那一刻我才明白」「多年以后」「从那以后我学会了」。停在一个画面、一个动作或别人的一句话上，停得早一点，话不要说完。
+- 记不清的地方可以直说记不清了，记忆本来就不齐。`;
 
 let page='',vc=null,ansC=null,busy=false,typing=null;
 const BUSY=new Set();
@@ -38,9 +55,8 @@ body.ifb #tabbar{display:none}
 .if-top{position:absolute;z-index:2;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:calc(var(--st) + 4px) 12px 0;pointer-events:none}
 .if-top>*{pointer-events:auto}
 
-/* ===== 水面：透明 ===== */
-#ifView{position:absolute;inset:0;z-index:20;display:none;overflow:hidden;background:rgba(255,255,255,var(--veil,.1))}
-html.dk #ifView{background:rgba(10,14,22,calc(var(--veil,.1) * 3))}
+/* ===== 水面：纯透明，没有任何底色 ===== */
+#ifView{position:absolute;inset:0;z-index:20;display:none;overflow:hidden;background:transparent}
 #ifView.show{display:block;animation:mfFade .45s ease}
 @keyframes mfFade{from{opacity:0}}
 #mfWater{position:absolute;left:0;top:0;pointer-events:none;z-index:0}
@@ -59,7 +75,7 @@ html.dk #ifView{background:rgba(10,14,22,calc(var(--veil,.1) * 3))}
 html.dk .mf-stone{background:linear-gradient(165deg,rgba(120,132,158,.6),rgba(70,80,102,.5) 55%,rgba(100,112,138,.55));border-color:rgba(255,255,255,.3)}
 @keyframes mfFall{from{transform:translateY(-62vh) rotate(-10deg) scale(1.08);opacity:.2}}
 .mf-stone.sunk{animation:mfSink 1.1s cubic-bezier(.3,.6,.4,1) forwards}
-@keyframes mfSink{to{transform:translateY(14px) scale(.5);opacity:0;filter:blur(10px)}}
+@keyframes mfSink{to{transform:translateY(14px) scale(.5);opacity:0}}
 .mf-wait{text-align:center;font-size:12px;letter-spacing:8px;color:var(--ink);opacity:0;animation:mfShow 1s .9s ease forwards,mfPulse 2.6s 1.9s ease-in-out infinite;transition:opacity .6s}
 .mf-hint{text-align:center;font-size:11px;letter-spacing:4px;color:var(--ink);opacity:0;margin-top:10px;animation:mfHint 1s 1.4s ease forwards;transition:opacity .6s}
 @keyframes mfShow{to{opacity:.8}}
@@ -79,7 +95,7 @@ html.dk .mf-age{color:rgba(255,255,255,.13);text-shadow:0 0 34px rgba(170,195,25
 .mf-head.in>*{animation:mfRise 1.4s ease both}
 .mf-head.in .mf-age{animation-duration:2.6s}
 .mf-head.in .mf-tt{animation-delay:.3s}
-@keyframes mfRise{from{opacity:0;filter:blur(10px)}}
+@keyframes mfRise{from{opacity:0}}
 .mf-head.in .mf-k{opacity:0;animation:mfK 1.4s ease forwards}
 @keyframes mfK{to{opacity:.55}}
 .mf-head.in .mf-m{opacity:0;animation:mfM 1.4s .5s ease forwards}
@@ -88,7 +104,7 @@ html.dk .mf-age{color:rgba(255,255,255,.13);text-shadow:0 0 34px rgba(170,195,25
 .mf-tx p{font-family:var(--ti);font-size:16px;line-height:2.1;letter-spacing:.6px;text-align:justify;text-indent:2em;margin:0 0 1em;color:var(--ink);text-shadow:0 0 12px rgba(255,255,255,.75),0 1px 0 rgba(255,255,255,.5)}
 html.dk .mf-tx p,html.dk .mf-tt{text-shadow:0 0 12px rgba(0,0,0,.5)}
 .mf-tx p:last-child{margin:0}
-.mf-tx span{opacity:0;transition:opacity .7s ease}
+.mf-tx span{opacity:0;transition:opacity .9s ease-out}
 .mf-tx span.on{opacity:1}
 .mf-th{display:flex;flex-direction:column;gap:16px;margin-top:34px}
 .mf-say{font-family:var(--cn);font-size:14.5px;line-height:1.9;color:var(--ink);white-space:pre-wrap;word-break:break-word;text-shadow:0 0 10px rgba(255,255,255,.7)}
@@ -97,8 +113,8 @@ html.dk .mf-tx p,html.dk .mf-tt{text-shadow:0 0 12px rgba(0,0,0,.5)}
 .mf-ft{display:flex;gap:10px;justify-content:center;margin-top:36px;transition:opacity .8s}
 .mf-ft.hide{opacity:0;pointer-events:none}
 .mf-ft button{padding:9px 22px;border-radius:99px;font-size:13px;letter-spacing:3px;color:var(--ink);
-  background:rgba(255,255,255,.32);border:1px solid rgba(255,255,255,.75);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-html.dk .mf-ft button{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
+  background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.75)}
+html.dk .mf-ft button{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
 </style>`);
 
 $('#tabbar').insertAdjacentHTML('beforebegin',`
@@ -115,33 +131,38 @@ $('#app').insertAdjacentHTML('beforeend',`
   <label class="f"><span>想问他的</span><textarea class="short" id="ifAText" placeholder="后来呢？"></textarea></label>
   <div class="mbtns"><button class="pill ghost" data-close="ifAns">取消</button><button class="pill" id="ifASave">问他</button></div>
 </div></div>`);
-const VIEW=()=>$('#ifView');
-VIEW().style.setProperty('--veil',FX.veil);
+const VIEW=()=>$('#ifView'),CV=$('#mfWater');
 const dark=()=>document.documentElement.classList.contains('dk');
 
-/* ================= 水面：雨落在水上（显卡画，轻量） ================= */
-const WV={W:0,H:0,raf:0,rain:0,pulse:0,cx:0,cy:0,sunk:false,ok:undefined};
+/* ================= 水面：雨落在水上（显卡画，只算坡度，一个像素算一遍） ================= */
+const WV={W:0,H:0,raf:0,rain:0,pulse:0,cx:0,cy:0,sunk:false,ok:undefined,q:1,last:0,acc:0,n:0};
 const DR=[],T0=performance.now(),now=()=>(performance.now()-T0)/1000;
+/* 一个雨点：位置、力度（坡度 0～1.6）、一圈的宽度、扩散速度、寿命（秒）、延迟 */
 function addDrop(x,y,amp,lam,spd,life,delay=0){DR.push([x,y,now()+delay,amp,lam,spd,life]);if(DR.length>16)DR.shift()}
 const VS='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
 const FS=`precision highp float;
 uniform vec2 uR;uniform float uK,uT,uL,uA,uDk;uniform vec4 uD[16];uniform vec4 uP[16];uniform int uN;
-float H(vec2 p){
-  float h=uA*(sin(dot(p,vec2(.010,.006))+uT*.5)+sin(dot(p,vec2(-.005,.012))-uT*.4)+.6*sin(dot(p,vec2(.016,-.004))+uT*.7));
-  for(int i=0;i<16;i++){if(i>=uN)break;vec4 d=uD[i];vec4 q=uP[i];float a=uT-d.z;
-    if(a<0.||a>q.z)continue;
-    float r=length(p-d.xy),lam=q.x*(1.+a*.3),ph=r-q.y*a,e=ph/(lam*1.2),f=1.-a/q.z;
-    h+=d.w*sin(6.2832*ph/lam)*exp(-e*e)*f*f/sqrt(1.+r*.02);}
-  return h;}
+const vec2 K1=vec2(.010,.006),K2=vec2(-.005,.012),K3=vec2(.016,-.004),K4=vec2(.031,.022),K5=vec2(-.027,.041),K6=vec2(.052,-.018);
 void main(){
   vec2 p=vec2(gl_FragCoord.x,uR.y*uK-gl_FragCoord.y)/uK;
-  float h0=H(p);vec2 g=vec2(H(p+vec2(1.5,0.))-h0,H(p+vec2(0.,1.5))-h0)/1.5;
-  float s=dot(g,vec2(.55,.83));
-  float hi=smoothstep(.02,.7,s)*uL*(1.-.45*uDk),sh=smoothstep(.02,.7,-s)*uL*.5;
-  vec3 sc=mix(vec3(.24,.32,.48),vec3(0.,.02,.07),uDk);
-  gl_FragColor=vec4(vec3(hi)+sc*sh,clamp(hi+sh,0.,1.));}`;
+  vec2 w=p+10.*vec2(sin(p.y*.019+uT*.6),sin(p.x*.016-uT*.5));
+  vec2 g=uA*(cos(dot(w,K1)+uT*.5)*K1+cos(dot(w,K2)-uT*.4)*K2+.6*cos(dot(w,K3)+uT*.7)*K3
+    +.35*cos(dot(w,K4)-uT*1.1)*K4+.25*cos(dot(w,K5)+uT*.9)*K5+.16*cos(dot(w,K6)-uT*1.3)*K6);
+  for(int i=0;i<16;i++){if(i>=uN)break;
+    vec4 d=uD[i],q=uP[i];vec2 v=p-d.xy;float r2=dot(v,v);
+    if(r2>q.z)continue;
+    float r=sqrt(r2);if(r<q.w)continue;
+    float x=r-d.z,s=x>0.?q.y*2.2:q.y,e=x*s,ph=q.x*x;
+    g+=v*(d.w*exp(-e*e)*(cos(ph)-2.*e*s/q.x*sin(ph))*min(r*.25,1.)/max(r,.5));}
+  float lit=dot(g,vec2(.55,.83)),m=dot(g,g);
+  float core=smoothstep(.22,.6,lit);
+  float hi=min((smoothstep(.03,.4,lit)*.42+core*core*.8+m/(m+.6)*.3)*uL*(1.-.45*uDk),1.);
+  float sh=smoothstep(.03,.5,-lit)*.5*uL;
+  float al=min(hi+sh,1.);
+  vec3 sc=mix(vec3(.2,.28,.44),vec3(0.,.02,.07),uDk);
+  gl_FragColor=vec4(min(vec3(hi)+sc*sh,vec3(al)),al);}`;
 function glInit(){if(WV.ok!==undefined)return WV.ok;
-  const gl=$('#mfWater').getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:false,depth:false});
+  const gl=CV.getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false});
   if(!gl)return WV.ok=false;
   try{const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o};
     const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);
@@ -149,39 +170,53 @@ function glInit(){if(WV.ok!==undefined)return WV.ok;
     const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
     const lp=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(lp);gl.vertexAttribPointer(lp,2,gl.FLOAT,false,0,0);
     WV.u={};['uR','uK','uT','uL','uA','uDk','uN','uD','uP'].forEach(k=>WV.u[k]=gl.getUniformLocation(pr,k));
+    /* 先空画一个像素，把编译的那一下卡顿提前花掉 */
+    gl.viewport(0,0,1,1);gl.uniform2f(WV.u.uR,1,1);gl.uniform1f(WV.u.uK,1);gl.uniform1i(WV.u.uN,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     WV.gl=gl;WV.ok=true}
   catch(e){console.error(e);WV.ok=false}
   return WV.ok}
-function wvSize(){const v=VIEW(),W=v.clientWidth||innerWidth,H=v.clientHeight||innerHeight;if(W===WV.W&&H===WV.H)return;
-  WV.W=W;WV.H=H;const c=$('#mfWater');c.width=Math.round(W*FX.res);c.height=Math.round(H*FX.res);c.style.width=W+'px';c.style.height=H+'px'}
+CV.addEventListener('webglcontextlost',e=>{e.preventDefault();WV.ok=undefined;WV.gl=null});
+CV.addEventListener('webglcontextrestored',()=>{if(VIEW().classList.contains('show'))wvStart()});
+function wvSize(force){const v=VIEW(),W=v.clientWidth||innerWidth,H=v.clientHeight||innerHeight;if(!force&&W===WV.W&&H===WV.H)return;
+  WV.W=W;WV.H=H;const k=Math.min(devicePixelRatio||1,FX.res)*WV.q;
+  CV.width=Math.round(W*k);CV.height=Math.round(H*k);CV.style.width=W+'px';CV.style.height=H+'px'}
 const UA=new Float32Array(64),UB=new Float32Array(64);
-function wvDraw(){const gl=WV.gl,u=WV.u,c=$('#mfWater'),t=now();
+function wvDraw(){const gl=WV.gl,u=WV.u,t=now();let n=0;
   for(let i=DR.length-1;i>=0;i--)if(t>DR[i][2]+DR[i][6])DR.splice(i,1);
-  gl.viewport(0,0,c.width,c.height);
-  gl.uniform2f(u.uR,WV.W,WV.H);gl.uniform1f(u.uK,c.width/WV.W);gl.uniform1f(u.uT,t);
+  for(const d of DR){const a=t-d[2];if(a<0)continue;
+    const f=1-a/d[6],lam=d[4]*(1+a*.2),w=lam*FX.rings,R=d[5]*a,j=(n++)*4;
+    UA[j]=d[0];UA[j+1]=d[1];UA[j+2]=R;UA[j+3]=d[3]*FX.punch*f*Math.sqrt(f)*Math.min(a/.1,1)/Math.sqrt(1+R*.012);
+    UB[j]=6.2832/lam;UB[j+1]=1/w;UB[j+2]=(R+w)*(R+w);UB[j+3]=Math.max(0,R-2.2*w)}
+  gl.viewport(0,0,CV.width,CV.height);
+  gl.uniform2f(u.uR,WV.W,WV.H);gl.uniform1f(u.uK,CV.width/WV.W);gl.uniform1f(u.uT,t%(200*Math.PI));
   gl.uniform1f(u.uL,FX.light);gl.uniform1f(u.uA,FX.sea);gl.uniform1f(u.uDk,dark()?1:0);
-  UA.fill(0);UB.fill(0);DR.forEach((d,i)=>{UA.set([d[0],d[1],d[2],d[3]],i*4);UB.set([d[4],d[5],d[6],0],i*4)});
-  gl.uniform4fv(u.uD,UA);gl.uniform4fv(u.uP,UB);gl.uniform1i(u.uN,DR.length);
+  gl.uniform4fv(u.uD,UA);gl.uniform4fv(u.uP,UB);gl.uniform1i(u.uN,n);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4)}
-function rainDrop(){const big=Math.random()<.15;
-  addDrop(Math.random()*WV.W,Math.random()*WV.H,big?1.4:.7+Math.random()*.5,FX.fat*(big?1.5:.8+Math.random()*.5),big?60:42+Math.random()*16,big?2.6:1.5+Math.random()*.8)}
+function rainDrop(){const big=Math.random()<.15,x=Math.random()*WV.W,y=Math.random()*WV.H,l=FX.fat*(big?1.35:.75+Math.random()*.45);
+  addDrop(x,y,big?1.25:.7+Math.random()*.35,l,big?68:46+Math.random()*18,big?3.8:2.2+Math.random());
+  if(big)addDrop(x,y,.7,l*.7,52,2.6,.28)}
 function wvLoop(ts){if(!VIEW().classList.contains('show')||!WV.ok){WV.raf=0;return}
   if(!document.hidden){
+    /* 连续掉帧就把清晰度降一档，只降不升 */
+    const dt=ts-WV.last;
+    if(dt>0&&dt<120&&++WV.n>0){WV.acc+=dt;
+      if(WV.n>=45){if(WV.acc/WV.n>24&&WV.q>.5){WV.q-=.25;wvSize(true)}WV.acc=WV.n=0}}
     if(ts>WV.rain){WV.rain=ts+FX.rain[0]+Math.random()*(FX.rain[1]-FX.rain[0]);rainDrop()}
-    if(vc&&vc._wait&&WV.sunk&&ts>WV.pulse){WV.pulse=ts+1800;addDrop(WV.cx,WV.cy,1.6,FX.fat*2.2,70,3)}
+    if(vc&&vc._wait&&WV.sunk&&ts>WV.pulse){WV.pulse=ts+1800;addDrop(WV.cx,WV.cy,.9,FX.fat*1.5,66,3.2)}
     wvDraw()}
+  WV.last=ts;
   WV.raf=requestAnimationFrame(wvLoop)}
 function wvStart(){if(!glInit())return;wvSize();WV.cx=WV.W/2;WV.cy=WV.H*.45;
-  if(!WV.raf){DR.length=0;WV.raf=requestAnimationFrame(wvLoop)}}
+  if(!WV.raf){DR.length=0;WV.n=-30;WV.acc=0;WV.raf=requestAnimationFrame(wvLoop)}}
 addEventListener('resize',()=>{if(VIEW().classList.contains('show'))wvSize()});
 /* 手指点水、拨水 */
 let pd=null,pdT=0;
 const rel=(x,y)=>{const vr=VIEW().getBoundingClientRect();return [x-vr.left,y-vr.top]};
-function tap(cx,cy){const[x,y]=rel(cx,cy);addDrop(x,y,1.6,FX.fat*1.6,75,2.6)}
+function tap(cx,cy){const[x,y]=rel(cx,cy);addDrop(x,y,1.2,FX.fat*1.2,72,3)}
 VIEW().addEventListener('touchstart',e=>{const t=e.touches[0];pd={x:t.clientX,y:t.clientY};tap(t.clientX,t.clientY)},{passive:true});
 VIEW().addEventListener('touchmove',e=>{if(!pd)return;const t=e.touches[0],n=performance.now();
   if(n-pdT<60||Math.hypot(t.clientX-pd.x,t.clientY-pd.y)<16)return;pdT=n;
-  pd={x:t.clientX,y:t.clientY};const[x,y]=rel(t.clientX,t.clientY);addDrop(x,y,.8,FX.fat,50,1.6)},{passive:true});
+  pd={x:t.clientX,y:t.clientY};const[x,y]=rel(t.clientX,t.clientY);addDrop(x,y,.6,FX.fat*.8,50,1.8)},{passive:true});
 VIEW().addEventListener('touchend',()=>pd=null,{passive:true});
 VIEW().addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')tap(e.clientX,e.clientY)});
 
@@ -189,8 +224,8 @@ VIEW().addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')tap(e.clien
 function splash(f){const p=$('#mfPool'),s=$('#mfStone');if(!p||vc!==f)return;
   const r=p.getBoundingClientRect(),[x,y]=rel(r.left+r.width/2,r.top+r.height/2);
   WV.cx=x;WV.cy=y;WV.sunk=true;WV.pulse=performance.now()+1800;s?.classList.add('sunk');navigator.vibrate?.(18);
-  addDrop(x,y,2.6,FX.fat*3,95,3.6);addDrop(x,y,1.4,FX.fat*2,70,2.8,.3)}
-function surface(){addDrop(WV.cx,WV.cy,2.2,FX.fat*2.6,90,3.4)}
+  addDrop(x,y,1.6,FX.fat*1.9,95,4);addDrop(x,y,1,FX.fat*1.3,70,3.2,.3)}
+function surface(){addDrop(WV.cx,WV.cy,1.3,FX.fat*1.7,90,3.6)}
 
 /* ---------- 他想起一段 ---------- */
 const SCENE='这是你们的小窝「365」里「关于他」的「他的记忆」：一个玻璃文件夹，里面封着你自己的过去。';
@@ -205,22 +240,28 @@ async function pick(){
   try{
     const era=S.fragEra||POOL[Math.floor(Math.random()*POOL.length)];
     const old=DATA.frag.slice(-40).map(x=>`- ${x.era||''}·${x.title}：${x.sum||''}`).join('\n');
-    const raw=await callAI(sceneSystem(SCENE),[{role:'user',text:`请以${S.hisName}的身份，写一段你自己人生里的回忆：你${era}的事。
-这是你自己的过去，像写给自己的回忆录，不是讲给她听的话：
+    const raw=await callAI(sceneSystem(SCENE),[{role:'user',text:`请以${S.hisName}的身份，写一段你自己人生里的往事：你${era}的事。
+这是写给自己的回忆，像从一本散文集里撕下来的一页，不是讲给她听的话。
+
+【写什么】
 - ${era==='遇见你以后'?'这一段是遇见她以后的事，可以写到她，用「她」称呼，但重点是你自己当时的处境、别的人和事。':'不要对她说话，不要出现「你」，不要提到她，结尾也不要拐到她身上。'}
-- 要有具体的人：家人、同学、老师、朋友、同事、对手、陌生人，写出名字或称呼，可以有他们说过的原话。
-- 要有事情的经过：发生了什么，后来怎么样了。可以是好事，也可以是遗憾、丢脸、争吵、离别、没说出口的话。
-- 不要总结道理，不要升华，不要写「那一刻我才明白」「从那以后我学会了」。在一个画面或一句话上停下就好。
-- 和你的人设、家世、经历对得上。${old?'\n- 你以前想起过这些，不要重复，也不要和它们矛盾：\n'+old:''}
-这次的篇幅：${pickLen()}
-用第一人称，自然分段，不要 emoji，不要 markdown。
+- 要有具体的人：家人、同学、老师、朋友、同事、对手、陌生人，有名字或称呼，可以有他们说过的原话。
+- 要有一件事的经过：发生了什么，后来怎么样了。可以是好事，也可以是遗憾、丢脸、争吵、离别、没说出口的话。
+- 这一次从「${rnd(START)}」想起（只是个起头，不必扣题），${rnd(TONE)}。
+- 和你的人设、家世、经历对得上；那个年份、那个地方该有的东西才出现。${old?'\n- 你以前想起过这些，不要重复，也不要和它们矛盾：\n'+old:''}
+
+【怎么写】
+${VOICE}
+
+【篇幅】${pickLen()}
+用第一人称，自然分段，不要 emoji，不要 markdown，不要小标题。
 按下面的格式输出：前六行每行一项，然后单独一行三个短横，再写正文。
 阶段：${era}
 年份：四位数字
 年龄：当时几岁，只写数字
 地点：两到八个字
-标题：四到十二个字，像一篇散文的题目，平实，不要煽情
-概括：三十字以内
+标题：两到十个字，最好就是文中的一样东西、一个地方或一句话，平实，不要煽情，不要「那年」「时光」这类字眼
+概括：三十字以内，写清楚是谁、什么事
 ---
 正文`}]);
     const j=parse(raw);if(!j.story||!j.title)throw new SyntaxError('empty');
@@ -240,29 +281,33 @@ async function pick(){
 async function respond(f){
   if(BUSY.has(f))return;BUSY.add(f);if(vc===f)vRender('full',true);
   try{const th=(f.thread||[]).map(x=>`${x.who==='me'?'她':'你'}：${x.text}`).join('\n');
-    const t=await callAI(sceneSystem(SCENE),[{role:'user',text:`她刚看了你${f.era}的一段回忆「${f.title}」（${f.year?f.year+'年，':''}${f.age?f.age+'岁，':''}${f.place||''}）：\n「${String(f.story).slice(0,1500)}」\n\n后面的对话：\n${th}\n\n请以${S.hisName}的身份回她最新问的，细节要和这段回忆对得上，可以多讲一点当时的事。口语化，一到五句，不要加名字前缀，不要 emoji。`}]);
+    const t=await callAI(sceneSystem(SCENE),[{role:'user',text:`她刚看了你${f.era}的一段回忆「${f.title}」（${f.year?f.year+'年，':''}${f.age?f.age+'岁，':''}${f.place||''}）：\n「${String(f.story).slice(0,1500)}」\n\n后面的对话：\n${th}\n\n请以${S.hisName}的身份回她最新问的，像两个人坐着聊旧事。细节要和这段回忆对得上，可以补一个文章里没写的小细节，可以说记不清了，也可以不正面回答。不要复述文章，不要讲道理，不要总结。口语，一到五句，不要加名字前缀，不要 emoji。`}]);
     (f.thread=f.thread||[]).push({who:'him',text:clean(t),t:Date.now()})}
   catch(e){toast(e.message)}
   BUSY.delete(f);await save();if(vc===f)vRender('full',true)}
 
-/* ---------- 一个字一个字浮上来（字本身不动） ---------- */
+/* ---------- 一小句一小句浮上来（字本身不动） ---------- */
+const CUT=/[^，。！？；：…—!?]+[，。！？；：…—!?”’」』）》\s]*|[，。！？；：…—!?”’」』）》\s]+/g;
 function typeOut(f){const box=$('#mfTx'),L=$('#mfLayer');if(!box)return;
-  box.innerHTML=String(f.story).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(p=>`<p>${[...p].map(c=>`<span>${esc(c)}</span>`).join('')}</p>`).join('');
-  const SP=[...box.querySelectorAll('span')],n=SP.length,gap=Math.max(16,Math.min(48,7000/n));
+  box.innerHTML=String(f.story).split(/\n+/).map(s=>s.trim()).filter(Boolean)
+    .map(p=>`<p>${(p.match(CUT)||[p]).map(c=>`<span>${esc(c)}</span>`).join('')}</p>`).join('');
+  const SP=[...box.querySelectorAll('span')],per=Math.max(18,Math.min(50,8000/String(f.story).length));
   let i=0,free=false;L.addEventListener('touchstart',()=>free=true,{once:true,passive:true});
-  clearInterval(typing);
-  typing=setInterval(()=>{
-    if(vc!==f){clearInterval(typing);typing=null;return}
-    SP[i++].classList.add('on');
-    if(i%10===0||i>=n){const r=SP[i-1].getBoundingClientRect(),vr=VIEW().getBoundingClientRect();
-      if(!free&&r.bottom>vr.bottom-150)L.scrollBy({top:r.bottom-(vr.bottom-150),behavior:'smooth'})}
-    if(i>=n){clearInterval(typing);typing=null;$('.mf-ft')?.classList.remove('hide')}},gap)}
+  clearTimeout(typing);
+  const step=()=>{
+    if(vc!==f||!SP[i]){typing=null;return}
+    const s=SP[i++];
+    if(!free){const over=s.getBoundingClientRect().bottom-(VIEW().getBoundingClientRect().bottom-150);
+      if(over>0)L.scrollBy({top:over+68,behavior:'smooth'})}
+    s.classList.add('on');
+    if(i>=SP.length){typing=null;$('.mf-ft')?.classList.remove('hide');return}
+    typing=setTimeout(step,Math.max(90,s.textContent.length*per))};
+  step()}
 
 /* ---------- 打开 ---------- */
 function open(f,mode){vc=f;$('#page-cards').classList.add('wet');VIEW().classList.add('show');wvStart();vRender(mode);if(mode==='open')surface()}
 function view(f){if(f)open(f,'open')}
-function closeView(){VIEW().classList.remove('show');$('#page-cards').classList.remove('wet');vc=null;WV.sunk=false;clearInterval(typing);typing=null;
-  if(WV.a){WV.a.fill(0);WV.b.fill(0)}}
+function closeView(){VIEW().classList.remove('show');$('#page-cards').classList.remove('wet');vc=null;WV.sunk=false;clearTimeout(typing);typing=null}
 function vRender(mode,bottom){const f=vc;if(!f)return;const H=esc(S.hisName),L=$('#mfLayer');
   if(f._wait){WV.sunk=false;
     L.innerHTML=`<div class="mf-box"><div class="mf-pool" id="mfPool"><div class="mf-stone" id="mfStone"></div></div><p class="mf-wait">${H}在想</p><p class="mf-hint">碰一碰水面</p></div>`;
@@ -320,7 +365,8 @@ HOOKS.persona.push(()=>{const L=DATA.frag.filter(f=>f.title);if(!L.length)return
     +L.slice(-30).map(f=>`- ${f.era||''}${f.year?'，'+f.year:''}${f.age?'，'+f.age+'岁':''}${f.place?'，'+f.place:''}：${f.title}——${f.sum||String(f.story).slice(0,40)}`).join('\n')});
 
 hideGame();
-HOOKS.ready.push(async()=>{if(!Array.isArray(DATA.frag))DATA.frag=[];await purge();hideGame();card();const f=$('#ifFrame');if(f&&!f.src)f.src='infinity.html'});
+HOOKS.ready.push(async()=>{if(!Array.isArray(DATA.frag))DATA.frag=[];await purge();hideGame();card();const f=$('#ifFrame');if(f&&!f.src)f.src='infinity.html';
+  setTimeout(glInit,600)});   // 趁空闲先把水面的着色器编译好
 HOOKS.page.push(n=>{page=n;document.body.classList.toggle('ifb',n==='cards');
   if(n==='game')setTimeout(hideGame,0);
   if(n==='him')setTimeout(card,0);
