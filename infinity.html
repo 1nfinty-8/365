@@ -213,13 +213,21 @@ window.ifSync();booted=true;
 
 /* ---------- 翻面：文件夹自己左右翻，毛玻璃不会丢 ---------- */
 let flipping=false;
-window.ifFlip=cb=>{if(flipping)return;flipping=true;folder.classList.remove('open');layoutArc();riffleReset();
-  const t0=performance.now(),D=780;let swapped=false;
-  (function f(now){const p=Math.min(1,(now-t0)/D),e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2,a=e*Math.PI,c=Math.cos(a),s=Math.sin(a);
-    if(!swapped&&e>=.5){swapped=true;try{cb&&cb()}catch(x){}}
-    const sx=Math.max(.03,Math.abs(c)),sk=(c>=0?-1:1)*s*7;
-    stage.style.transform=`translateY(-3vh) scale(${(1-s*.06).toFixed(3)}) skewY(${sk.toFixed(2)}deg) scaleX(${sx.toFixed(3)})`;
-    if(p<1)requestAnimationFrame(f);else{stage.style.transform='';flipping=false;status()}})(t0)};
+/* ---------- 翻面：合上时在文件夹上左右滑，跟着手指立体地转 ---------- */
+let flipping=false,fd=null,ang=0,face=0;
+function pose(a){const r=a*Math.PI/180,c=Math.cos(r),s=Math.abs(Math.sin(r));
+  const sx=Math.max(.03,Math.abs(c)),sk=(c>=0?-1:1)*(a<0?-1:1)*s*7;
+  stage.style.transform=`translateY(-3vh) scale(${(1-s*.06).toFixed(3)}) skewY(${sk.toFixed(2)}deg) scaleX(${sx.toFixed(3)})`}
+function swapAt(a){const f=Math.abs(a)>90?1:0;if(f!==face){face=f;try{P?.flip?.()}catch(e){}status()}}
+function settle(to){flipping=true;const from=ang,t0=performance.now(),D=Math.max(240,Math.abs(to-from)*3.2);
+  (function f(now){const p=Math.min(1,(now-t0)/D),e=1-Math.pow(1-p,3);ang=from+(to-from)*e;swapAt(ang);pose(ang);
+    if(p<1)requestAnimationFrame(f);else{stage.style.transform='';ang=0;face=0;flipping=false;status()}})(t0)}
+stage.addEventListener('pointerdown',e=>{if(flipping||folder.classList.contains('open')||!P?.flip)return;fd={x:e.clientX,y:e.clientY,on:false}});
+document.addEventListener('pointermove',e=>{if(!fd)return;const dx=e.clientX-fd.x,dy=e.clientY-fd.y;
+  if(!fd.on){if(Math.abs(dx)<12)return;if(Math.abs(dy)>Math.abs(dx)){fd=null;return}fd.on=true;moved=true}
+  ang=Math.max(-180,Math.min(180,dx/(folder.offsetWidth*.9)*180));swapAt(ang);pose(ang)});
+['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,()=>{if(!fd)return;const on=fd.on;fd=null;if(!on)return;
+  settle(Math.abs(ang)>70?(ang<0?-180:180):0)}));
 
 /* ---------- 抽一张 ---------- */
 function pickEl(el){
