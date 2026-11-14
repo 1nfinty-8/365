@@ -1,4 +1,4 @@
-/* ===== 365 · fog.js · 他的记忆的背面：我们（秘密的模型 · 起雾的玻璃） ===== */
+/* ===== 365 · fog.js · 他的记忆的背面：我们（秘密的模型 · 下雨天起雾的玻璃） ===== */
 (()=>{
 const INF=window.INF;if(!INF)return;
 if(!Array.isArray(DATA.dream))DATA.dream=[];
@@ -10,16 +10,19 @@ const KINDS=['平常的一天','第一次','闹别扭以后','很久以后','只
 const LEN=[[.3,'短一点：一个片段，100 到 200 字，只写一个场面。'],[.45,'中等：300 到 550 字，分三到五段。'],[.25,'长一点：600 到 1000 字，五段以上，可以有两三个场面。']];
 const pickLen=()=>{let r=Math.random();for(const[p,s]of LEN){if((r-=p)<0)return s}return LEN[1][1]};
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const rr=a=>a[0]+Math.random()*(a[1]-a[0]);
 const paras=t=>String(t).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<p>${esc(s)}</p>`).join('');
 
-/* ===== 想调雾改这里 ===== */
+/* ===== 想调雾和雨改这里 ===== */
 const FG={
-  fog:.8,        // 雾有多浓：越大越看不清（.6～.92）
-  wipe:35,       // 手指擦开的范围（像素半径）
-  keep:.9,       // 擦得多干净：1 = 完全擦干净
-  regrow:.03,    // 雾重新起来的快慢：越大越快（.015～.06）
-  drip:0,      // 擦的时候流下水珠的机会（0 = 不流）
-  res:.5         // 雾的清晰度：越小越省电
+  fog:.8,              // 雾有多浓：越大越看不清（.6～.92）
+  wipe:30,             // 手指擦开的范围（像素半径）
+  keep:.9,             // 擦得多干净：1 = 完全擦干净
+  regrow:.018,         // 雾重新起来的快慢：越大越快（.008～.05）
+  beads:70,            // 玻璃上最多挂几颗小水珠
+  beadEvery:[80,260],  // 多久冒出一颗新水珠（毫秒）
+  run:[1400,3600],     // 多久有一颗水珠滑下来（毫秒）
+  res:.5               // 雾的清晰度：越小越省电
 };
 
 let side=0,page='',vc=null,busy=false,typing=null,ansC=null;
@@ -36,18 +39,16 @@ INF.list=()=>side?showList():O.list();
 document.head.insertAdjacentHTML('beforeend',`<style>
 #fgFlip{margin-left:auto;margin-right:8px;transition:color .4s}
 #page-cards.back #fgFlip{color:var(--accent-t)}
-#ifFrame.fl1{animation:fgA .3s ease-in forwards}
-@keyframes fgA{to{transform:perspective(1200px) rotateY(90deg) scale(.95)}}
-#ifFrame.fl2{animation:fgB .45s cubic-bezier(.2,.9,.3,1)}
-@keyframes fgB{from{transform:perspective(1200px) rotateY(-90deg) scale(.95)}}
 #fgView{position:absolute;inset:0;z-index:21;display:none;overflow:hidden}
 #fgView.show{display:block;animation:fgFade .5s ease}
 @keyframes fgFade{from{opacity:0}}
 #fgLayer{position:absolute;inset:0;z-index:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   display:flex;flex-direction:column;padding:calc(var(--st) + 70px) 30px calc(var(--sb) + 40px)}
-#fgFog{position:absolute;left:0;top:0;width:100%;height:100%;z-index:2;pointer-events:none;opacity:var(--fog,.8)}
-.fg-x{position:absolute;z-index:3;left:12px;top:calc(var(--st) + 4px)}
-.fg-hint{position:absolute;z-index:3;left:0;right:0;bottom:calc(var(--sb) + 46px);text-align:center;font-size:11px;letter-spacing:6px;color:var(--ink);opacity:0;transition:opacity 1.2s;pointer-events:none}
+#fgFog,#fgRain{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+#fgFog{z-index:2;opacity:var(--fog,.8)}
+#fgRain{z-index:3}
+.fg-x{position:absolute;z-index:4;left:12px;top:calc(var(--st) + 4px)}
+.fg-hint{position:absolute;z-index:4;left:0;right:0;bottom:calc(var(--sb) + 46px);text-align:center;font-size:11px;letter-spacing:6px;color:var(--ink);opacity:0;transition:opacity 1.2s;pointer-events:none}
 .fg-hint.on{opacity:.65}
 .fg-box{margin:auto 0;width:100%;max-width:440px;align-self:center}
 .fg-card{width:120px;height:186px;margin:0 auto 26px;border-radius:12px;
@@ -55,7 +56,7 @@ document.head.insertAdjacentHTML('beforeend',`<style>
   border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 1px 1px #fff,0 20px 40px rgba(60,80,120,.18);
   animation:fgIn .7s cubic-bezier(.2,.9,.3,1),fgBr 3s .7s ease-in-out infinite}
 html.dk .fg-card{background:linear-gradient(165deg,rgba(120,132,158,.6),rgba(70,80,102,.5) 55%,rgba(100,112,138,.55));border-color:rgba(255,255,255,.3)}
-@keyframes fgIn{from{transform:perspective(900px) rotateY(-90deg);opacity:0}}
+@keyframes fgIn{from{transform:scaleX(0);opacity:0}}
 @keyframes fgBr{50%{transform:translateY(-6px)}}
 .fg-wait{text-align:center;font-size:12px;letter-spacing:8px;color:var(--ink);opacity:.7;animation:fgP 2.6s ease-in-out infinite}
 @keyframes fgP{50%{opacity:.3}}
@@ -78,7 +79,7 @@ html.dk .fg-ft button{background:rgba(255,255,255,.1);border-color:rgba(255,255,
 </style>`);
 
 $('#ifMenu').insertAdjacentHTML('beforebegin',`<button class="iconbtn glass" id="fgFlip" aria-label="翻面">${FLIP}</button>`);
-$('#page-cards').insertAdjacentHTML('beforeend',`<div id="fgView"><div id="fgLayer"></div><canvas id="fgFog"></canvas>
+$('#page-cards').insertAdjacentHTML('beforeend',`<div id="fgView"><div id="fgLayer"></div><canvas id="fgFog"></canvas><canvas id="fgRain"></canvas>
   <div class="fg-hint" id="fgHint">用手指擦开</div><button class="iconbtn glass fg-x" data-fx aria-label="收好">${BACK}</button></div>`);
 $('#app').insertAdjacentHTML('beforeend',`
 <div class="modal" id="fgAns"><div class="mbox">
@@ -87,18 +88,20 @@ $('#app').insertAdjacentHTML('beforeend',`
   <label class="f"><span>想问他的</span><textarea class="short" id="fgAText" placeholder="然后呢？"></textarea></label>
   <div class="mbtns"><button class="pill ghost" data-close="fgAns">取消</button><button class="pill" id="fgASave">问他</button></div>
 </div></div>`);
-const V=()=>$('#fgView'),CV=$('#fgFog');
+const V=()=>$('#fgView'),CV=$('#fgFog'),RC=$('#fgRain'),LY=()=>$('#fgLayer');
 V().style.setProperty('--fog',FG.fog);
 const dark=()=>document.documentElement.classList.contains('dk');
 
-/* ---------- 翻面 ---------- */
+/* ---------- 翻面：让文件夹自己翻，毛玻璃不会丢 ---------- */
 function setSide(s){side=s;$('#page-cards').classList.toggle('back',!!s);fire()}
-$('#fgFlip').onclick=()=>{const f=$('#ifFrame');if(f.classList.contains('fl1')||f.classList.contains('fl2'))return;
-  navigator.vibrate?.(10);f.classList.add('fl1');
-  setTimeout(()=>{setSide(1-side);f.classList.remove('fl1');f.classList.add('fl2');setTimeout(()=>f.classList.remove('fl2'),460)},300)};
+let flipping=false;
+$('#fgFlip').onclick=()=>{if(flipping)return;flipping=true;navigator.vibrate?.(10);
+  let w=null;try{w=$('#ifFrame').contentWindow}catch(e){}
+  if(w&&w.ifFlip){w.ifFlip(()=>setSide(1-side));setTimeout(()=>flipping=false,740)}
+  else{setSide(1-side);flipping=false}};
 
-/* ================= 起雾的玻璃 ================= */
-const G={W:0,H:0,k:1,ctx:null,tex:null,raf:0,acc:0,last:0,drips:[]};
+/* ================= 下雨天起雾的玻璃 ================= */
+const G={W:0,H:0,k:.5,rk:1,ctx:null,rc:null,tex:null,tmp:null,bead:null,raf:0,acc:0,last:0,nb:0,nr:0,top:0,beads:[],runs:[]};
 function makeTex(){const w=CV.width,h=CV.height,c=document.createElement('canvas');c.width=w;c.height=h;
   const g=c.getContext('2d'),dk=dark();
   g.fillStyle=dk?'#2A303C':'#EEF1F6';g.fillRect(0,0,w,h);
@@ -110,24 +113,75 @@ function makeTex(){const w=CV.width,h=CV.height,c=document.createElement('canvas
     g.fillStyle=dk?'rgba(0,0,0,.22)':'rgba(150,165,190,.28)';g.beginPath();g.arc(x+r*.4,y+r*.5,r*.75,0,7);g.fill();
     g.fillStyle=dk?'rgba(130,145,170,.4)':'rgba(255,255,255,.95)';g.beginPath();g.arc(x,y,r,0,7);g.fill()}
   return c}
+/* 一颗水珠的样子：影子、透明的身体、底边一道亮、左上一点高光 */
+function makeBead(){const s=64,c=document.createElement('canvas');c.width=c.height=s;
+  const g=c.getContext('2d'),dk=dark(),m=s/2,r=s*.42;
+  g.fillStyle=dk?'rgba(0,0,0,.35)':'rgba(70,90,125,.2)';g.beginPath();g.ellipse(m+r*.06,m+r*.16,r,r*.95,0,0,7);g.fill();
+  const b=g.createRadialGradient(m-r*.25,m-r*.3,r*.1,m,m,r);
+  b.addColorStop(0,dk?'rgba(150,165,190,.12)':'rgba(255,255,255,.22)');
+  b.addColorStop(.75,dk?'rgba(110,125,150,.22)':'rgba(225,232,242,.32)');
+  b.addColorStop(1,dk?'rgba(200,215,240,.5)':'rgba(120,140,170,.42)');
+  g.fillStyle=b;g.beginPath();g.arc(m,m,r,0,7);g.fill();
+  g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=s*.045;g.beginPath();g.arc(m,m,r*.8,Math.PI*.2,Math.PI*.8);g.stroke();
+  g.fillStyle='rgba(255,255,255,.95)';g.beginPath();g.ellipse(m-r*.35,m-r*.42,r*.2,r*.13,-.6,0,7);g.fill();
+  return c}
 function fogSize(){const v=V(),W=v.clientWidth||innerWidth,H=v.clientHeight||innerHeight;
-  if(W===G.W&&H===G.H&&G.ctx)return;G.W=W;G.H=H;G.k=FG.res;
-  CV.width=Math.round(W*G.k);CV.height=Math.round(H*G.k);G.ctx=CV.getContext('2d');G.tex=makeTex();refog(1)}
+  if(W===G.W&&H===G.H&&G.ctx)return;G.W=W;G.H=H;G.k=FG.res;G.rk=Math.min(devicePixelRatio||1,2);
+  CV.width=Math.round(W*G.k);CV.height=Math.round(H*G.k);G.ctx=CV.getContext('2d');G.tex=makeTex();
+  G.tmp=document.createElement('canvas');G.tmp.width=CV.width;G.tmp.height=CV.height;
+  RC.width=Math.round(W*G.rk);RC.height=Math.round(H*G.rk);G.rc=RC.getContext('2d');G.bead=makeBead()}
 function refog(a){const g=G.ctx;if(!g)return;g.globalCompositeOperation='source-over';g.globalAlpha=a;g.drawImage(G.tex,0,0);g.globalAlpha=1}
-function erase(x,y,r,al){const g=G.ctx,k=G.k,R=r*k,X=x*k,Y=y*k;g.globalCompositeOperation='destination-out';
+function erase(x,y,r,al){const g=G.ctx;if(!g)return;const k=G.k,R=r*k,X=x*k,Y=y*k;g.globalCompositeOperation='destination-out';
   const rg=g.createRadialGradient(X,Y,0,X,Y,R);rg.addColorStop(0,`rgba(0,0,0,${al})`);rg.addColorStop(.55,`rgba(0,0,0,${al*.6})`);rg.addColorStop(1,'rgba(0,0,0,0)');
   g.fillStyle=rg;g.fillRect(X-R,Y-R,R*2,R*2);g.globalCompositeOperation='source-over'}
 function wipe(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),st=Math.max(1,Math.ceil(d/(FG.wipe*.35)));
-  for(let i=1;i<=st;i++){const x=x1+(x2-x1)*i/st,y=y1+(y2-y1)*i/st;erase(x,y,FG.wipe,FG.keep);
-    if(Math.random()<FG.drip)G.drips.push({x:x+(Math.random()-.5)*FG.wipe,y:y+FG.wipe*.5,v:.5+Math.random()*.8,r:1.3+Math.random()*1.1,life:90+Math.random()*120})}}
+  for(let i=1;i<=st;i++)erase(x1+(x2-x1)*i/st,y1+(y2-y1)*i/st,FG.wipe,FG.keep)}
+
+/* 雨：小水珠慢慢冒出来，偶尔一颗变重滑下去，在雾上冲出一道水痕 */
+function addBead(){const b={x:Math.random()*G.W,y:Math.random()*G.H,r:1.4+Math.pow(Math.random(),2)*3.6,t:performance.now()};
+  G.beads.push(b);erase(b.x,b.y,b.r*1.4,.55);if(G.beads.length>FG.beads)G.beads.shift()}
+function addRun(){let x,y,r;const big=G.beads.filter(b=>b.r>3.2);
+  if(big.length&&Math.random()<.6){const b=rnd(big);G.beads.splice(G.beads.indexOf(b),1);x=b.x;y=b.y;r=b.r+1.2}
+  else{x=Math.random()*G.W;y=Math.random()*G.H*.55;r=rr([3.6,5.6])}
+  G.runs.push({x,y,r,v:0})}
+function stepRuns(){for(let i=G.runs.length-1;i>=0;i--){const r=G.runs[i];
+  r.v=Math.min(r.v+.05+r.r*.006,2.4+r.r*.25);
+  if(Math.random()<.035)r.v*=.25;
+  r.x+=(Math.random()-.5)*.8;r.y+=r.v;
+  erase(r.x,r.y,r.r*1.25,.92);
+  for(let j=G.beads.length-1;j>=0;j--){const b=G.beads[j];
+    if(Math.abs(b.x-r.x)<r.r+b.r&&Math.abs(b.y-r.y)<r.r+b.r){G.beads.splice(j,1);r.r=Math.min(8,r.r+b.r*.22)}}
+  if(Math.random()<.025&&r.r>3){G.beads.push({x:r.x+(Math.random()-.5)*2,y:r.y-r.r*1.3,r:r.r*(.25+Math.random()*.2),t:performance.now()-300});r.r*=.96}
+  if(r.y>G.H+20)G.runs.splice(i,1)}}
+function drawRain(){const g=G.rc,k=G.rk,s=G.bead,n=performance.now();if(!g)return;
+  g.setTransform(k,0,0,k,0,0);g.clearRect(0,0,G.W,G.H);
+  for(const b of G.beads){const d=b.r*2.4*Math.min(1,(n-b.t)/400);g.drawImage(s,b.x-d/2,b.y-d/2,d,d)}
+  for(const r of G.runs){const d=r.r*2.4;g.drawImage(s,r.x-d/2,r.y-d*.62,d,d*1.25)}}
+
+/* 正文滑动时，雾和水珠跟着字一起走 */
+function onScroll(){const t=LY().scrollTop,dy=t-G.top;G.top=t;if(!dy||!G.ctx)return;
+  const g=G.ctx,w=CV.width,h=CV.height,d=Math.round(dy*G.k);
+  if(Math.abs(d)>=h)refog(1);
+  else{const tg=G.tmp.getContext('2d');tg.clearRect(0,0,w,h);tg.drawImage(CV,0,0);
+    g.clearRect(0,0,w,h);g.drawImage(G.tmp,0,-d);
+    if(d>0)g.drawImage(G.tex,0,h-d,w,d,0,h-d,w,d);else if(d<0)g.drawImage(G.tex,0,0,w,-d,0,0,w,-d)}
+  G.beads.forEach(b=>b.y-=dy);G.runs.forEach(r=>r.y-=dy);
+  G.beads=G.beads.filter(b=>b.y>-10&&b.y<G.H+10)}
+LY().addEventListener('scroll',onScroll,{passive:true});
+
 function fogLoop(ts){if(!V().classList.contains('show')){G.raf=0;return}
-  if(!document.hidden){
-    G.acc+=Math.min(100,ts-(G.last||ts));
-    if(G.acc>160){G.acc=0;refog(FG.regrow)}
-    for(let i=G.drips.length-1;i>=0;i--){const d=G.drips[i];d.y+=d.v;d.v*=.99;d.life--;erase(d.x,d.y,d.r*2.2,.5);if(d.life<=0||d.y>G.H)G.drips.splice(i,1)}}
+  if(!document.hidden){const dt=Math.min(100,ts-(G.last||ts));
+    G.acc+=dt;if(G.acc>160){G.acc=0;refog(FG.regrow)}
+    if(ts>G.nb){G.nb=ts+rr(FG.beadEvery);addBead()}
+    if(ts>G.nr){G.nr=ts+rr(FG.run);addRun()}
+    stepRuns();drawRain()}
   G.last=ts;G.raf=requestAnimationFrame(fogLoop)}
-function fogStart(){fogSize();refog(1);G.drips=[];if(!G.raf){G.last=0;G.raf=requestAnimationFrame(fogLoop)}}
-addEventListener('resize',()=>{if(V().classList.contains('show')){G.W=0;fogSize()}});
+function fogStart(){fogSize();refog(1);G.beads=[];G.runs=[];G.top=LY().scrollTop;
+  for(let i=0;i<30;i++)addBead();
+  if(!G.raf){G.last=0;G.raf=requestAnimationFrame(fogLoop)}}
+addEventListener('resize',()=>{if(V().classList.contains('show')){G.W=0;fogSize();refog(1)}});
+
+/* 手指擦雾 */
 let fp=null;
 const rel=(x,y)=>{const r=V().getBoundingClientRect();return [x-r.left,y-r.top]};
 V().addEventListener('touchstart',e=>{const t=e.touches[0];fp=rel(t.clientX,t.clientY);erase(fp[0],fp[1],FG.wipe,FG.keep);hint(false)},{passive:true});
@@ -189,25 +243,25 @@ async function respond(f){
   BUSY.delete(f);await save();if(vc===f)render('full',true)}
 
 /* ---------- 字一个一个出现（在雾后面） ---------- */
-function typeOut(f){const box=$('#fgTx'),L=$('#fgLayer');if(!box)return;
+function typeOut(f){const box=$('#fgTx'),L=LY();if(!box)return;
   box.innerHTML=String(f.story).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(p=>`<p>${[...p].map(c=>`<span>${esc(c)}</span>`).join('')}</p>`).join('');
   const SP=[...box.querySelectorAll('span')],n=SP.length;
   if(!n){$('.fg-ft')?.classList.remove('hide');return}
-  const gap=Math.max(18,Math.min(50,8000/n));let i=0,free=false,was=L.scrollTop;
-  L.onscroll=()=>{if(L.scrollTop<was-40)free=true};
+  const gap=Math.max(18,Math.min(50,8000/n));let i=0,free=false;
+  L.addEventListener('touchstart',()=>free=true,{once:true,passive:true});
   clearInterval(typing);
   typing=setInterval(()=>{
     if(vc!==f){clearInterval(typing);typing=null;return}
     SP[i++].classList.add('on');
     if(!free&&(i%10===0||i>=n)){const r=SP[i-1].getBoundingClientRect(),vr=V().getBoundingClientRect();
-      if(r.bottom>vr.bottom-150){L.scrollTop+=r.bottom-(vr.bottom-150);was=L.scrollTop}}
+      if(r.bottom>vr.bottom-150)L.scrollTop+=r.bottom-(vr.bottom-150)}
     if(i>=n){clearInterval(typing);typing=null;$('.fg-ft')?.classList.remove('hide')}},gap)}
 
 /* ---------- 打开 ---------- */
-function open(f,mode){vc=f;$('#page-cards').classList.add('wet');V().classList.add('show');fogStart();render(mode);hint(true)}
+function open(f,mode){vc=f;$('#page-cards').classList.add('wet');V().classList.add('show');LY().scrollTop=0;fogStart();render(mode);hint(true)}
 function closeFog(){V().classList.remove('show');vc=null;clearInterval(typing);typing=null;hint(false);
   if(!$('#ifView')?.classList.contains('show'))$('#page-cards').classList.remove('wet')}
-function render(mode,bottom){const f=vc;if(!f)return;const H=esc(S.hisName),L=$('#fgLayer');L.onscroll=null;
+function render(mode,bottom){const f=vc;if(!f)return;const H=esc(S.hisName),L=LY();
   if(f._wait){L.innerHTML=`<div class="fg-box"><div class="fg-card"></div><p class="fg-wait">${H}在想</p></div>`;return}
   const tp=mode==='new',no=DATA.dream.indexOf(f)+1,b=BUSY.has(f);
   const th=(f.thread||[]).map(x=>`<div class="fg-say ${x.who==='me'?'me':'him'}"><small>${x.who==='me'?'我':H}</small>${esc(x.text)}</div>`).join('')
