@@ -214,9 +214,12 @@ window.ifSync();booted=true;
 /* ---------- 翻面：文件夹自己左右翻，毛玻璃不会丢 ---------- */
 let flipping=false;
 window.ifFlip=cb=>{if(flipping)return;flipping=true;folder.classList.remove('open');layoutArc();riffleReset();
-  stage.classList.add('fl1');
-  setTimeout(()=>{try{cb&&cb()}catch(e){}stage.classList.remove('fl1');stage.classList.add('fl2');
-    setTimeout(()=>{stage.classList.remove('fl2');flipping=false;status()},430)},280)};
+  const t0=performance.now(),D=780;let swapped=false;
+  (function f(now){const p=Math.min(1,(now-t0)/D),e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2,a=e*Math.PI,c=Math.cos(a),s=Math.sin(a);
+    if(!swapped&&e>=.5){swapped=true;try{cb&&cb()}catch(x){}}
+    const sx=Math.max(.03,Math.abs(c)),sk=(c>=0?-1:1)*s*7;
+    stage.style.transform=`translateY(-3vh) scale(${(1-s*.06).toFixed(3)}) skewY(${sk.toFixed(2)}deg) scaleX(${sx.toFixed(3)})`;
+    if(p<1)requestAnimationFrame(f);else{stage.style.transform='';flipping=false;status()}})(t0)};
 
 /* ---------- 抽一张 ---------- */
 function pickEl(el){
