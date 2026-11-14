@@ -11,8 +11,6 @@
   --flake-core:rgba(255,255,255,.95);--flake-glow:rgba(190,210,245,.8);
   --lg-a:rgba(255,255,255,.05);--lg-b:rgba(255,255,255,.01);--lg-c:rgba(230,238,250,.025);
   --edge-hi:rgba(255,255,255,.95);--edge-cool:rgba(165,195,255,.5);--edge-warm:rgba(255,205,225,.4);
-  --card-bg:linear-gradient(170deg,rgba(255,255,255,.97),rgba(234,238,244,.93));
-  --line-c:rgba(140,150,170,.45);
   --glow:rgba(255,255,255,.4);
   --shadow:0 22px 44px rgba(96,106,126,.18);
   --f-script:"Snell Roundhand","Savoye LET","Apple Chancery","Zapfino","Segoe Script",cursive;
@@ -25,8 +23,6 @@ html.dk{
   --flake-glow:rgba(170,195,255,.7);
   --lg-a:rgba(135,152,185,.05);--lg-b:rgba(80,92,118,.01);--lg-c:rgba(150,165,200,.02);
   --edge-hi:rgba(255,255,255,.55);--edge-cool:rgba(150,185,255,.45);--edge-warm:rgba(255,185,215,.3);
-  --card-bg:linear-gradient(170deg,rgba(60,68,88,.96),rgba(38,44,58,.93));
-  --line-c:rgba(255,255,255,.22);
   --glow:rgba(195,212,255,.3);
   --shadow:0 24px 50px rgba(0,0,0,.5);
 }
@@ -37,6 +33,10 @@ body{position:fixed;inset:0;touch-action:none;color:var(--ink);font-family:var(-
 #snow{position:fixed;inset:0;z-index:0;pointer-events:none;}
 
 .stage{position:relative;z-index:2;perspective:1100px;transform:translateY(-3vh);}
+.stage.fl1{animation:flA .27s ease-in forwards}
+@keyframes flA{to{transform:translateY(-3vh) scaleX(0)}}
+.stage.fl2{animation:flB .42s cubic-bezier(.2,.9,.3,1)}
+@keyframes flB{from{transform:translateY(-3vh) scaleX(0)}}
 .tilt{transition:transform .25s ease-out;transform-style:preserve-3d;}
 .folder{position:relative;width:min(76vw,300px);height:252px;cursor:pointer;}
 
@@ -48,7 +48,8 @@ body{position:fixed;inset:0;touch-action:none;color:var(--ink);font-family:var(-
 .folder-back::after{content:"";position:absolute;top:-16px;right:calc(44% - 2px);width:26px;height:17px;background:var(--back-tint);
   border-radius:12px 0 0 0;transform:skewX(-34deg);transform-origin:bottom right;}
 
-.snow-string{position:absolute;top:12px;right:15%;width:0;z-index:2;transform-origin:top center;animation:sway 6.5s ease-in-out infinite;}
+/* 雪花串：挂在最前面，不被玻璃挡住，也不挡手指 */
+.snow-string{position:absolute;top:12px;right:15%;width:0;z-index:8;pointer-events:none;transform-origin:top center;animation:sway 6.5s ease-in-out infinite;}
 @keyframes sway{0%,100%{transform:rotate(-2.4deg)}50%{transform:rotate(2.4deg)}}
 .snow-string::before{content:"";position:absolute;left:-.5px;top:0;width:1px;height:var(--line,80px);opacity:.5;
   background:linear-gradient(to bottom,transparent,rgba(255,255,255,.8) 25%,transparent);}
@@ -63,21 +64,21 @@ body{position:fixed;inset:0;touch-action:none;color:var(--ink);font-family:var(-
 .flake.enter{animation:dropIn .7s cubic-bezier(.2,1.4,.3,1);}
 @keyframes dropIn{from{opacity:0;margin-top:-30px}to{opacity:1;margin-top:0}}
 
-/* ===== 封着的记忆牌 ===== */
+/* ===== 牌：随机的一摊，毛玻璃 ===== */
 .cards{position:absolute;inset:0;z-index:3;pointer-events:none;}
 .folder.open .cards{z-index:6;}
-.file-card{position:absolute;left:calc(50% - 21px);bottom:14px;width:42px;height:64px;transform-origin:50% 300%;
+.file-card{position:absolute;left:calc(50% - 21px);bottom:14px;width:42px;height:64px;transform-origin:50% 50%;
   transform:translate(var(--sx),var(--sy)) rotate(var(--s)) scale(.95);
-  transition:transform .5s cubic-bezier(.22,1.25,.36,1),opacity .4s;transition-delay:var(--dl,0s);pointer-events:auto;}
+  transition:transform .5s cubic-bezier(.22,1.25,.36,1),transform-origin .5s,opacity .4s;transition-delay:var(--dl,0s);pointer-events:auto;}
 .file-card.enter{animation:cardIn .7s cubic-bezier(.2,1.4,.3,1) both}
 @keyframes cardIn{from{opacity:0;margin-bottom:220px}}
-.folder.open .file-card{transform:rotate(var(--a)) translateY(-40px);}
+.folder.open .file-card{transform-origin:50% 300%;transform:rotate(var(--a)) translateY(-40px);}
 .file-card.picked{z-index:99!important;opacity:0;transform:rotate(0deg) translateY(-320px) scale(1.7)!important;
   transition:transform .55s cubic-bezier(.5,0,.3,1),opacity .55s ease-in!important;transition-delay:0s!important}
 .pad{width:100%;height:100%;border-radius:7px;position:relative;overflow:hidden;
   background:linear-gradient(165deg,rgba(255,255,255,.82),rgba(238,242,248,.62) 55%,rgba(250,251,253,.74));
   border:1px solid rgba(255,255,255,.95);
-  box-shadow:inset 0 1px 1px #fff,inset 0 0 8px rgba(255,255,255,.5),0 4px 12px rgba(80,95,125,.14);
+  box-shadow:inset 0 1px 1px #fff,inset 0 0 8px rgba(255,255,255,.5),0 3px 8px rgba(80,95,125,.12);
   transform:translateY(calc(var(--lift,0px) * -1));transition:transform .1s ease-out;}
 .pad::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 60% at 30% 0%,rgba(255,255,255,.7),transparent 60%);pointer-events:none}
 html.dk .pad{background:linear-gradient(165deg,rgba(120,132,158,.5),rgba(70,80,102,.4) 55%,rgba(100,112,138,.45));border-color:rgba(255,255,255,.3)}
@@ -126,18 +127,18 @@ html.dk .pad{background:linear-gradient(165deg,rgba(120,132,158,.5),rgba(70,80,1
 
 <canvas id="snow"></canvas>
 
-<div class="stage">
+<div class="stage" id="stage">
   <div class="tilt" id="tilt">
     <div class="folder" id="folder">
       <div class="folder-back"></div>
-      <div class="snow-string" id="string">
-        <span class="anchor glassy"><svg width="100" height="100"><use href="#sf"/></svg></span>
-      </div>
       <div class="cards" id="cards"></div>
       <div class="glass" id="glass">
         <div class="glow"></div>
         <div class="glass-title">Infinity</div>
         <div class="cnt" id="cnt">0</div>
+      </div>
+      <div class="snow-string" id="string">
+        <span class="anchor glassy"><svg width="100" height="100"><use href="#sf"/></svg></span>
       </div>
     </div>
     <div class="toolbar">
@@ -154,34 +155,35 @@ const syncDark=()=>{try{root.classList.toggle('dk',window.parent.document.docume
 syncDark();
 const isDark=()=>root.classList.contains('dk');
 
-const folder=document.getElementById('folder'),tilt=document.getElementById('tilt'),string=document.getElementById('string'),
+const stage=document.getElementById('stage'),folder=document.getElementById('folder'),tilt=document.getElementById('tilt'),string=document.getElementById('string'),
       cards=document.getElementById('cards'),glass=document.getElementById('glass'),
       tip=document.getElementById('tip'),cnt=document.getElementById('cnt'),listBtn=document.getElementById('listBtn');
 const P=(()=>{try{return window.parent!==window&&window.parent.INF?window.parent.INF:null}catch(e){return null}})();
-const num=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h%997};
-const POOL=30;
+const num=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h};
+const hf=(k,m)=>((k*m+m*7919)%10007)/10007;
+const POOL=15;
 let picking=false,booted=false,seq=0;
 
-/* ---------- 封着的牌：抽走一张，补上一张 ---------- */
+/* ---------- 牌：随手倒进去的一摊；抽走一张，补上一张 ---------- */
 const live=()=>[...cards.querySelectorAll('.file-card:not(.picked)')];
 function makeCard(enter){
-  const el=document.createElement('div'),k=num('c'+(seq++));
-  el.className='file-card'+(enter?' enter':'');
-  el.style.setProperty('--sx',((k*53)%170-85)+'px');
-  el.style.setProperty('--sy',-(26+(k*29)%110)+'px');
-  el.style.setProperty('--s',((k*41)%60-30)+'deg');
+  const el=document.createElement('div');
+  el.className='file-card'+(enter?' enter':'');el.dataset.k=num('c'+(seq++)+'-'+Math.random());
   el.innerHTML='<div class="pad"></div>';
   cards.appendChild(el)}
 function layoutArc(){
-  const L=live(),n=L.length,sp=Math.min(110,n*3.6);
-  L.forEach((el,i)=>{
+  const L=live(),n=L.length,sp=Math.min(96,n*6.5);
+  L.forEach((el,i)=>{const k=+el.dataset.k,a=hf(k,131),b=hf(k,257),c=hf(k,373),d=hf(k,491);
+    el.style.setProperty('--sx',((a+b-1)*86)+'px');
+    el.style.setProperty('--sy',-(62+c*82)+'px');
+    el.style.setProperty('--s',((d*2-1)*40)+'deg');
     el.style.setProperty('--a',(n<2?0:-sp/2+sp*i/(n-1))+'deg');
-    el.style.setProperty('--dl',(i*10)+'ms');
-    el.style.zIndex=i})}
+    el.style.setProperty('--dl',(i*14)+'ms');
+    el.style.zIndex=folder.classList.contains('open')?i:(k%50)})}
 for(let i=0;i<POOL;i++)makeCard(false);layoutArc();
 
-/* ---------- 雪花串：讲一段，挂一片 ---------- */
-const SIZES=[40,20,34,18,28,22,36,18];
+/* ---------- 雪花串：讲一段，挂一片（最多 6 片） ---------- */
+const SIZES=[40,20,34,18,28,22];
 const liveF=()=>[...string.querySelectorAll('.flake')];
 function makeFlake(enter){
   const i=liveF().length,el=document.createElement('span');
@@ -196,7 +198,7 @@ function layoutString(){
   const F=liveF();string.style.setProperty('--line',(F.length*28+56)+'px');
   F.forEach((el,i)=>{el.style.top=(i*28+52)+'px';el.style.left=(Math.sin(i*1.9)*12)+'px'})}
 function syncFlakes(d){
-  d=Math.min(d,8);const F=liveF();
+  d=Math.min(d,6);const F=liveF();
   for(let i=F.length;i<d;i++)makeFlake(booted);
   F.slice(d).forEach(fl=>fl.remove());
   layoutString()}
@@ -205,10 +207,17 @@ function syncFlakes(d){
 function status(){
   const n=P?P.count():0,b=P?P.busy():false;
   cnt.textContent=n;
-  tip.textContent=b?'他在想…':folder.classList.contains('open')?'划过牌浪 · 点一张，听他讲':'轻触打开文件夹';
+  tip.textContent=b?'他在想…':folder.classList.contains('open')?'划过牌浪 · 点一张':'轻触打开文件夹';
   listBtn.hidden=!n;listBtn.textContent='收好的 · '+n}
 window.ifSync=()=>{syncFlakes(P?P.count():0);status()};
 window.ifSync();booted=true;
+
+/* ---------- 翻面：文件夹自己左右翻，毛玻璃不会丢 ---------- */
+let flipping=false;
+window.ifFlip=cb=>{if(flipping)return;flipping=true;folder.classList.remove('open');layoutArc();riffleReset();
+  stage.classList.add('fl1');
+  setTimeout(()=>{try{cb&&cb()}catch(e){}stage.classList.remove('fl1');stage.classList.add('fl2');
+    setTimeout(()=>{stage.classList.remove('fl2');flipping=false;status()},430)},280)};
 
 /* ---------- 抽一张 ---------- */
 function pickEl(el){
@@ -221,10 +230,10 @@ function pickEl(el){
 /* ================= 常规交互 ================= */
 let moved=false,downX=0,downY=0;
 folder.addEventListener('pointerup',e=>{
-  if(moved)return;
+  if(moved||flipping)return;
   const c=e.target.closest('.file-card');
   if(c&&folder.classList.contains('open')){pickEl(c);return}
-  folder.classList.toggle('open');riffleReset();status()});
+  folder.classList.toggle('open');layoutArc();riffleReset();status()});
 listBtn.addEventListener('click',()=>P?.list());
 
 function riffle(px){
