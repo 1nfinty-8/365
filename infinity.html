@@ -161,26 +161,25 @@ const stage=document.getElementById('stage'),folder=document.getElementById('fol
 const P=(()=>{try{return window.parent!==window&&window.parent.INF?window.parent.INF:null}catch(e){return null}})();
 const num=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h};
 const hf=(k,m)=>((k*m+m*7919)%10007)/10007;
-const POOL=15;
+const POOL=15,DECO=10;
 let picking=false,booted=false,seq=0;
 
-/* ---------- 牌：随手倒进去的一摊；抽走一张，补上一张 ---------- */
-const live=()=>[...cards.querySelectorAll('.file-card:not(.picked)')];
-function makeCard(enter){
+/* ---------- 牌：随手倒进去的一摊（合上时多 10 张做样子）；抽走一张，补上一张 ---------- */
+const live=()=>[...cards.querySelectorAll('.file-card:not(.picked):not(.deco)')];
+function makeCard(enter,deco){
   const el=document.createElement('div');
-  el.className='file-card'+(enter?' enter':'');el.dataset.k=num('c'+(seq++)+'-'+Math.random());
+  el.className='file-card'+(deco?' deco':'')+(enter?' enter':'');el.dataset.k=num('c'+(seq++)+'-'+Math.random());
   el.innerHTML='<div class="pad"></div>';
   cards.appendChild(el)}
 function layoutArc(){
-  const L=live(),n=L.length,sp=Math.min(96,n*6.5);
-  L.forEach((el,i)=>{const k=+el.dataset.k,a=hf(k,131),b=hf(k,257),c=hf(k,373),d=hf(k,491);
-    el.style.setProperty('--sx',((a+b-1)*86)+'px');
-    el.style.setProperty('--sy',-(62+c*82)+'px');
-    el.style.setProperty('--s',((d*2-1)*40)+'deg');
-    el.style.setProperty('--a',(n<2?0:-sp/2+sp*i/(n-1))+'deg');
-    el.style.setProperty('--dl',(i*14)+'ms');
-    el.style.zIndex=folder.classList.contains('open')?i:(k%50)})}
-for(let i=0;i<POOL;i++)makeCard(false);layoutArc();
+  const op=folder.classList.contains('open'),L=live(),n=L.length,sp=Math.min(96,n*6.5);
+  [...cards.querySelectorAll('.file-card:not(.picked)')].forEach(el=>{const k=+el.dataset.k,a=hf(k,131),b=hf(k,257),c=hf(k,373),d=hf(k,491);
+    el.style.setProperty('--sx',((a+b-1)*92)+'px');
+    el.style.setProperty('--sy',-(18+c*72)+'px');
+    el.style.setProperty('--s',((d*2-1)*42)+'deg');
+    el.style.zIndex=op?0:(k%60)});
+  L.forEach((el,i)=>{el.style.setProperty('--a',(n<2?0:-sp/2+sp*i/(n-1))+'deg');el.style.setProperty('--dl',(i*14)+'ms');if(op)el.style.zIndex=i})}
+for(let i=0;i<POOL;i++)makeCard(false);for(let i=0;i<DECO;i++)makeCard(false,true);layoutArc();
 
 /* ---------- 雪花串：讲一段，挂一片（最多 6 片） ---------- */
 const SIZES=[40,20,34,18,28,22];
