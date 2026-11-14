@@ -291,6 +291,7 @@ for(let i=0;i<110;i++){const z=Math.random();
   flakes.push({x:Math.random()*W,y:Math.random()*H,z,vy:.25+z*1.1,ph:Math.random()*7,tw:Math.random()*7,
     rot:Math.random()*7,vr:(Math.random()-.5)*.012,crystal:z>.55&&Math.random()<.5})}
 (function step(){
+  const fe=window.frameElement;if(fe&&(!fe.offsetParent||fe.closest('.wet'))){setTimeout(()=>requestAnimationFrame(step),400);return}
   ctx.clearRect(0,0,W,H);const t=performance.now()/1000;
   for(const f of flakes){
     f.x+=Math.sin(t*.7+f.ph)*(.2+f.z*.5);f.y+=f.vy;f.rot+=f.vr;
