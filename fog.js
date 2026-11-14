@@ -193,19 +193,14 @@ function fogStart(){fogSize();refog(1);G.beads=[];G.runs=[];G.top=LY().scrollTop
   if(!G.raf){G.last=0;G.raf=requestAnimationFrame(fogLoop)}}
 addEventListener('resize',()=>{if(V().classList.contains('show')){G.W=0;fogSize();refog(1)}});
 
-/* 手指擦雾 */
-let fp=null;
+/* 手指擦雾：左右擦是擦，一旦开始上下翻页就不擦 */
+let fp=null,scr=false;
 const rel=(x,y)=>{const r=V().getBoundingClientRect();return [x-r.left,y-r.top]};
-V().addEventListener('touchstart',e=>{const t=e.touches[0];fp=rel(t.clientX,t.clientY);erase(fp[0],fp[1],FG.wipe,FG.keep);hint(false)},{passive:true});
-V().addEventListener('touchmove',e=>{if(!fp)return;const t=e.touches[0],p=rel(t.clientX,t.clientY);
+V().addEventListener('touchstart',e=>{const t=e.touches[0];fp=rel(t.clientX,t.clientY);scr=false;hint(false)},{passive:true});
+V().addEventListener('touchmove',e=>{if(!fp||scr)return;const t=e.touches[0],p=rel(t.clientX,t.clientY);
   if(Math.hypot(p[0]-fp[0],p[1]-fp[1])<3)return;wipe(fp[0],fp[1],p[0],p[1]);fp=p},{passive:true});
-V().addEventListener('touchend',()=>fp=null,{passive:true});
-let md=null;
-V().addEventListener('mousedown',e=>{md=rel(e.clientX,e.clientY)});
-V().addEventListener('mousemove',e=>{if(!md)return;const p=rel(e.clientX,e.clientY);wipe(md[0],md[1],p[0],p[1]);md=p});
-addEventListener('mouseup',()=>md=null);
-let hintT=0;
-function hint(on){clearTimeout(hintT);$('#fgHint').classList.toggle('on',!!on);if(on)hintT=setTimeout(()=>hint(false),3800)}
+V().addEventListener('touchend',()=>{fp=null;scr=false},{passive:true});
+LY().addEventListener('scroll',()=>{if(fp)scr=true},{passive:true});
 
 /* ---------- 他写一段：你们之间的事 ---------- */
 const SCENE='这是你们的小窝「365」里「他的记忆」的背面：一块起了雾的玻璃，后面是只属于你们两个人的事。只有她能看到，她要自己把雾擦开才看得见。';
