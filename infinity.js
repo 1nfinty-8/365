@@ -13,14 +13,14 @@ const paras=t=>String(t).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<
 
 /* ===== 想调效果改这里 ===== */
 const FX={
-  fat:24,             // 涟漪一圈有多宽（像素）：越大越肥（16～36）
-  rings:1.8,          // 一个雨点荡出几圈：越大圈越多（1.2～2.6）
+  fat:22,             // 涟漪一圈有多宽（像素）：越大越肥（16～36）——已调窄一点点
+  rings:1.35,         // 一个雨点荡出几圈：越大圈越多（1.2～2.6）——拨水时更像水纹
   punch:1,            // 涟漪起伏的力度（.6～1.6）
-  speed:.5,           // 涟漪荡开的快慢：越小越慢（.3～1）
+  speed:.62,          // 涟漪荡开的快慢：越小越慢（.3～1）——已调快一点点
   wave:1,             // 湖面一直在的波浪：越大越明显（0～1.6），0 = 只剩雨圈
   drift:1,            // 波浪推过来的快慢：越小越慢（.4～1.5）
-  light:.85,          // 亮面（白光）的浓淡
-  shade:.42,          // 暗面的浓淡：嫌深往 .3 调，嫌浅往 .55 调
+  light:.78,          // 亮面（白光）的浓淡——调低，整体更透
+  shade:.36,          // 暗面的浓淡——调低，整体更透
   tint:[.60,.67,.82], // 暗面的颜色（红、绿、蓝，0～1）：三个数一起加大就更浅
   rain:[320,820],     // 雨点间隔（毫秒），越小越密
   res:1.5             // 清晰度上限（×屏幕点）：1.5 清楚，1 最省电；连续掉帧会自动降
@@ -216,14 +216,26 @@ function wvLoop(ts){if(!VIEW().classList.contains('show')||!WV.ok){WV.raf=0;retu
 function wvStart(){if(!glInit())return;wvSize();WV.cx=WV.W/2;WV.cy=WV.H*.45;
   if(!WV.raf){DR.length=0;WV.n=-30;WV.acc=0;WV.raf=requestAnimationFrame(wvLoop)}}
 addEventListener('resize',()=>{if(VIEW().classList.contains('show'))wvSize()});
-/* 手指点水；滑过去，水跟着手动起来 */
+/* 手指点水；滑过去像在拨水：沿轨迹连续落小水滴，叠成一条被拨开的水路 */
 let pd=null,pdT=0;
 const rel=(x,y)=>{const vr=VIEW().getBoundingClientRect();return [x-vr.left,y-vr.top]};
 function tap(cx,cy){const[x,y]=rel(cx,cy);addDrop(x,y,1.2,FX.fat*1.2,72,3)}
 VIEW().addEventListener('touchstart',e=>{const t=e.touches[0];pd={x:t.clientX,y:t.clientY};tap(t.clientX,t.clientY)},{passive:true});
 VIEW().addEventListener('touchmove',e=>{if(!pd)return;const t=e.touches[0],n=performance.now();
-  if(n-pdT<70||Math.hypot(t.clientX-pd.x,t.clientY-pd.y)<14)return;pdT=n;
-  pd={x:t.clientX,y:t.clientY};const[x,y]=rel(t.clientX,t.clientY);addDrop(x,y,.8,FX.fat*.85,58,2.2)},{passive:true});
+  /* 间隔很短、距离门槛很小：沿着手指走过的路连续落小水滴，叠成一条水路，不是一个个圆环 */
+  if(n-pdT<26)return;
+  const dx=t.clientX-pd.x,dy=t.clientY-pd.y,dist=Math.hypot(dx,dy);
+  if(dist<4)return;
+  pdT=n;
+  /* 在两点之间补几个点，手指划得快也不会断成一段一段 */
+  const steps=Math.min(6,Math.max(1,Math.round(dist/10)));
+  for(let i=1;i<=steps;i++){
+    const x=pd.x+dx*i/steps,y=pd.y+dy*i/steps,[rx,ry]=rel(x,y);
+    /* 力度小、圈窄、寿命短：像水被拨开，不是石头砸出来的大圈 */
+    addDrop(rx,ry,.42,FX.fat*.55,52,1.1);
+  }
+  pd={x:t.clientX,y:t.clientY};
+},{passive:true});
 VIEW().addEventListener('touchend',()=>pd=null,{passive:true});
 VIEW().addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')tap(e.clientX,e.clientY)});
 
@@ -288,95 +300,4 @@ ${VOICE}
 async function respond(f){
   if(BUSY.has(f))return;BUSY.add(f);if(vc===f)vRender('full',true);
   try{const th=(f.thread||[]).map(x=>`${x.who==='me'?'她':'你'}：${x.text}`).join('\n');
-    const t=await callAI(sceneSystem(SCENE),[{role:'user',text:`她刚看了你${f.era}的一段回忆「${f.title}」（${f.year?f.year+'年，':''}${f.age?f.age+'岁，':''}${f.place||''}）：\n「${String(f.story).slice(0,1500)}」\n\n后面的对话：\n${th}\n\n请以${S.hisName}的身份回她最新问的，像两个人坐着聊旧事。细节要和这段回忆对得上，可以补一个文章里没写的小细节，可以说记不清了，也可以不正面回答。不要复述文章，不要讲道理，不要总结。口语，一到五句，不要加名字前缀，不要 emoji。`}]);
-    (f.thread=f.thread||[]).push({who:'him',text:clean(t),t:Date.now()})}
-  catch(e){toast(e.message)}
-  BUSY.delete(f);await save();if(vc===f)vRender('full',true)}
-
-/* ---------- 一小句一小句浮上来（字本身不动） ---------- */
-const CUT=/[^，。！？；：…—!?]+[，。！？；：…—!?”’」』）》\s]*|[，。！？；：…—!?”’」』）》\s]+/g;
-function typeOut(f){const box=$('#mfTx'),L=$('#mfLayer');if(!box)return;
-  box.innerHTML=String(f.story).split(/\n+/).map(s=>s.trim()).filter(Boolean)
-    .map(p=>`<p>${(p.match(CUT)||[p]).map(c=>`<span>${esc(c)}</span>`).join('')}</p>`).join('');
-  const SP=[...box.querySelectorAll('span')],per=Math.max(18,Math.min(50,8000/String(f.story).length));
-  let i=0,free=false;L.addEventListener('touchstart',()=>free=true,{once:true,passive:true});
-  clearTimeout(typing);
-  const step=()=>{
-    if(vc!==f||!SP[i]){typing=null;return}
-    const s=SP[i++];
-    if(!free){const over=s.getBoundingClientRect().bottom-(VIEW().getBoundingClientRect().bottom-150);
-      if(over>0)L.scrollBy({top:over+68,behavior:'smooth'})}
-    s.classList.add('on');
-    if(i>=SP.length){typing=null;$('.mf-ft')?.classList.remove('hide');return}
-    typing=setTimeout(step,Math.max(90,s.textContent.length*per))};
-  step()}
-
-/* ---------- 打开 ---------- */
-function open(f,mode){vc=f;$('#page-cards').classList.add('wet');VIEW().classList.add('show');wvStart();vRender(mode);if(mode==='open')surface()}
-function view(f){if(f)open(f,'open')}
-function closeView(){VIEW().classList.remove('show');$('#page-cards').classList.remove('wet');vc=null;WV.sunk=false;clearTimeout(typing);typing=null}
-function vRender(mode,bottom){const f=vc;if(!f)return;const H=esc(S.hisName),L=$('#mfLayer');
-  if(f._wait){WV.sunk=false;
-    L.innerHTML=`<div class="mf-box"><div class="mf-pool" id="mfPool"><div class="mf-stone" id="mfStone"></div></div><p class="mf-wait">${H}在想</p><p class="mf-hint">碰一碰水面</p></div>`;
-    setTimeout(()=>splash(f),740);return}
-  const tp=mode==='new',an=tp||mode==='open',no=DATA.frag.indexOf(f)+1,b=BUSY.has(f);
-  const meta=[f.year,f.place,f.age?f.age+' 岁':''].filter(Boolean).map(esc).join('<i>·</i>');
-  const th=(f.thread||[]).map(x=>`<div class="mf-say ${x.who==='me'?'me':'him'}"><small>${x.who==='me'?'我':H}</small>${esc(x.text)}</div>`).join('')
-    +(b?`<div class="mf-say him"><small>${H}</small>在想怎么跟你说…</div>`:'');
-  L.innerHTML=`<div class="mf-box">
-    <div class="mf-head${an?' in':''}">${f.age?`<div class="mf-age">${f.age}</div>`:''}
-      <div class="mf-k">${esc(f.era||'往事')}　·　No. ${no}</div>
-      <h3 class="mf-tt">${esc(f.title)}</h3>
-      ${meta?`<div class="mf-m">${meta}</div>`:''}</div>
-    <div class="mf-rule"></div>
-    <div class="mf-tx" id="mfTx">${tp?'':paras(f.story)}</div>
-    ${th?`<div class="mf-th">${th}</div>`:''}
-    <div class="mf-ft${tp?' hide':''}">${b?'':'<button data-va>问他</button>'}<button data-vm>···</button><button data-vx>收好</button></div></div>`;
-  if(tp){L.scrollTop=0;typeOut(f)}
-  else requestAnimationFrame(()=>{L.scrollTop=bottom?L.scrollHeight:0})}
-VIEW().addEventListener('click',e=>{const f=vc;
-  if(e.target.closest('[data-vx]'))return closeView();
-  if(!f||f._wait)return;
-  if(e.target.closest('[data-va]')){ansC=f;$('#ifACard').textContent=f.title;$('#ifAText').value='';openModal('ifAns');return}
-  if(e.target.closest('[data-vm]'))sheet([
-    ['复制这段',()=>navigator.clipboard?.writeText(`${f.title}\n\n${f.story}`).then(()=>toast('已复制'))],
-    ['删除这段记忆',async()=>{if(!confirm('删除这段记忆？他也会忘掉这件事。'))return;DATA.frag=DATA.frag.filter(x=>x!==f);await save();closeView();fire();card()}]])});
-$('#ifASave').onclick=async()=>{const f=ansC,v=$('#ifAText').value.trim();if(!f)return;if(!v)return toast('写点什么吧');
-  (f.thread=f.thread||[]).push({who:'me',text:v,t:Date.now()});await save();closeModal('ifAns');if(vc===f)vRender('full',true);respond(f)};
-
-/* ---------- 收好的记忆 / 想听哪一段 ---------- */
-function showList(){const L=DATA.frag.slice().reverse().slice(0,50);if(!L.length)return toast('还没抽过');
-  sheet(L.map(f=>[`No.${DATA.frag.indexOf(f)+1} · ${f.era||''} · ${f.title}`,()=>view(f)]))}
-$('#ifMenu').onclick=()=>sheet([
-  ['收好的记忆',showList],
-  [`想听哪一段：${S.fragEra||'随便'}`,()=>sheet([['随便',()=>{S.fragEra='';saveSettings();toast('随他想起什么')}],
-    ...ERAS.map(x=>[x,()=>{S.fragEra=x;saveSettings();toast(`下一张讲${x}的事`)}])])],
-  ['全部清空',async()=>{if(!DATA.frag.length)return toast('本来就是空的');if(!confirm('清空所有记忆？他也会全部忘掉。'))return;
-    DATA.frag=[];await save();fire();card();toast('清空了')}]]);
-
-/* ---------- 「关于他」里的卡片；游戏页里藏起来 ---------- */
-function card(){const g=$('#himGrid');if(!g)return;let c=$('#himGrid [data-go="cards"]');
-  if(!c){g.insertAdjacentHTML('beforeend','<button class="card glass hm-frag" data-go="cards"><div class="cn">他的记忆</div><div class="ce">memories</div><div class="hm-now" id="mfNow"></div></button>');c=$('#himGrid [data-go="cards"]')}
-  const t=$('#himGrid [data-go="trip"]');if(t&&t.nextElementSibling!==c)t.after(c);
-  const n=$('#mfNow'),L=DATA.frag.at(-1);if(n)n.textContent=L?`${DATA.frag.length} 段 · ${L.title}`:'抽一张，听他讲一段过去'}
-function hideGame(){$$('#page-game [data-go]').forEach(x=>{if(x.dataset.go==='cards'||/小卡片|Infinity/.test(x.textContent))x.style.display='none'})}
-$$('#moreGrid [data-go="infinity"]').forEach(x=>x.remove());
-
-/* ---------- 旧的真心话大冒险、塔罗：清掉一次 ---------- */
-async function purge(){if(localStorage.getItem('365-purge1'))return;
-  try{DATA.cards=[];await saveData('cards');await DB.del('tarot');delete DATA.tarot;localStorage.setItem('365-purge1','1')}catch(e){}}
-
-/* ---------- 收进他的记忆：想起过的事，他一直记得 ---------- */
-HOOKS.persona.push(()=>{const L=DATA.frag.filter(f=>f.title);if(!L.length)return '';
-  return '【你自己的往事】这些是你的过去，她都看过。要一直记得，细节不能说错，可以在聊天里自然地提起：\n'
-    +L.slice(-30).map(f=>`- ${f.era||''}${f.year?'，'+f.year:''}${f.age?'，'+f.age+'岁':''}${f.place?'，'+f.place:''}：${f.title}——${f.sum||String(f.story).slice(0,40)}`).join('\n')});
-
-hideGame();
-HOOKS.ready.push(async()=>{if(!Array.isArray(DATA.frag))DATA.frag=[];await purge();hideGame();card();const f=$('#ifFrame');if(f&&!f.src)f.src='infinity.html';
-  setTimeout(glInit,600)});   // 趁空闲先把水面的着色器编译好
-HOOKS.page.push(n=>{page=n;document.body.classList.toggle('ifb',n==='cards');
-  if(n==='game')setTimeout(hideGame,0);
-  if(n==='him')setTimeout(card,0);
-  if(n==='cards'){const f=$('#ifFrame');if(!f.src)f.src='infinity.html';else fire()}
-  else closeView()});
-})();
+    const t=await callAI(sceneSystem(SCENE),[{role:'user',text:`她刚看了你${f.era}的一段回忆「${f.title}」（${f.year?f.year+'年，':''}${f.age?f.age
