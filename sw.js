@@ -15,7 +15,7 @@ async function netFirst(req){
   const net=fetch(req.url,{cache:'no-cache'}).then(res=>{if(res.ok)c.put(req,res.clone());return res});
   const hit=await c.match(req,{ignoreSearch:true});
   if(!hit)return net;
-  return Promise.race([net.catch(()=>hit),new Promise(r=>setTimeout(()=>r(hit),4000))]);
+  return Promise.race([net.catch(()=>hit),new Promise(r=>setTimeout(()=>r(hit),1000))]);
 }
 async function cacheFirst(req){
   const c=await caches.open(FONTS);
