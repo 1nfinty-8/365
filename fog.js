@@ -12,13 +12,14 @@ const pickLen=()=>{let r=Math.random();for(const[p,s]of LEN){if((r-=p)<0)return 
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const rr=a=>a[0]+Math.random()*(a[1]-a[0]);
 const paras=t=>String(t).split(/\n+/).map(s=>s.trim()).filter(Boolean).map(s=>`<p>${esc(s)}</p>`).join('');
+const dstr=t=>{const d=new Date(t);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`};
 
 /* ===== 想调雾和雨改这里 ===== */
 const FG={
-  fog:.96,              // 雾有多浓：越大越看不清（.6～.92）
+  fog:.9,              // 雾有多浓：越大越看不清（.8～.96）
   wipe:30,             // 手指擦开的范围（像素半径）
-  keep:.9,             // 擦得多干净：1 = 完全擦干净
-  regrow:.018,         // 雾重新起来的快慢：越大越快（.008～.05）
+  keep:.92,            // 擦得多干净：1 = 完全擦干净
+  regrow:.012,         // 雾重新起来的快慢：越大越快（.006～.04）
   beads:70,            // 玻璃上最多挂几颗小水珠
   beadEvery:[80,260],  // 多久冒出一颗新水珠（毫秒）
   run:[1400,3600],     // 多久有一颗水珠滑下来（毫秒）
@@ -36,20 +37,22 @@ INF.busy=()=>side?busy:O.busy();
 INF.pick=()=>side?pick():O.pick();
 INF.list=()=>side?showList():O.list();
 
+['https://fonts.googleapis.com','https://fonts.loli.net'].forEach(h=>document.head.insertAdjacentHTML('beforeend',
+  `<link rel="stylesheet" href="${h}/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap">`));
 document.head.insertAdjacentHTML('beforeend',`<style>
 #fgFlip{margin-left:auto;margin-right:8px;transition:color .4s}
 #page-cards.back #fgFlip{color:var(--accent-t)}
-#fgView{position:absolute;inset:0;z-index:21;display:none;overflow:hidden}
+#fgView{position:absolute;inset:0;z-index:21;display:none;overflow:hidden;--fen:"Cormorant Garamond",var(--en)}
 #fgView.show{display:block;animation:fgFade .5s ease}
 @keyframes fgFade{from{opacity:0}}
 #fgLayer{position:absolute;inset:0;z-index:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   display:flex;flex-direction:column;padding:calc(var(--st) + 70px) 30px calc(var(--sb) + 40px)}
 #fgFog,#fgRain{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
-#fgFog{z-index:2;opacity:var(--fog,.8)}
+#fgFog{z-index:2;opacity:var(--fog,.9)}
 #fgRain{z-index:3}
 .fg-x{position:absolute;z-index:4;left:12px;top:calc(var(--st) + 4px)}
 .fg-hint{position:absolute;z-index:4;left:0;right:0;bottom:calc(var(--sb) + 46px);text-align:center;font-size:11px;letter-spacing:6px;color:var(--ink);opacity:0;transition:opacity 1.2s;pointer-events:none}
-.fg-hint.on{opacity:.65}
+.fg-hint.on{opacity:.7}
 .fg-box{margin:auto 0;width:100%;max-width:440px;align-self:center}
 .fg-card{width:120px;height:186px;margin:0 auto 26px;border-radius:12px;
   background:linear-gradient(165deg,rgba(255,255,255,.85),rgba(238,242,248,.66) 55%,rgba(250,251,253,.78));
@@ -60,19 +63,20 @@ html.dk .fg-card{background:linear-gradient(165deg,rgba(120,132,158,.6),rgba(70,
 @keyframes fgBr{50%{transform:translateY(-6px)}}
 .fg-wait{text-align:center;font-size:12px;letter-spacing:8px;color:var(--ink);opacity:.7;animation:fgP 2.6s ease-in-out infinite}
 @keyframes fgP{50%{opacity:.3}}
-.fg-head{text-align:center;padding-top:30px}
-.fg-k{font-size:11px;letter-spacing:6px;color:var(--ink);opacity:.55}
-.fg-tt{font-family:var(--ti);font-weight:500;font-size:24px;letter-spacing:6px;line-height:1.5;margin:14px 0 0;color:var(--ink)}
-.fg-rule{width:1px;height:36px;margin:28px auto;background:linear-gradient(transparent,var(--ink),transparent);opacity:.3}
-.fg-tx p{font-family:var(--ti);font-size:16px;line-height:2.1;letter-spacing:.6px;text-align:justify;text-indent:2em;margin:0 0 1em;color:var(--ink)}
+.fg-head{text-align:center;padding-top:36px}
+.fg-k{font-size:11px;letter-spacing:6px;color:var(--ink);opacity:.6}
+.fg-tt{font-family:var(--ti);font-weight:500;font-size:25px;letter-spacing:6px;line-height:1.5;margin:16px 0 10px;color:var(--ink)}
+.fg-d{font-family:var(--fen);font-size:15px;letter-spacing:3px;color:var(--ink);opacity:.6}
+.fg-rule{width:1px;height:36px;margin:28px auto;background:linear-gradient(transparent,var(--ink),transparent);opacity:.35}
+.fg-tx p{font-family:var(--ti);font-size:16.5px;line-height:2.15;letter-spacing:.6px;text-align:justify;text-indent:2em;margin:0 0 1.1em;color:var(--ink);font-weight:500}
 .fg-tx p:last-child{margin:0}
 .fg-tx span{opacity:0;transition:opacity .9s ease-out}
 .fg-tx span.on{opacity:1}
-.fg-th{display:flex;flex-direction:column;gap:16px;margin-top:34px}
+.fg-th{display:flex;flex-direction:column;gap:16px;margin-top:36px}
 .fg-say{font-family:var(--cn);font-size:14.5px;line-height:1.9;color:var(--ink);white-space:pre-wrap;word-break:break-word}
-.fg-say small{display:block;font-size:11px;letter-spacing:3px;opacity:.45;margin-bottom:2px}
-.fg-say.me{text-align:right;opacity:.8}
-.fg-ft{display:flex;gap:10px;justify-content:center;margin-top:36px;transition:opacity .8s}
+.fg-say small{display:block;font-size:11px;letter-spacing:3px;opacity:.5;margin-bottom:2px}
+.fg-say.me{text-align:right;opacity:.85}
+.fg-ft{display:flex;gap:10px;justify-content:center;margin-top:38px;transition:opacity .8s}
 .fg-ft.hide{opacity:0;pointer-events:none}
 .fg-ft button{padding:9px 22px;border-radius:99px;font-size:13px;letter-spacing:3px;color:var(--ink);background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.75)}
 html.dk .fg-ft button{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
@@ -80,7 +84,7 @@ html.dk .fg-ft button{background:rgba(255,255,255,.1);border-color:rgba(255,255,
 
 $('#ifMenu').insertAdjacentHTML('beforebegin',`<button class="iconbtn glass" id="fgFlip" aria-label="翻面">${FLIP}</button>`);
 $('#page-cards').insertAdjacentHTML('beforeend',`<div id="fgView"><div id="fgLayer"></div><canvas id="fgFog"></canvas><canvas id="fgRain"></canvas>
-  <div class="fg-hint" id="fgHint">用手指擦开</div><button class="iconbtn glass fg-x" data-fx aria-label="收好">${BACK}</button></div>`);
+  <div class="fg-hint" id="fgHint">用手指左右擦开</div><button class="iconbtn glass fg-x" data-fx aria-label="收好">${BACK}</button></div>`);
 $('#app').insertAdjacentHTML('beforeend',`
 <div class="modal" id="fgAns"><div class="mbox">
   <h3>问问<span class="hisName">陆择</span></h3>
@@ -92,12 +96,12 @@ const V=()=>$('#fgView'),CV=$('#fgFog'),RC=$('#fgRain'),LY=()=>$('#fgLayer');
 V().style.setProperty('--fog',FG.fog);
 const dark=()=>document.documentElement.classList.contains('dk');
 
-/* ---------- 翻面：让文件夹自己翻，毛玻璃不会丢 ---------- */
+/* ---------- 翻面：文件夹自己立体翻，毛玻璃不会丢 ---------- */
 function setSide(s){side=s;$('#page-cards').classList.toggle('back',!!s);fire()}
 let flipping=false;
 $('#fgFlip').onclick=()=>{if(flipping)return;flipping=true;navigator.vibrate?.(10);
   let w=null;try{w=$('#ifFrame').contentWindow}catch(e){}
-  if(w&&w.ifFlip){w.ifFlip(()=>setSide(1-side));setTimeout(()=>flipping=false,740)}
+  if(w&&w.ifFlip){w.ifFlip(()=>setSide(1-side));setTimeout(()=>flipping=false,820)}
   else{setSide(1-side);flipping=false}};
 
 /* ================= 下雨天起雾的玻璃 ================= */
@@ -113,7 +117,7 @@ function makeTex(){const w=CV.width,h=CV.height,c=document.createElement('canvas
     g.fillStyle=dk?'rgba(0,0,0,.22)':'rgba(150,165,190,.28)';g.beginPath();g.arc(x+r*.4,y+r*.5,r*.75,0,7);g.fill();
     g.fillStyle=dk?'rgba(130,145,170,.4)':'rgba(255,255,255,.95)';g.beginPath();g.arc(x,y,r,0,7);g.fill()}
   return c}
-/* 一颗水珠的样子：影子、透明的身体、底边一道亮、左上一点高光 */
+/* 一颗液态玻璃水珠：中间透明，边缘折光，下沿亮弧，左上高光 */
 function makeBead(){const s=96,c=document.createElement('canvas');c.width=c.height=s;
   const g=c.getContext('2d'),dk=dark(),m=s/2,r=s*.4;
   const sh=g.createRadialGradient(m,m+r*.35,r*.5,m,m+r*.35,r*1.15);
@@ -170,7 +174,7 @@ function drawRain(){const g=G.rc,k=G.rk,s=G.bead,n=performance.now();if(!g)retur
   for(const b of G.beads){const d=b.r*2.5*Math.min(1,(n-b.t)/400);g.drawImage(s,b.x-d/2,b.y-d/2,d,d*1.05)}
   for(const r of G.runs){const d=r.r*2.5;g.drawImage(s,r.x-d/2,r.y-d*.65,d,d*1.3)}}
 
-/* 正文滑动时，雾和水珠跟着字一起走 */
+/* 正文滑动时，雾和水珠跟着字一起走：擦开的地方跟着字，新滑上来的是雾 */
 function onScroll(){const t=LY().scrollTop,dy=t-G.top;G.top=t;if(!dy||!G.ctx)return;
   const g=G.ctx,w=CV.width,h=CV.height,d=Math.round(dy*G.k);
   if(Math.abs(d)>=h)refog(1);
@@ -201,6 +205,12 @@ V().addEventListener('touchmove',e=>{if(!fp||scr)return;const t=e.touches[0],p=r
   if(Math.hypot(p[0]-fp[0],p[1]-fp[1])<3)return;wipe(fp[0],fp[1],p[0],p[1]);fp=p},{passive:true});
 V().addEventListener('touchend',()=>{fp=null;scr=false},{passive:true});
 LY().addEventListener('scroll',()=>{if(fp)scr=true},{passive:true});
+let md=null;
+V().addEventListener('mousedown',e=>{md=rel(e.clientX,e.clientY)});
+V().addEventListener('mousemove',e=>{if(!md)return;const p=rel(e.clientX,e.clientY);wipe(md[0],md[1],p[0],p[1]);md=p});
+addEventListener('mouseup',()=>md=null);
+let hintT=0;
+function hint(on){clearTimeout(hintT);$('#fgHint').classList.toggle('on',!!on);if(on)hintT=setTimeout(()=>hint(false),3800)}
 
 /* ---------- 他写一段：你们之间的事 ---------- */
 const SCENE='这是你们的小窝「365」里「他的记忆」的背面：一块起了雾的玻璃，后面是只属于你们两个人的事。只有她能看到，她要自己把雾擦开才看得见。';
@@ -265,7 +275,8 @@ function typeOut(f){const box=$('#fgTx'),L=LY();if(!box)return;
     if(i>=n){clearInterval(typing);typing=null;$('.fg-ft')?.classList.remove('hide')}},gap)}
 
 /* ---------- 打开 ---------- */
-function open(f,mode){vc=f;$('#page-cards').classList.add('wet');V().classList.add('show');LY().scrollTop=0;fogStart();render(mode);hint(true)}
+function open(f,mode){vc=f;$('#page-cards').classList.add('wet');V().classList.add('show');LY().scrollTop=0;
+  try{fogStart()}catch(e){console.error(e)}render(mode);hint(true)}
 function closeFog(){V().classList.remove('show');vc=null;clearInterval(typing);typing=null;hint(false);
   if(!$('#ifView')?.classList.contains('show'))$('#page-cards').classList.remove('wet')}
 function render(mode,bottom){const f=vc;if(!f)return;const H=esc(S.hisName),L=LY();
@@ -274,7 +285,7 @@ function render(mode,bottom){const f=vc;if(!f)return;const H=esc(S.hisName),L=LY
   const th=(f.thread||[]).map(x=>`<div class="fg-say ${x.who==='me'?'me':'him'}"><small>${x.who==='me'?'我':H}</small>${esc(x.text)}</div>`).join('')
     +(b?`<div class="fg-say him"><small>${H}</small>在想怎么跟你说…</div>`:'');
   L.innerHTML=`<div class="fg-box">
-    <div class="fg-head"><div class="fg-k">${esc(f.kind||'我们')}　·　No. ${no}</div><h3 class="fg-tt">${esc(f.title)}</h3></div>
+    <div class="fg-head"><div class="fg-k">${esc(f.kind||'我们')}　·　No. ${no}</div><h3 class="fg-tt">${esc(f.title)}</h3><div class="fg-d">${dstr(f.t)}</div></div>
     <div class="fg-rule"></div>
     <div class="fg-tx" id="fgTx">${tp?'':paras(f.story)}</div>
     ${th?`<div class="fg-th">${th}</div>`:''}
