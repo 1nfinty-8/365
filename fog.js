@@ -183,7 +183,7 @@ LY().addEventListener('scroll',onScroll,{passive:true});
 
 function fogLoop(ts){if(!V().classList.contains('show')){G.raf=0;return}
   if(!document.hidden){const dt=Math.min(100,ts-(G.last||ts));
-    G.acc+=dt;if(G.acc>160){G.acc=0;refog(FG.regrow)}
+    G.acc+=dt;if(G.acc>160){G.acc=0;refog(FG.regrow);for(const b of G.beads)erase(b.x,b.y,b.r*1.05,1)}
     if(ts>G.nb){G.nb=ts+rr(FG.beadEvery);addBead()}
     if(ts>G.nr){G.nr=ts+rr(FG.run);addRun()}
     stepRuns();drawRain()}
