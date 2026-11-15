@@ -301,21 +301,27 @@ $('#dcsGrid').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;cur=
 const durOf=()=>isFinite(A.duration)&&A.duration>0?A.duration:(pd?.dur||0);
 const levelAt=f=>{const pk=pd?.peaks||[];return pk.length?pk[Math.min(pk.length-1,Math.floor(f*pk.length))]:0};
 function setBtn(){$('#dcpPlay').innerHTML=A.paused?PLAY:PAUSE}
-/* 声纹：三层流动的浪，高低是这段声音的起伏，正在播的地方会涌起来 */
+/* 声纹：两根线，一上一下缠绕交叉，连起来像一串 ∞；正在播的地方会张开 */
+const LOOPS=5;   // 一共交叉成几个 ∞：越大越密
 function drawWave(now=performance.now()){const c=$('#dcpWave'),d=pd;if(!d)return;const W=c.clientWidth,H=c.clientHeight,k=Math.min(devicePixelRatio||1,2);if(!W)return;
   if(c.width!==Math.round(W*k)){c.width=Math.round(W*k);c.height=Math.round(H*k)}
   const g=c.getContext('2d');g.setTransform(k,0,0,k,0,0);g.clearRect(0,0,W,H);
-  const pk=d.peaks||[],n=pk.length,du=durOf(),f=du?Math.min(1,(A.currentTime||0)/du):0,px=f*W,s=now/1000,mid=H/2,mv=A.paused?.3:1;
-  lv+=((A.paused?0:levelAt(f))-lv)*.1;
-  const amp=x=>{const u=x/W*(n-1),i=Math.floor(u),r=u-i,v=n>1?pk[i]*(1-r)+pk[Math.min(n-1,i+1)]*r:.5,near=Math.exp(-Math.pow((x-px)/60,2));
-    return H*.4*(.22+.78*v)*(.7+.3*near+.5*near*lv)};
-  for(const[sc,al,sp,ph]of[[1,.85,1.3,0],[.72,.5,.9,2.1],[.46,.32,1.8,4.2]]){const path=new Path2D();
-    for(let x=0;x<=W;x+=3){const y=mid-amp(x)*sc*(.6+.4*Math.sin(x*.045-s*sp*2*mv+ph));x?path.lineTo(x,y):path.moveTo(x,y)}
-    for(let x=Math.floor(W/3)*3;x>=0;x-=3)path.lineTo(x,mid+amp(x)*sc*(.6+.4*Math.sin(x*.037+s*sp*1.6*mv+ph+1.3)));
-    path.closePath();g.fillStyle=ink;
-    g.save();g.beginPath();g.rect(0,0,px,H);g.clip();g.globalAlpha=al*.55;g.fill(path);g.restore();
-    g.save();g.beginPath();g.rect(px,0,W-px,H);g.clip();g.globalAlpha=al*.16;g.fill(path);g.restore()}
-  g.fillStyle=ink;g.globalAlpha=.7;g.fillRect(px-.5,4,1,H-8);g.beginPath();g.arc(px,mid,3,0,7);g.fill();g.globalAlpha=1;
+  const pk=d.peaks||[],n=pk.length,du=durOf(),f=du?Math.min(1,(A.currentTime||0)/du):0,px=f*W,s=now/1000,mid=H/2,mv=A.paused?.22:1,dk=document.documentElement.classList.contains('dk');
+  lv+=((A.paused?0:levelAt(f))-lv)*.08;
+  const amp=x=>{const u=x/W*(n-1),i=Math.floor(u),r=u-i,v=n>1?pk[i]*(1-r)+pk[Math.min(n-1,i+1)]*r:.5,
+    near=Math.exp(-Math.pow((x-px)/70,2)),end=Math.pow(Math.sin(Math.PI*Math.min(1,Math.max(0,x/W))),.6);
+    return H*.42*end*(.38+.62*v)*(.72+.28*near+.5*near*lv)*(1+.04*Math.sin(s*1.3))};
+  const K=Math.PI*2*LOOPS/W,ph=s*1.1*mv,drift=.45*Math.sin(s*.6*mv);
+  const yA=x=>mid+amp(x)*Math.sin(x*K-ph),yB=x=>mid-amp(x)*Math.sin(x*K-ph+drift);
+  const line=fn=>{const p=new Path2D();for(let x=0;x<=W;x+=2)x?p.lineTo(x,fn(x)):p.moveTo(x,fn(x));return p};
+  const LA=line(yA),LB=line(yB);
+  g.lineCap='round';g.lineJoin='round';g.strokeStyle=ink;
+  for(const[P,w]of[[LA,1.35],[LB,1]]){g.lineWidth=w;
+    g.save();g.beginPath();g.rect(px,0,W-px,H);g.clip();g.globalAlpha=.2;g.stroke(P);g.restore();
+    g.save();g.beginPath();g.rect(0,0,px,H);g.clip();g.globalAlpha=.85;if(dk){g.shadowColor=ink;g.shadowBlur=6}g.stroke(P);g.restore()}
+  for(const[y,r]of[[yA(px),3],[yB(px),2.4]]){g.globalAlpha=.25;g.beginPath();g.arc(px,y,r*2.6,0,7);g.fillStyle=ink;g.fill();
+    g.globalAlpha=1;g.beginPath();g.arc(px,y,r,0,7);g.fill()}
+  g.globalAlpha=1;g.shadowBlur=0;
   $('#dcpCur').textContent=tm(A.currentTime);$('#dcpDur').textContent=tm(du)}
 function ptick(n){if(!$('#dcPlay').classList.contains('show')){praf=0;return}
   const dt=Math.min(50,n-(pl||n));pl=n;if(!A.paused)pang+=dt*.045*A.playbackRate;
