@@ -12,7 +12,26 @@ const MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DE
 const p2=n=>String(n).padStart(2,'0');
 const tm=s=>{s=isFinite(s)?Math.max(0,Math.floor(s)):0;return Math.floor(s/60)+':'+p2(s%60)};
 const SPD=[.75,1,1.25,1.5,2];
-let page='',cur=0,rot=0,vel=0,busy=false,face=null,raf=0,lt=0,pd=null,pface=null,pang=0,pl=0,praf=0,si=1,ink='#2F2A2C',dragW=false,lv=0,spotT=0;
+const hs=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h};
+
+/* ---------- 五种唱片 ---------- */
+const LOOKS=[
+  {k:'ivory', bg:'#FBFAF7',ink:'#2E2F34',edge:'rgba(40,45,60,.13)',gr:'rgba(0,0,0,.035)',m:'inf'},
+  {k:'mist',  bg:'#EDF1F6',ink:'#2A3341',edge:'rgba(60,80,110,.16)',gr:'rgba(60,80,110,.06)',m:'moon'},
+  {k:'silver',bg:'',       ink:'#33363D',edge:'rgba(40,45,60,.18)',gr:'rgba(255,255,255,.55)',m:'star'},
+  {k:'frost', bg:'rgba(255,255,255,.52)',ink:'#2E2F34',edge:'rgba(255,255,255,.95)',gr:'rgba(255,255,255,.6)',m:'flake'},
+  {k:'night', bg:'#1C1D21',ink:'#EFEBE4',edge:'rgba(255,255,255,.2)',gr:'rgba(255,255,255,.07)',m:'wave'}];
+const lookOf=d=>LOOKS[(d.look!=null?d.look:hs(d.id))%LOOKS.length];
+const starP=(cx,cy,R,r)=>{let s='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r:R;s+=(i?'L':'M')+(cx+q*Math.cos(a)).toFixed(2)+' '+(cy+q*Math.sin(a)).toFixed(2)}return s+'Z'};
+const MOT={
+  inf:'<path d="M100 44C98.4 41.6 95 41.6 95 44S98.4 46.4 100 44 101.6 41.6 105 44 101.6 46.4 100 44Z" fill="none" stroke="currentColor" stroke-width=".7"/>',
+  moon:'<path d="M101.5 39.2a4.8 4.8 0 1 0 0 9.6a3.9 3.9 0 1 1 0-9.6Z" fill="currentColor"/>',
+  star:`<path d="${starP(100,44,5,2.1)}" fill="none" stroke="currentColor" stroke-width=".6" stroke-linejoin="round"/>`,
+  flake:'<path d="M100 39v10M95.7 41.5l8.6 5M95.7 46.5l8.6-5" stroke="currentColor" stroke-width=".6" stroke-linecap="round"/>',
+  wave:'<path d="M94.5 44q1.4-2.6 2.75 0t2.75 0 2.75 0 2.75 0" fill="none" stroke="currentColor" stroke-width=".7" stroke-linecap="round"/>'};
+
+let page='',cur=0,mode='case',openOut=false,rot=0,vel=0,busy=false,face=null,raf=0,lt=0,pd=null,pface=null,pang=0,pl=0,praf=0,si=1,ink='#2F2A2C',dragW=false,lv=0,spotT=0;
+const BP=[];
 const A=new Audio();A.preload='auto';
 
 ['mr-de-haviland/400.css','cormorant-garamond/400.css','cormorant-garamond/500.css','cormorant-garamond/300-italic.css'].forEach(f=>
@@ -23,6 +42,9 @@ body.dcp #tabbar{display:none}
 .dc-stage{--S:min(58vw,270px);position:relative;width:calc(var(--S)*1.5);height:calc(var(--S) + 40px);margin:34px auto 0;touch-action:none;-webkit-user-select:none;user-select:none}
 .dc-shadow{position:absolute;left:2%;right:0;top:calc(var(--S) + 8px);height:26px;border-radius:50%;background:radial-gradient(closest-side,rgba(50,60,80,.22),transparent);filter:blur(5px)}
 .dc-case,.dc-front{position:absolute;left:0;top:0;width:var(--S);height:var(--S);border-radius:6px}
+.dc-case,.dc-front,.dc-shadow{transition:transform .5s cubic-bezier(.4,0,.2,1),opacity .45s}
+.dc-stage.leave .dc-case,.dc-stage.leave .dc-front,.dc-stage.leave .dc-shadow{transform:translateX(-35%) scale(.92);opacity:0}
+.dc-stage.leave .dc-disc{transform:translateX(calc(var(--S)*.95));transition-duration:.48s}
 .dc-case{z-index:1;background:linear-gradient(155deg,rgba(255,255,255,.42),rgba(255,255,255,.12) 55%,rgba(255,255,255,.26));border:1px solid rgba(255,255,255,.9);
   box-shadow:inset 0 1px 1px #fff,inset 0 -1px 2px rgba(255,255,255,.4),0 26px 50px rgba(60,70,90,.16);-webkit-backdrop-filter:blur(12px) saturate(1.2);backdrop-filter:blur(12px) saturate(1.2)}
 .dc-case::before{content:"";position:absolute;left:3%;top:3%;width:94%;height:94%;border-radius:50%;border:1px solid rgba(255,255,255,.7);
@@ -36,7 +58,7 @@ body.dcp #tabbar{display:none}
 .dc-face{position:absolute;inset:0;border-radius:50%}
 .dc-face svg,.dcs-r svg{width:100%;height:100%;display:block}
 .dc-gloss{position:absolute;inset:0;border-radius:50%;pointer-events:none;
-  background:radial-gradient(circle at var(--dx,30%) var(--dy,24%),rgba(255,255,255,.6),transparent 36%),conic-gradient(from 210deg,transparent,rgba(205,220,255,.22) 8%,transparent 18%,rgba(255,215,232,.15) 30%,transparent 42%,transparent 58%,rgba(200,235,255,.18) 70%,transparent 82%);
+  background:radial-gradient(circle at var(--dx,30%) var(--dy,24%),rgba(255,255,255,.55),transparent 36%),conic-gradient(from 210deg,transparent,rgba(205,220,255,.2) 8%,transparent 18%,rgba(230,225,240,.14) 30%,transparent 42%,transparent 58%,rgba(200,235,255,.16) 70%,transparent 82%);
   -webkit-mask:radial-gradient(closest-side,transparent 7.6%,#000 8%);mask:radial-gradient(closest-side,transparent 7.6%,#000 8%)}
 .dc-front{z-index:3;pointer-events:none;overflow:hidden;border:1px solid rgba(255,255,255,.7);color:var(--ink);
   background:linear-gradient(115deg,rgba(255,255,255,.3),rgba(255,255,255,.06) 42%,rgba(255,255,255,.18));-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:inset 0 1px 1px rgba(255,255,255,.9)}
@@ -55,13 +77,19 @@ html.dk .dc-case::before{border-color:rgba(255,255,255,.22)}
 html.dk .dc-front{background:linear-gradient(115deg,rgba(255,255,255,.1),rgba(255,255,255,.02) 42%,rgba(255,255,255,.06));border-color:rgba(255,255,255,.25)}
 html.dk .dc-spot{background:radial-gradient(closest-side,rgba(255,255,255,.22),rgba(255,255,255,.06) 45%,transparent)}
 html.dk .dc-shadow{background:radial-gradient(closest-side,rgba(0,0,0,.5),transparent)}
-.dc-info{text-align:center;margin-top:20px;color:var(--ink)}
+.dc-car{--D:min(70vw,310px);position:relative;display:none;height:calc(var(--D) + 34px);margin:28px -18px 0;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+.dc-car.show{display:block;animation:dcCarIn .55s cubic-bezier(.2,.9,.25,1)}
+@keyframes dcCarIn{from{opacity:0;transform:translateX(12%) scale(.94)}}
+.dc-ci{position:absolute;left:50%;top:6px;width:var(--D);height:var(--D);margin-left:calc(var(--D)/-2);border-radius:50%;filter:drop-shadow(0 16px 26px rgba(40,50,70,.2))}
+.dc-car.snap .dc-ci{transition:transform .45s cubic-bezier(.2,.9,.25,1),opacity .45s}
+.dc-info{text-align:center;margin-top:18px;color:var(--ink)}
 .dc-no{font-family:"Cormorant Garamond",var(--en),serif;font-style:italic;font-weight:300;font-size:17px;letter-spacing:2px;opacity:.6}
 .dc-no span{opacity:.6}
 .dc-tt{font-family:var(--ti);font-size:21px;letter-spacing:4px;margin-top:8px}
 .dc-sub{font-size:12px;letter-spacing:2px;opacity:.5;margin-top:6px}
 .dc-foot{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:22px;font-size:11px;letter-spacing:3px;color:var(--ink)}
-.dc-foot span{opacity:.45}
+.dc-foot>span{opacity:.45}
+.dc-foot .btns{justify-content:center}
 .dcs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
 .dcs-item{padding:16px 10px 14px;border-radius:24px;text-align:center;color:var(--ink)}
 .dcs-d{width:80%;aspect-ratio:1;margin:0 auto 12px;filter:drop-shadow(0 8px 14px rgba(40,50,70,.16))}
@@ -76,11 +104,11 @@ html.dk #dcPlay{background:rgba(12,12,14,.62)}
 @keyframes dcFade{from{opacity:0}}
 .dcp-top{display:flex;justify-content:space-between;padding:calc(var(--st) + 4px) 12px 0}
 .dcp-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;padding:6px 26px calc(var(--sb) + 30px)}
-.dcp-disc{position:relative;flex:none;width:min(76vw,330px);height:min(76vw,330px);margin:14px 0 28px;touch-action:none;filter:drop-shadow(0 22px 40px rgba(40,50,70,.22))}
+.dcp-disc{position:relative;flex:none;width:min(76vw,330px);height:min(76vw,330px);margin:14px 0 26px;touch-action:none;filter:drop-shadow(0 22px 40px rgba(40,50,70,.22))}
 .dcp-tt{font-family:var(--ti);font-size:22px;letter-spacing:4px;color:var(--ink);text-align:center}
 .dcp-sub{font-size:12px;letter-spacing:2px;color:var(--ink);opacity:.5;margin-top:6px}
-#dcpWave{width:100%;max-width:390px;height:72px;margin-top:24px;touch-action:none}
-.dcp-time{width:100%;max-width:390px;display:flex;justify-content:space-between;font-family:"Cormorant Garamond",var(--en),serif;font-size:13px;color:var(--ink);opacity:.55;margin-top:4px}
+#dcpWave{width:100%;max-width:390px;height:120px;margin-top:10px;touch-action:none}
+.dcp-time{width:100%;max-width:390px;display:flex;justify-content:space-between;font-family:"Cormorant Garamond",var(--en),serif;font-size:13px;color:var(--ink);opacity:.55;margin-top:-6px;padding:0 10px}
 .dcp-ctl{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:18px}
 .dcp-ctl button{min-width:46px;height:46px;padding:0 10px;border-radius:23px;color:var(--ink);font-size:13px;letter-spacing:1px;background:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center}
 html.dk .dcp-ctl button{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
@@ -97,8 +125,9 @@ $('#tabbar').insertAdjacentHTML('beforebegin',`
     <div class="dc-disc in" id="dcDisc"></div>
     <div class="dc-front"><div class="dc-spine">365 · INFINITY · RECORDS</div><div class="dc-print"><b>TODAY</b><b>I</b><b>MISS</b><b>YOU</b></div><div class="dc-print2" id="dcPrint2"></div><i class="dc-spot" id="dcSpot"></i></div>
   </div>
+  <div class="dc-car" id="dcCar"></div>
   <div class="dc-info" id="dcInfo"></div>
-  <div class="dc-foot"><span>上下滑转一转 · 左右滑换一张 · 点唱片播放</span><button class="pill ghost" data-go="discs" id="dcAllBtn">全部唱片</button></div>
+  <div class="dc-foot"><span id="dcHint"></span><div class="btns"><button class="pill ghost" id="dcBackIn" hidden>放回盒子</button><button class="pill ghost" data-go="discs" id="dcAllBtn">全部唱片</button></div></div>
 </div></section>
 <section class="page" id="page-discs"><div class="wrap">
   <div class="head"><button class="iconbtn glass" data-go="disc" aria-label="返回">${BACK}</button><h2>全部唱片</h2><em>all records</em></div>
@@ -134,21 +163,24 @@ function fields(){const v=S.dcTts||'gemini';$$('#dcSet [data-g]').forEach(x=>x.h
 $('#dcSet [data-k="dcTts"]').addEventListener('change',()=>setTimeout(fields,0));
 
 /* ---------- 唱片的样子 ---------- */
-function discSVG(d,i){const t=new Date(d.t),id='dc'+Math.random().toString(36).slice(2,8),w=d._wait,no=p2(i+1),
+function discSVG(d,i){const t=new Date(d.t),id='dc'+Math.random().toString(36).slice(2,8),w=d._wait,no=p2(i+1),L=lookOf(d),nt=L.k==='night',
   date=`${p2(t.getDate())} ${MON[t.getMonth()]} ${t.getFullYear()}`,
   rim=`365 INFINITY RECORDS · VOL. ${no} · ${date} · ${(EN[d.kind]||'LOVE.').replace('.','')} · FOR YOU, ONLY · `,
   tx=[...String(d.text||'').replace(/\s+/g,' ')].slice(0,48),ln=[0,1,2].map(k=>esc(tx.slice(k*16,k*16+16).join(''))),
-  tt=[...String(w?'他在录':(d.title||''))],t1=esc(tt.slice(0,5).join('')),t2=esc(tt.slice(5,10).join(''));
+  tt=[...String(w?'他在录':(d.title||''))],t1=esc(tt.slice(0,5).join('')),t2=esc(tt.slice(5,10).join('')),
+  bg=L.k==='silver'?`url(#${id}s)`:L.bg;
   return `<svg viewBox="0 0 200 200"><defs><path id="${id}" d="M14 100a86 86 0 1 1 172 0a86 86 0 1 1-172 0"/>
-  <linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E3E7EE"/><stop offset=".45" stop-color="#FFFFFF"/><stop offset=".7" stop-color="#ECE6F2"/><stop offset="1" stop-color="#D6E0EB"/></linearGradient></defs>
-  <path fill-rule="evenodd" fill="#FBFAF7" d="M1 100a99 99 0 1 0 198 0a99 99 0 1 0-198 0ZM78 100a22 22 0 1 0 44 0a22 22 0 1 0-44 0Z"/>
-  <path fill-rule="evenodd" fill="rgba(255,255,255,.42)" stroke="rgba(160,166,178,.45)" stroke-width=".4" d="M78 100a22 22 0 1 0 44 0a22 22 0 1 0-44 0ZM92.5 100a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0-15 0Z"/>
-  <circle cx="100" cy="100" r="98.6" fill="none" stroke="rgba(40,45,60,.13)" stroke-width=".6"/>
+  <linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E3E7EE"/><stop offset=".45" stop-color="#FFFFFF"/><stop offset=".7" stop-color="#E9E8EE"/><stop offset="1" stop-color="#D6E0EB"/></linearGradient>
+  <linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6F7F9"/><stop offset=".35" stop-color="#D8DCE3"/><stop offset=".6" stop-color="#F8F8FA"/><stop offset="1" stop-color="#CBD0D8"/></linearGradient></defs>
+  <path fill-rule="evenodd" fill="${bg}" d="M1 100a99 99 0 1 0 198 0a99 99 0 1 0-198 0ZM78 100a22 22 0 1 0 44 0a22 22 0 1 0-44 0Z"/>
+  ${[93,78,66].map(r=>`<circle cx="100" cy="100" r="${r}" fill="none" stroke="${L.gr}" stroke-width=".4"/>`).join('')}
+  <path fill-rule="evenodd" fill="${nt?'rgba(255,255,255,.1)':'rgba(255,255,255,.42)'}" stroke="rgba(160,166,178,.45)" stroke-width=".4" d="M78 100a22 22 0 1 0 44 0a22 22 0 1 0-44 0ZM92.5 100a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0-15 0Z"/>
+  <circle cx="100" cy="100" r="98.6" fill="none" stroke="${L.edge}" stroke-width=".6"/>
   <circle cx="100" cy="100" r="16" fill="none" stroke="rgba(160,166,178,.4)" stroke-width=".3"/>
-  <circle cx="100" cy="100" r="64" fill="none" stroke="rgba(0,0,0,.035)" stroke-width=".4"/>
-  <g fill="#2E2F34" font-family="Cormorant Garamond,Didot,serif">
+  <g fill="${L.ink}" font-family="Cormorant Garamond,Didot,serif">
     <text font-size="4.3" letter-spacing="1.2" opacity=".55"><textPath href="#${id}" textLength="528">${esc(rim)}</textPath></text>
-    <text x="100" y="47" text-anchor="middle" font-size="8.5" letter-spacing="1.6" opacity=".85">365 ( ∞ )</text>
+    <text x="93" y="47" text-anchor="end" font-size="8.5" letter-spacing="1.2" opacity=".85">365 (</text>
+    <text x="107" y="47" font-size="8.5" letter-spacing="1.2" opacity=".85">) ∞</text>
     <text x="40" y="94" text-anchor="middle" font-size="5.6" letter-spacing="1" opacity=".7">${p2(t.getDate())}</text>
     <text x="40" y="102" text-anchor="middle" font-size="5.6" letter-spacing="1" opacity=".7">${MON[t.getMonth()]}</text>
     <text x="40" y="110" text-anchor="middle" font-size="5.6" letter-spacing="1" opacity=".7">${t.getFullYear()}</text>
@@ -157,6 +189,7 @@ function discSVG(d,i){const t=new Date(d.t),id='dc'+Math.random().toString(36).s
     <g font-family="Songti SC,serif" font-size="3.6" opacity=".5" text-anchor="middle">${ln.map((l,k)=>`<text x="100" y="${134+k*5}">${l}</text>`).join('')}</g>
     <text x="100" y="163" text-anchor="middle" font-size="11" font-weight="500" letter-spacing="1.3">${w?'RECORDING…':(EN[d.kind]||'LOVE.')}</text>
   </g>
+  <g color="${L.ink}" opacity=".85">${MOT[L.m]}</g>
   <g transform="translate(128 118) rotate(8)"><rect width="26" height="34" rx="1.6" fill="url(#${id}h)" stroke="#fff" stroke-width=".6" opacity=".94"/>
     <rect x="3" y="2" width="4" height="30" fill="rgba(255,255,255,.55)"/>
     <g fill="#6E7280" font-family="Mr De Haviland,Songti SC,serif" font-size="6" text-anchor="middle"><text x="13" y="20">${t1}</text><text x="13" y="27">${t2}</text></g></g>
@@ -166,38 +199,81 @@ function setRot(){if(face)face.style.transform=`rotate(${rot}deg)`}
 function info(){const L=DATA.disc,n=L.length,d=L[cur],t=d?new Date(d.t):new Date();
   $('#dcPrint2').innerHTML=`VOL. ${p2(d?cur+1:0)}<br>${t.getFullYear()}.${p2(t.getMonth()+1)}.${p2(t.getDate())}`;
   $('#dcAllBtn').textContent=`全部唱片 · ${L.filter(x=>!x._wait).length}`;
+  $('#dcHint').textContent=!d?'':mode==='case'?'点唱片，把它取出来 · 上下滑转一转':'左右滑换一张 · 上下滑转一转 · 点唱片播放';
+  $('#dcBackIn').hidden=mode!=='out';
   $('#dcInfo').innerHTML=!d?'<div class="dc-tt">还没有唱片</div><div class="dc-sub">点右上角「＋ 录一张」，让他录给你</div>'
     :`<div class="dc-no">No. ${p2(cur+1)} <span>/ ${p2(n)}</span></div><div class="dc-tt">${esc(d._wait?'他在录…':d.title)}</div><div class="dc-sub">${KIND[d.kind]||''} · ${fmtDate(d.t)}${d.dur?' · '+tm(d.dur):''}</div>`}
-function refresh(){const el=$('#dcDisc'),d=DATA.disc[cur];if(!d)return show(cur);el.innerHTML=faceHTML(d,cur);face=el.querySelector('.dc-face');setRot();info()}
-function show(i,anim=true){const el=$('#dcDisc'),d=DATA.disc[i];
+
+/* ---------- 盒子里：抽出一半 ---------- */
+function showCase(i,anim=true){const el=$('#dcDisc'),d=DATA.disc[i];
   if(!d){el.style.display='none';el.innerHTML='';face=null;info();return}
   el.style.display='';
   const fill=()=>{el.innerHTML=faceHTML(d,i);face=el.querySelector('.dc-face');setRot();info();
     requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('in')));if(d._wait)spin()};
   if(anim&&el.innerHTML&&!el.classList.contains('in')){el.classList.add('in');setTimeout(fill,400)}else{el.classList.add('in');fill()}}
+function takeOut(){const st=$('#dcStage');if(st.classList.contains('leave'))return;navigator.vibrate?.(10);st.classList.add('leave');
+  setTimeout(()=>{mode='out';st.style.display='none';st.classList.remove('leave');$('#dcCar').classList.add('show');renderCar()},480)}
+function putBack(){mode='case';$('#dcCar').classList.remove('show');const st=$('#dcStage');st.style.display='';
+  $('#dcDisc').classList.add('in');$('#dcDisc').innerHTML='';rot=0;vel=0;showCase(cur,false)}
+$('#dcBackIn').onclick=putBack;
 
-/* ---------- 转动；光点跟着手指 ---------- */
+/* ---------- 拿出来以后：一张一张划 ---------- */
+const stepOf=()=>($('#dcCar .dc-ci')?.offsetWidth||300)*.74;
+function renderCar(){const L=DATA.disc;if(!L.length)return putBack();let h='';
+  for(let k=-2;k<=2;k++){const i=cur+k,d=L[i];if(!d)continue;h+=`<div class="dc-ci" data-k="${k}">${faceHTML(d,i)}</div>`}
+  const c=$('#dcCar');c.innerHTML=h;face=c.querySelector('.dc-ci[data-k="0"] .dc-face');setRot();layoutCar(0);info();
+  if(L[cur]&&L[cur]._wait)spin()}
+function layoutCar(dx){const s=stepOf();$$('#dcCar .dc-ci').forEach(el=>{const p=+el.dataset.k+dx/s,a=Math.min(1,Math.abs(p));
+  el.style.transform=`translateX(${(p*s).toFixed(1)}px) scale(${(1-.3*a).toFixed(3)})`;el.style.opacity=(1-.55*a).toFixed(2);el.style.zIndex=10-Math.round(Math.abs(p)*3)})}
+function goTo(n,from=0){n=Math.max(0,Math.min(DATA.disc.length-1,n));const c=$('#dcCar');
+  if(n===cur){c.classList.add('snap');layoutCar(0);return}
+  const off=from+(n-cur)*stepOf();cur=n;rot=0;vel=0;c.classList.remove('snap');renderCar();layoutCar(off);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{c.classList.add('snap');layoutCar(0)}))}
+
+/* ---------- 转动 ---------- */
 function spin(){if(!raf){lt=performance.now();raf=requestAnimationFrame(tick)}}
 function tick(n){const dt=Math.min(50,n-lt);lt=n;const d=DATA.disc[cur];
   if(d&&d._wait)rot+=dt*.06;else{rot+=vel*dt/16;vel*=Math.pow(.94,dt/16)}
   setRot();
   if(page==='disc'&&((d&&d._wait)||Math.abs(vel)>.05))raf=requestAnimationFrame(tick);else raf=0}
+const glow=(el,e)=>{if(!el)return;const r=el.getBoundingClientRect();el.style.setProperty('--dx',((e.clientX-r.left)/r.width*100)+'%');el.style.setProperty('--dy',((e.clientY-r.top)/r.height*100)+'%')};
 function light(e){const fr=$('.dc-front').getBoundingClientRect(),s=$('#dcSpot');clearTimeout(spotT);s.classList.add('on');
-  s.style.left=((e.clientX-fr.left)/fr.width*100)+'%';s.style.top=((e.clientY-fr.top)/fr.height*100)+'%';
-  const dk=$('#dcDisc'),r=dk.getBoundingClientRect();dk.style.setProperty('--dx',((e.clientX-r.left)/r.width*100)+'%');dk.style.setProperty('--dy',((e.clientY-r.top)/r.height*100)+'%')}
+  s.style.left=((e.clientX-fr.left)/fr.width*100)+'%';s.style.top=((e.clientY-fr.top)/fr.height*100)+'%';glow($('#dcDisc'),e)}
+
+/* 盒子里：点一下或往右拉，取出来；上下滑转 */
 const st=$('#dcStage');let g=null;
 st.addEventListener('pointerdown',e=>{g={x:e.clientX,y:e.clientY,ly:e.clientY,ax:'',t:performance.now()};vel=0;light(e);try{st.setPointerCapture(e.pointerId)}catch(x){}});
 st.addEventListener('pointermove',e=>{if(!g)return;light(e);const dx=e.clientX-g.x,dy=e.clientY-g.y;
   if(!g.ax){if(Math.hypot(dx,dy)<8)return;g.ax=Math.abs(dy)>Math.abs(dx)?'v':'h'}
   if(g.ax==='v'){const d=e.clientY-g.ly,n=performance.now();rot+=d*.9;vel=d*.9/Math.max(8,n-g.t)*16;g.t=n;setRot()}
-  else $('#dcDisc').style.marginLeft=(dx*.25)+'px';
+  else $('#dcDisc').style.marginLeft=(Math.max(0,dx)*.35)+'px';
   g.ly=e.clientY});
 const up=e=>{if(!g)return;const dx=e.clientX-g.x,ax=g.ax;g=null;$('#dcDisc').style.marginLeft='';
   spotT=setTimeout(()=>$('#dcSpot').classList.remove('on'),1400);
-  if(!ax){const d=DATA.disc[cur];if(d&&!d._wait)openPlay(d);return}
-  if(ax==='h'&&Math.abs(dx)>50&&DATA.disc.length>1){cur=(cur+(dx<0?1:-1)+DATA.disc.length)%DATA.disc.length;rot=0;vel=0;show(cur)}
+  const d=DATA.disc[cur];
+  if(!ax){if(d&&!d._wait)takeOut();return}
+  if(ax==='h'&&dx>40&&d&&!d._wait)return takeOut();
   if(ax==='v')spin()};
 st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
+
+/* 拿出来以后：左右换，上下转，点中间播放 */
+const car=$('#dcCar');let cg=null;
+car.addEventListener('pointerdown',e=>{const ci=e.target.closest('.dc-ci');cg={x:e.clientX,y:e.clientY,ly:e.clientY,ax:'',dx:0,t:performance.now(),k:ci?+ci.dataset.k:null};
+  vel=0;car.classList.remove('snap');glow($('#dcCar .dc-ci[data-k="0"]'),e);try{car.setPointerCapture(e.pointerId)}catch(x){}});
+car.addEventListener('pointermove',e=>{if(!cg)return;glow($('#dcCar .dc-ci[data-k="0"]'),e);const dx=e.clientX-cg.x,dy=e.clientY-cg.y;
+  if(!cg.ax){if(Math.hypot(dx,dy)<8)return;cg.ax=Math.abs(dy)>Math.abs(dx)?'v':'h'}
+  if(cg.ax==='v'){const d=e.clientY-cg.ly,n=performance.now();rot+=d*.9;vel=d*.9/Math.max(8,n-cg.t)*16;cg.t=n;setRot()}
+  else{let x=dx;if((cur===0&&x>0)||(cur===DATA.disc.length-1&&x<0))x*=.35;cg.dx=x;layoutCar(x)}
+  cg.ly=e.clientY});
+const cup=()=>{if(!cg)return;const c=cg;cg=null;
+  if(!c.ax){if(c.k==null)return;if(c.k===0){const d=DATA.disc[cur];if(d&&!d._wait)openPlay(d)}else goTo(cur+c.k);return}
+  if(c.ax==='v')return spin();
+  const s=stepOf();goTo(c.dx<-s*.22?cur+1:c.dx>s*.22?cur-1:cur,c.dx)};
+car.addEventListener('pointerup',cup);car.addEventListener('pointercancel',cup);
+
+function redraw(){if(page!=='disc')return;if(mode==='out')renderCar();else showCase(cur)}
+function refresh(){if(page!=='disc')return;if(mode==='out')return renderCar();
+  const el=$('#dcDisc'),d=DATA.disc[cur];if(!d)return showCase(cur);el.innerHTML=faceHTML(d,cur);face=el.querySelector('.dc-face');setRot();info()}
 
 /* ---------- 生成声音 ---------- */
 const toURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
@@ -268,15 +344,16 @@ async function words(kind){const rc=recentChat(10);
   return {title:title.slice(0,12)||(kind==='song'?'一小段歌':'一段留言'),text:body}}
 
 /* ---------- 刻一张唱片 ---------- */
+function newLook(){const last=DATA.disc.length?lookOf(DATA.disc.at(-1)):null;let k;do{k=Math.floor(Math.random()*LOOKS.length)}while(LOOKS.length>1&&LOOKS[k]===last);return k}
 async function make(kind,given){if(busy)return toast('他还在录上一张');busy=true;
-  const d={id:uid(),t:Date.now(),kind,title:'',text:'',audio:'',peaks:null,dur:0,_wait:true};
-  DATA.disc.push(d);cur=DATA.disc.length-1;rot=0;vel=0;if(page==='disc')show(cur);
+  const d={id:uid(),t:Date.now(),kind,look:newLook(),title:'',text:'',audio:'',peaks:null,dur:0,_wait:true};
+  DATA.disc.push(d);cur=DATA.disc.length-1;rot=0;vel=0;redraw();
   try{let url;
     if(kind==='mine'){d.title=given.title;url=given.url}
-    else{Object.assign(d,kind==='read'?given:await words(kind));if(DATA.disc[cur]===d&&page==='disc')refresh();url=await tts(d.text,kind)}
+    else{Object.assign(d,kind==='read'?given:await words(kind));if(DATA.disc[cur]===d)refresh();url=await tts(d.text,kind)}
     const k=await peaksOf(url);d.peaks=k.peaks;d.dur=k.dur;d.audio=await IMG.put(url);
-    delete d._wait;await save();if(DATA.disc[cur]===d&&page==='disc')refresh();card();toast(kind==='mine'?'收好了':`${S.hisName}录好了，点唱片听`)}
-  catch(e){DATA.disc=DATA.disc.filter(x=>x!==d);cur=Math.max(0,DATA.disc.length-1);if(page==='disc')show(cur);toast(e.message)}
+    delete d._wait;await save();if(DATA.disc[cur]===d)refresh();card();toast(kind==='mine'?'收好了':`${S.hisName}录好了，点唱片听`)}
+  catch(e){DATA.disc=DATA.disc.filter(x=>x!==d);cur=Math.max(0,DATA.disc.length-1);redraw();toast(e.message)}
   finally{busy=false}}
 function pickAudio(){const i=document.createElement('input');i.type='file';i.accept='audio/*';i.style.display='none';document.body.appendChild(i);
   i.onchange=async()=>{const f=i.files[0];i.remove();if(!f)return;if(f.size>25e6)return toast('这个文件太大了，换一个小一点的');
@@ -295,39 +372,60 @@ $('#dcTest').onclick=async()=>{toast('正在生成…');try{const u=await tts(`�
 function grid(){const L=DATA.disc.map((d,i)=>[d,i]).filter(x=>!x[0]._wait).reverse();
   $('#dcsGrid').innerHTML=L.length?L.map(([d,i])=>`<button class="dcs-item glass" data-i="${i}"><div class="dcs-d"><div class="dcs-r" style="transform:rotate(${(i*47)%360}deg)">${discSVG(d,i)}</div></div><div class="dcs-t">${esc(d.title)}</div><div class="dcs-s">No.${p2(i+1)} · ${KIND[d.kind]||''} · ${fmtDate(d.t)}</div></button>`).join('')
     :'<div class="empty" style="grid-column:1/-1">还没有唱片</div>'}
-$('#dcsGrid').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;cur=+b.dataset.i;rot=0;vel=0;go('disc')};
+$('#dcsGrid').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;cur=+b.dataset.i;rot=0;vel=0;openOut=true;go('disc')};
 
 /* ================= 播放页 ================= */
 const durOf=()=>isFinite(A.duration)&&A.duration>0?A.duration:(pd?.dur||0);
 const levelAt=f=>{const pk=pd?.peaks||[];return pk.length?pk[Math.min(pk.length-1,Math.floor(f*pk.length))]:0};
 function setBtn(){$('#dcpPlay').innerHTML=A.paused?PLAY:PAUSE}
-/* 声纹：两根线，一上一下缠绕交叉，连起来像一串 ∞；正在播的地方会张开 */
-const LOOPS=5;   // 一共交叉成几个 ∞：越大越密
+/* 毛玻璃小鸟：朝右，f 是翅膀的位置（-1 往下，1 往上） */
+function drawBird(g,x,y,ang,f,sc,dk){g.save();g.translate(x,y);g.rotate(ang);g.scale(sc,sc);
+  const fill=dk?'rgba(255,255,255,.55)':'rgba(255,255,255,.8)',edge=dk?'rgba(255,255,255,.85)':'rgba(95,110,140,.45)';
+  g.lineJoin='round';g.lineWidth=.7;
+  const wing=(ff,al)=>{const ty=-1-11*ff,tx=-8+2*Math.abs(ff);g.beginPath();g.moveTo(3,-1);g.quadraticCurveTo(0,ty*.7-1,tx,ty);g.quadraticCurveTo(-3,ty*.25+1,-4,1);g.closePath();
+    g.globalAlpha=al;g.fillStyle=fill;g.fill();g.strokeStyle=edge;g.stroke();g.globalAlpha=1};
+  g.shadowColor=dk?'rgba(190,210,255,.55)':'rgba(90,110,150,.3)';g.shadowBlur=6;
+  wing(f*.85,.55);
+  g.fillStyle=fill;g.strokeStyle=edge;
+  g.beginPath();g.moveTo(-6,0);g.lineTo(-13,-3.2);g.lineTo(-11,0);g.lineTo(-13,3.2);g.closePath();g.fill();g.stroke();
+  g.beginPath();g.ellipse(0,0,8,4.2,0,0,7);g.fill();g.stroke();
+  g.beginPath();g.arc(7.2,-2,3.3,0,7);g.fill();g.stroke();
+  g.shadowBlur=0;
+  g.beginPath();g.moveTo(10.2,-2.6);g.lineTo(13,-1.7);g.lineTo(10.2,-.9);g.closePath();g.fillStyle=edge;g.fill();
+  g.beginPath();g.arc(8.2,-2.6,.55,0,7);g.fillStyle=dk?'rgba(20,24,32,.8)':'rgba(40,45,60,.75)';g.fill();
+  g.strokeStyle='rgba(255,255,255,.95)';g.lineWidth=.8;g.beginPath();g.ellipse(0,-1,5.5,2.2,0,Math.PI*1.1,Math.PI*1.85);g.stroke();
+  wing(f,.95);
+  g.restore()}
+/* 一条虚线波浪，小鸟沿着线飞，它在哪里就是播到哪里 */
 function drawWave(now=performance.now()){const c=$('#dcpWave'),d=pd;if(!d)return;const W=c.clientWidth,H=c.clientHeight,k=Math.min(devicePixelRatio||1,2);if(!W)return;
   if(c.width!==Math.round(W*k)){c.width=Math.round(W*k);c.height=Math.round(H*k)}
   const g=c.getContext('2d');g.setTransform(k,0,0,k,0,0);g.clearRect(0,0,W,H);
-  const pk=d.peaks||[],n=pk.length,du=durOf(),f=du?Math.min(1,(A.currentTime||0)/du):0,px=f*W,s=now/1000,mid=H/2,mv=A.paused?.22:1,dk=document.documentElement.classList.contains('dk');
-  lv+=((A.paused?0:levelAt(f))-lv)*.08;
-  const amp=x=>{const u=x/W*(n-1),i=Math.floor(u),r=u-i,v=n>1?pk[i]*(1-r)+pk[Math.min(n-1,i+1)]*r:.5,
-    near=Math.exp(-Math.pow((x-px)/70,2)),end=Math.pow(Math.sin(Math.PI*Math.min(1,Math.max(0,x/W))),.6);
-    return H*.42*end*(.38+.62*v)*(.72+.28*near+.5*near*lv)*(1+.04*Math.sin(s*1.3))};
-  const K=Math.PI*2*LOOPS/W,ph=s*1.1*mv,drift=.45*Math.sin(s*.6*mv);
-  const yA=x=>mid+amp(x)*Math.sin(x*K-ph),yB=x=>mid-amp(x)*Math.sin(x*K-ph+drift);
-  const line=fn=>{const p=new Path2D();for(let x=0;x<=W;x+=2)x?p.lineTo(x,fn(x)):p.moveTo(x,fn(x));return p};
-  const LA=line(yA),LB=line(yB);
-  g.lineCap='round';g.lineJoin='round';g.strokeStyle=ink;
-  for(const[P,w]of[[LA,1.35],[LB,1]]){g.lineWidth=w;
-    g.save();g.beginPath();g.rect(px,0,W-px,H);g.clip();g.globalAlpha=.2;g.stroke(P);g.restore();
-    g.save();g.beginPath();g.rect(0,0,px,H);g.clip();g.globalAlpha=.85;if(dk){g.shadowColor=ink;g.shadowBlur=6}g.stroke(P);g.restore()}
-  for(const[y,r]of[[yA(px),3],[yB(px),2.4]]){g.globalAlpha=.25;g.beginPath();g.arc(px,y,r*2.6,0,7);g.fillStyle=ink;g.fill();
-    g.globalAlpha=1;g.beginPath();g.arc(px,y,r,0,7);g.fill()}
-  g.globalAlpha=1;g.shadowBlur=0;
+  const pk=d.peaks||[],n=pk.length,du=durOf(),f=du?Math.min(1,(A.currentTime||0)/du):0,M=16,LW=W-M*2,px=M+f*LW,s=now/1000,mid=H*.62,play=!A.paused,dk=document.documentElement.classList.contains('dk');
+  lv+=((play?levelAt(f):0)-lv)*.08;
+  const amp=x=>{const u=Math.max(0,Math.min(1,(x-M)/LW))*(n-1),i=Math.floor(u),r=u-i,v=n>1?pk[i]*(1-r)+pk[Math.min(n-1,i+1)]*r:.5,near=Math.exp(-Math.pow((x-px)/80,2));
+    return H*.15*(.35+.65*v)*(1+.7*near*lv)};
+  const ph=s*(play?1.6:.35),y=x=>mid+amp(x)*Math.sin(x*.045-ph);
+  const path=new Path2D();for(let x=M;x<=W-M;x+=2)x===M?path.moveTo(x,y(x)):path.lineTo(x,y(x));
+  const off=-s*(play?14:2);g.lineCap='round';g.strokeStyle=ink;
+  g.save();g.beginPath();g.rect(px,0,W,H);g.clip();g.setLineDash([1.5,6]);g.lineDashOffset=off;g.lineWidth=1.3;g.globalAlpha=.3;g.stroke(path);g.restore();
+  g.save();g.beginPath();g.rect(0,0,px,H);g.clip();g.setLineDash([7,5]);g.lineDashOffset=off;g.lineWidth=1.5;g.globalAlpha=.75;if(dk){g.shadowColor='rgba(255,255,255,.6)';g.shadowBlur=6}g.stroke(path);g.restore();
+  const by=y(px),sl=(y(px+3)-y(px-3))/6,bob=play?0:Math.sin(s*2)*1.5,bx=px,bb=by-17+bob;
+  if(play&&Math.random()<.35)BP.push({x:bx-12,y:bb+2+(Math.random()-.5)*6,a:.9,r:.6+Math.random()*1.4,vx:-.25-Math.random()*.4,vy:(Math.random()-.5)*.25});
+  g.fillStyle='#fff';g.shadowColor='rgba(150,170,210,.8)';g.shadowBlur=4;
+  for(let i=BP.length-1;i>=0;i--){const p=BP[i];p.x+=p.vx;p.y+=p.vy;p.a-=.012;if(p.a<=0){BP.splice(i,1);continue}
+    g.globalAlpha=p.a*.75;g.beginPath();g.arc(p.x,p.y,p.r,0,7);g.fill()}
+  g.shadowBlur=0;g.globalAlpha=1;
+  const gr=24+3*Math.sin(s*2.2),rg=g.createRadialGradient(bx,bb,0,bx,bb,gr);
+  rg.addColorStop(0,dk?'rgba(220,230,255,.35)':'rgba(255,255,255,.95)');rg.addColorStop(.45,dk?'rgba(200,215,255,.12)':'rgba(205,218,240,.35)');rg.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=rg;g.beginPath();g.arc(bx,bb,gr,0,7);g.fill();
+  drawBird(g,bx,bb,Math.atan(sl)*.7,play?Math.sin(s*13*A.playbackRate):-.25+.05*Math.sin(s*2),1.25,dk);
+  g.globalAlpha=.55;g.fillStyle=ink;g.beginPath();g.arc(px,by,1.8,0,7);g.fill();g.globalAlpha=1;
   $('#dcpCur').textContent=tm(A.currentTime);$('#dcpDur').textContent=tm(du)}
 function ptick(n){if(!$('#dcPlay').classList.contains('show')){praf=0;return}
   const dt=Math.min(50,n-(pl||n));pl=n;if(!A.paused)pang+=dt*.045*A.playbackRate;
   if(pface)pface.style.transform=`rotate(${pang}deg)`;drawWave(n);praf=requestAnimationFrame(ptick)}
 async function openPlay(d){const url=await IMG.get(d.audio);if(!url)return toast('这张唱片的声音找不到了');
-  pd=d;ink=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#2F2A2C';
+  pd=d;BP.length=0;ink=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#2F2A2C';
   const i=DATA.disc.indexOf(d);$('#dcpDisc').innerHTML=faceHTML(d,i);pface=$('#dcpDisc .dc-face');pang=rot;
   $('#dcpTt').textContent=d.title;$('#dcpSub').textContent=`No. ${p2(i+1)} · ${KIND[d.kind]||''} · ${fmtDate(d.t)}`;
   $('#dcpLyr').textContent=d.text||'（这张没有文字）';$('#dcpLyr').hidden=true;$('#dcpSp').textContent=SPD[si]+'×';
@@ -345,15 +443,13 @@ $('#dcpB').onclick=()=>{A.currentTime=Math.max(0,A.currentTime-5)};
 $('#dcpF').onclick=()=>{A.currentTime=Math.min(durOf()||0,A.currentTime+5)};
 $('#dcpTx').onclick=()=>{const l=$('#dcpLyr');l.hidden=!l.hidden};
 $('#dcpX').onclick=closePlay;
-const wv=$('#dcpWave'),seek=e=>{const r=wv.getBoundingClientRect(),f=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),du=durOf();if(du)A.currentTime=f*du};
+const wv=$('#dcpWave'),seek=e=>{const r=wv.getBoundingClientRect(),f=Math.max(0,Math.min(1,(e.clientX-r.left-16)/(r.width-32))),du=durOf();if(du)A.currentTime=f*du};
 wv.addEventListener('pointerdown',e=>{dragW=true;try{wv.setPointerCapture(e.pointerId)}catch(x){}seek(e)});
 wv.addEventListener('pointermove',e=>{if(dragW)seek(e)});
 ['pointerup','pointercancel'].forEach(v=>wv.addEventListener(v,()=>dragW=false));
-/* 播放页的唱片：上下拨可以前后拖，反光跟着手指 */
 let pg=null;const pdk=$('#dcpDisc');
-const pglow=e=>{const r=pdk.getBoundingClientRect();pdk.style.setProperty('--dx',((e.clientX-r.left)/r.width*100)+'%');pdk.style.setProperty('--dy',((e.clientY-r.top)/r.height*100)+'%')};
-pdk.addEventListener('pointerdown',e=>{pg={y:e.clientY};pglow(e);try{pdk.setPointerCapture(e.pointerId)}catch(x){}});
-pdk.addEventListener('pointermove',e=>{if(!pg)return;pglow(e);const dy=e.clientY-pg.y;pg.y=e.clientY;pang+=dy*.9;
+pdk.addEventListener('pointerdown',e=>{pg={y:e.clientY};glow(pdk,e);try{pdk.setPointerCapture(e.pointerId)}catch(x){}});
+pdk.addEventListener('pointermove',e=>{if(!pg)return;glow(pdk,e);const dy=e.clientY-pg.y;pg.y=e.clientY;pang+=dy*.9;
   const du=durOf();if(du)A.currentTime=Math.max(0,Math.min(du,A.currentTime+dy*.9/36))});
 ['pointerup','pointercancel'].forEach(v=>pdk.addEventListener(v,()=>pg=null));
 $('#dcpM').onclick=()=>{const d=pd;if(!d)return;sheet([
@@ -362,7 +458,7 @@ $('#dcpM').onclick=()=>{const d=pd;if(!d)return;sheet([
   ['保存到手机',async()=>{const u=await IMG.get(d.audio);if(!u)return;const b=await(await fetch(u)).blob(),ext=(b.type.split('/')[1]||'wav').replace('mpeg','mp3');
     shareFile(new File([b],`${d.title||'唱片'}.${ext}`,{type:b.type}))}],
   ['删除这张唱片',async()=>{if(!confirm('删除这张唱片？'))return;closePlay();const id=d.audio;DATA.disc=DATA.disc.filter(x=>x!==d);
-    await save();IMG.del([id]);cur=Math.min(cur,Math.max(0,DATA.disc.length-1));if(page==='disc')show(cur);if(page==='discs')grid();card()}]])};
+    await save();IMG.del([id]);cur=Math.min(cur,Math.max(0,DATA.disc.length-1));redraw();if(page==='discs')grid();card()}]])};
 
 /* ---------- 「关于他」里的入口 ---------- */
 function card(){const g=$('#himGrid');if(!g)return;let c=$('#himGrid [data-go="disc"]');
@@ -377,7 +473,9 @@ HOOKS.context.push(()=>{const L=DATA.disc.filter(d=>!d._wait&&d.kind!=='mine').s
 $$('#moreGrid [data-go="disc"]').forEach(x=>x.remove());
 HOOKS.ready.push(()=>{if(!Array.isArray(DATA.disc))DATA.disc=[];cur=Math.max(0,DATA.disc.length-1);$$('#moreGrid [data-go="disc"]').forEach(x=>x.remove());card()});
 HOOKS.page.push(n=>{page=n;
-  if(n==='disc'){$('#dcDisc').classList.add('in');$('#dcDisc').innerHTML='';show(cur,false)}
+  if(n==='disc'){const s=$('#dcStage'),c=$('#dcCar');s.classList.remove('leave');
+    if(openOut&&DATA.disc[cur]){openOut=false;mode='out';s.style.display='none';c.classList.add('show');requestAnimationFrame(()=>requestAnimationFrame(renderCar))}
+    else{mode='case';c.classList.remove('show');s.style.display='';$('#dcDisc').classList.add('in');$('#dcDisc').innerHTML='';showCase(cur,false)}}
   if(n==='discs')grid();
   if(n==='him')setTimeout(card,0);
   closePlay()});
