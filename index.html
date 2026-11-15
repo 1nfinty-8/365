@@ -29,15 +29,43 @@ html.dk{--accent:#B4B7BE!important;--acct:#111214!important;--accent-t:#C9CCD2!i
 <title>365</title>
 </head>
 <body>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/mr-de-haviland/400.css">
-<div id="splash"><svg class="sp-svg" viewBox="0 0 320 170"><defs><filter id="spGlow" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><path id="spA"/><path id="spB"/></defs><g class="sp-g" filter="url(#spGlow)"><path id="spL" class="sp-line" pathLength="1"/><text class="sp-t sp-t1"><textPath href="#spA" startOffset="50%" text-anchor="middle">365 with Luz</textPath></text><text class="sp-t sp-t2"><textPath href="#spB" startOffset="50%" text-anchor="middle">infinitely.</textPath></text></g></svg><div class="sp-foot">© 2026 · 365 infinity</div></div>
-<script>(()=>{const s=document.getElementById('splash');if(localStorage.getItem('365-dk')==='1')s.classList.add('dk');
-const a=140,cx=160,cy=85,PI=Math.PI,P=t=>{const n=Math.sin(t),c=Math.cos(t),d=1+n*n;return[cx+a*c/d,cy+a*n*c/d*1.2]},
-seg=(t0,t1,k)=>{let d='';for(let i=0;i<=k;i++){const p=P(t0+(t1-t0)*i/k);d+=(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)}return d};
-document.getElementById('spL').setAttribute('d',seg(PI*.94,PI*1.98,140));
-document.getElementById('spA').setAttribute('d',seg(PI*.9,PI*.56,50));
-document.getElementById('spB').setAttribute('d',seg(PI*.45,PI*.05,60))})()</script>
+<div id="splash"><svg class="sp-svg" viewBox="0 0 320 170"><defs><filter id="spGlow" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><path id="spA"/><path id="spB"/></defs><g class="sp-g" filter="url(#spGlow)"><path id="spL" class="sp-line" pathLength="1"/><path id="spF" class="sp-flow" pathLength="1"/><text class="sp-t sp-t1" id="spT1"><textPath href="#spA" startOffset="50%" text-anchor="middle"></textPath></text><text class="sp-t sp-t2" id="spT2"><textPath href="#spB" startOffset="50%" text-anchor="middle"></textPath></text></g></svg><div class="sp-foot" id="spFoot"></div></div>
+<script>
+(()=>{const T1='365 with Luz',T2='infinitely.',FOOT='© 2026 · 365 infinity',FONT='Ms Madi';
+const E=id=>document.getElementById(id),s=E('splash');
+document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ms-madi/400.css">');
+if(localStorage.getItem('365-dk')==='1')s.classList.add('dk');
+const PI=Math.PI,P=t=>{const n=Math.sin(t),c=Math.cos(t),d=1+n*n;return[160+140*c/d,85+140*n*c/d*1.2]};
+const seg=(a,b,k)=>{let d='';for(let i=0;i<=k;i++){const p=P(a+(b-a)*i/k);d+=(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)}return d};
+const LD=seg(PI*.955,PI*1.985,140);E('spL').setAttribute('d',LD);E('spF').setAttribute('d',LD);
+E('spA').setAttribute('d',seg(PI*.935,PI*.53,60));E('spB').setAttribute('d',seg(PI*.47,0,60));
+E('spFoot').textContent=FOOT;
+const one=(t,p,txt,mx)=>{const tp=t.firstChild,L=p.getTotalLength()*.94;tp.textContent=txt;tp.removeAttribute('textLength');tp.removeAttribute('lengthAdjust');
+  t.style.fontSize='30px';const w=t.getComputedTextLength()||L,fs=30*L/w;
+  if(fs>mx){t.style.fontSize=mx+'px';return}
+  t.style.fontSize=Math.max(14,fs)+'px';tp.setAttribute('textLength',L.toFixed(1));tp.setAttribute('lengthAdjust',fs<14?'spacingAndGlyphs':'spacing')};
+const fit=()=>{try{one(E('spT1'),E('spA'),T1,40);one(E('spT2'),E('spB'),T2,34)}catch(e){}};
+fit();if(document.fonts&&document.fonts.load)document.fonts.load(`30px "${FONT}"`).then(fit,fit);setTimeout(fit,700)})();
+</script>
 <style>
+#splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#FAFAFB;color:#2B2D31;transition:opacity .9s ease,filter .9s ease,transform .9s ease}
+#splash.dk{background:#050506;color:#F4EFE7}
+#splash.out{opacity:0;filter:blur(8px);transform:scale(1.03);pointer-events:none}
+#splash:not(.dk) .sp-g{filter:none}
+.sp-svg{width:min(92vw,460px);overflow:visible;margin-top:-6vh;transform:scale(.45);opacity:0;animation:spGrow 2.4s cubic-bezier(.22,.8,.2,1) forwards}
+.sp-line{fill:none;stroke:currentColor;stroke-width:1.15;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:spDraw 1.8s .15s cubic-bezier(.6,.05,.3,1) forwards}
+.sp-flow{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:.07 .93;stroke-dashoffset:1;opacity:0;animation:spFlow 2.6s 1.6s linear infinite}
+#splash:not(.dk) .sp-flow{stroke-width:1.8}
+.sp-t{fill:currentColor;font-family:"Ms Madi","Savoye LET","Snell Roundhand",cursive;opacity:0}
+.sp-t1{animation:spIn 1.1s .9s ease forwards}
+.sp-t2{animation:spIn 1.1s 1.3s ease forwards}
+.sp-foot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 64px);text-align:center;font:12px -apple-system,"Helvetica Neue",sans-serif;letter-spacing:.5px;opacity:0;animation:spFoot 1s 1.6s ease forwards}
+@keyframes spGrow{0%{transform:scale(.45);opacity:0}15%{opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@keyframes spFlow{0%{stroke-dashoffset:1;opacity:0}12%{opacity:.85}88%{opacity:.85}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes spIn{to{opacity:1}}
+@keyframes spFoot{to{opacity:.4}}
+</style>
 #splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#FAFAFB;color:#2B2D31;transition:opacity .9s ease,filter .9s ease,transform .9s ease}
 #splash.dk{background:#050506;color:#F4EFE7}
 #splash.out{opacity:0;filter:blur(8px);transform:scale(1.03);pointer-events:none}
