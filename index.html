@@ -343,7 +343,7 @@ document.getElementById('spB').setAttribute('d',seg(PI*.45,PI*.05,60))})()</scri
 <script>
 (()=>{const s=document.getElementById('splash');if(!s)return;const t0=Date.now();let done=false;
   const hide=()=>{if(done)return;done=true;
-    setTimeout(()=>{s.classList.add('out');setTimeout(()=>s.remove(),800)},Math.max(0,1200-(Date.now()-t0)))};
+    setTimeout(()=>{s.classList.add('out');setTimeout(()=>s.remove(),800)},Math.max(0,2600-(Date.now()-t0)))};
   try{HOOKS.ready.push(hide)}catch(e){}
   setTimeout(hide,6000)})();
 </script>
