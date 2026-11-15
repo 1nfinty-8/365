@@ -115,7 +115,9 @@ html.dk .dcp-ctl button{background:rgba(255,255,255,.08);border-color:rgba(255,2
 .dcp-ctl .dcp-play{width:68px;height:68px;border-radius:50%}
 .dcp-lyr{max-width:390px;margin-top:24px;white-space:pre-wrap;text-align:center;font-family:var(--ti);font-size:15px;line-height:2;color:var(--ink);opacity:.8}
 </style>`);
-
+body.dcp #sheet,body.dcp #sheet>*{z-index:9999!important}
+body.dcp #toast{z-index:10000!important}
+.dc-face,.dc-ci{will-change:transform;backface-visibility:hidden}
 $('#tabbar').insertAdjacentHTML('beforebegin',`
 <section class="page" id="page-disc"><div class="wrap">
   <div class="head"><button class="iconbtn glass" data-go="him" aria-label="返回">${BACK}</button><h2>他想说的</h2><em>voices</em><span class="sp"></span><button class="pill" id="dcAdd">＋ 录一张</button></div>
